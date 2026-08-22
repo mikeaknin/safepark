@@ -19,7 +19,7 @@ import { CarPlayView } from './views/CarPlayView';
 import { EnterpriseApiDashboard } from './views/EnterpriseApiDashboard';
 import { UserProfileView } from './views/UserProfileView';
 import { AdminOpsDashboard } from './views/AdminOpsDashboard';
-import { CheckCircle2, Shield } from 'lucide-react';
+import { CheckCircle2, Shield, FlaskConical } from 'lucide-react';
 
 export const App: React.FC = () => {
   const {
@@ -87,6 +87,38 @@ export const App: React.FC = () => {
 
           {/* Floating Top Search & Quick Filter Overlay */}
           <SearchAndFilterHeader onOpenLabTools={() => setIsLabToolsOpen(true)} />
+
+          {/* Subtle Top-Right Floating Lab Trigger FAB */}
+          <button
+            onClick={() => setIsLabToolsOpen(true)}
+            aria-label="Open Simulation Lab Tools"
+            style={{
+              position: 'fixed',
+              top: 'calc(env(safe-area-inset-top, 0px) + 64px)',
+              right: '12px',
+              zIndex: 30,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              backgroundColor: 'rgba(15, 23, 42, 0.90)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: '1px solid rgba(56, 189, 248, 0.4)',
+              color: '#38BDF8',
+              borderRadius: '12px',
+              padding: '6px 10px',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.4)',
+              minHeight: '44px',
+              minWidth: '44px',
+              transition: 'transform 0.15s ease, background-color 0.15s ease',
+            }}
+          >
+            <FlaskConical size={16} />
+            <span className="hidden sm:inline">Lab Tools</span>
+          </button>
 
           {/* Subterranean Signal Loss Banner Overlay */}
           <div

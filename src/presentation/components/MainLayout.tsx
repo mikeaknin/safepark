@@ -5,6 +5,7 @@ interface MainLayoutProps {
   mapCanvas?: ReactNode;
   bottomSheet?: ReactNode;
   bottomNav?: ReactNode;
+  labToolsDrawer?: ReactNode;
   modals?: ReactNode;
 }
 
@@ -13,6 +14,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   mapCanvas,
   bottomSheet,
   bottomNav,
+  labToolsDrawer,
   modals,
 }) => {
   return (
@@ -36,6 +38,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
       {/* Fixed Bottom Navigation Bar */}
       {bottomNav}
+
+      {/* Slide-Over Simulation Lab Tools Drawer */}
+      {labToolsDrawer}
 
       {/* Overlays / Modals */}
       {modals}
