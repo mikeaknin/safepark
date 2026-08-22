@@ -1,0 +1,73 @@
+:root {
+  --color-brand-primary: #2C73D2;
+  --color-brand-primary-hover: #225cb0;
+  --color-brand-light: #E8F1FC;
+
+  --color-surface-primary-dark: #1E293B;
+  --color-surface-secondary-dark: #0F172A;
+  --color-surface-card-dark: #334155;
+  --color-surface-border-dark: #475569;
+
+  --color-text-primary: #FFFFFF;
+  --color-text-secondary: #94A3B8;
+  --color-text-muted: #64748B;
+
+  --color-status-low: #22C55E;
+  --color-status-mod: #F59E0B;
+  --color-status-high: #EF4444;
+
+  --font-header: 'Poppins', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-tabular: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  background-color: var(--color-surface-secondary-dark);
+  color: var(--color-text-primary);
+  font-family: var(--font-body);
+  font-weight: 400;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-header);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+/* Metric / Timer Tabular Numbers to eliminate jitter */
+.tabular-nums {
+  font-family: var(--font-tabular);
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-surface-secondary-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-surface-border-dark);
+  border-radius: 9999px;
+}
+
+/* Accessible focus ring */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 2px solid var(--color-brand-primary);
+  outline-offset: 2px;
+}

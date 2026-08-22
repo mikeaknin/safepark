@@ -1,0 +1,4 @@
+app_identifier("app.safepark.mobile") # The bundle identifier of your app
+apple_id("developer@safepark.app") # Your Apple Developer email
+team_id("SAFEPARK99") # Developer Portal Team ID
+itc_team_id("119882201") # App Store Connect Team ID

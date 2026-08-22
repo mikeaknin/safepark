@@ -1,0 +1,58 @@
+# SafePark Fastlane Automation Configuration
+# Automated lanes for testing, building, and delivering SafePark iOS to Apple TestFlight & App Store
+
+default_platform(:ios)
+
+platform :ios do
+  before_all do
+    ensure_git_status_clean unless is_ci
+  end
+
+  desc "Run local and CI automated test suites"
+  lane :test do
+    sh("npm test")
+    sh("npm run test:smoke")
+  end
+
+  desc "Increment build number and bundle production web assets into Capacitor iOS runtime"
+  lane :prepare_native do
+    sh("npm run build")
+    sh("npx cap sync ios")
+  end
+
+  desc "Build signed .ipa archive for Apple TestFlight"
+  lane :beta do
+    test
+    prepare_native
+    increment_build_number(
+      build_number: Time.now.strftime("%Y%m%d%H%M")
+    )
+    build_app(
+      workspace: "App.xcworkspace",
+      scheme: "App",
+      export_method: "app-store",
+      output_directory: "./build",
+      output_name: "SafePark.ipa"
+    )
+    upload_to_testflight(
+      skip_waiting_for_build_processing: true,
+      changelog: "SafePark v1.0.0 — Native CoreBluetooth vehicle exit detection, multi-city municipal crime telemetry & subterranean offline caching."
+    )
+  end
+
+  desc "Deploy new release version to the Apple App Store"
+  lane :release do
+    test
+    prepare_native
+    build_app(
+      workspace: "App.xcworkspace",
+      scheme: "App",
+      export_method: "app-store"
+    )
+    upload_to_app_store(
+      submit_for_review: true,
+      force: true,
+      automatic_release: true
+    )
+  end
+end

@@ -1,0 +1,361 @@
+openapi: 3.0.3
+info:
+  title: SafePark Risk Telemetry & Parking Intelligence API
+  version: 1.0.0
+  description: |
+    SafePark Enterprise API Suite for Automotive OEMs (e.g., in-dash headunits),
+    fleet telematics managers, commercial parking operators, and mobility underwriters.
+    Delivers geocoded block-level Composite Safety Index (CSI) ratings, municipal lighting lux telemetry,
+    anti-bias physical hazard reports, and B2B facility certifications.
+servers:
+  - url: https://api.safepark.ai/v1
+    description: Production Global Gateway
+  - url: https://sandbox.safepark.ai/v1
+    description: Sandbox Environment
+
+paths:
+  /blocks/risk:
+    get:
+      summary: Query Geocoded Block-Level Risk Telemetry
+      description: |
+        Retrieves real-time Composite Safety Index (CSI) calculations, crime densities,
+        and municipal lighting lux levels for specific latitude/longitude coordinates.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            example: 37.7812
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+            example: -122.4001
+        - name: radiusMeters
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 500
+            example: 500
+      responses:
+        '200':
+          description: Block risk telemetry stream
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BlockRiskPayload'
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+
+  /spots:
+    get:
+      summary: List Evaluated Parking Spots
+      description: Returns active parking locations filtered by minimum CSI safety threshold and structure type.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: minCsi
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 100
+            example: 75
+        - name: structureType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [covered_underground_garage, multi_level_deck, gated_surface_lot, curbside_street_metered]
+      responses:
+        '200':
+          description: List of parking locations with real-time CSI scores
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ParkingLocation'
+
+  /spots/{spotId}/safe-walk:
+    get:
+      summary: Get Safe Walk Back Return Routing
+      description: Returns turn-by-turn illuminated pedestrian routes prioritizing well-lit, high-traffic corridors over dark alleys.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: spotId
+          in: path
+          required: true
+          schema:
+            type: string
+            example: spot-sf-001
+      responses:
+        '200':
+          description: Dual route comparison (Illuminated Corridor vs Direct Alley)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SafeWalkComparison'
+
+  /facilities/certify:
+    post:
+      summary: Submit B2B Garage Security Audit for SafePark Certification
+      description: Evaluates physical infrastructure safeguards (CCTV coverage, security guards, barrier gates, lux output) and assigns a certification tier.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GarageSecurityAudit'
+      responses:
+        '200':
+          description: Certification evaluation and CSI baseline boost result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CertificationResult'
+
+  /hazards/report:
+    post:
+      summary: Submit Community Physical Hazard Report (Anti-Bias Filtered)
+      description: |
+        Ingests user-reported hazards. Enforces strict legal anti-bias validation:
+        subjective terms are rejected; verifiable physical defects are accepted into the CSI engine.
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HazardSubmissionRequest'
+      responses:
+        '201':
+          description: Verified hazard ingested into time-decayed scoring engine
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HazardValidationResult'
+        '422':
+          description: Submission rejected due to subjective profiling or unapproved category
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API-Key
+
+  responses:
+    UnauthorizedError:
+      description: API key missing or invalid
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: Invalid API key provided
+
+  schemas:
+    BlockRiskPayload:
+      type: object
+      properties:
+        blockId:
+          type: string
+          example: blk-sf-001
+        geohash:
+          type: string
+          example: 9q8yyk
+        neighborhood:
+          type: string
+          example: South of Market (SOMA), San Francisco
+        csiScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+          example: 94
+        riskTier:
+          type: string
+          enum: [LOW, MODERATE, HIGH]
+          example: LOW
+        smashAndGrabIncidents30d:
+          type: integer
+          example: 0
+        catalyticThefts30d:
+          type: integer
+          example: 0
+        lightingLuxAverage:
+          type: number
+          example: 68.0
+        municipalSmartLampsActive:
+          type: integer
+          example: 2
+        cctvSurveillanceTier:
+          type: string
+          example: monitored_cctv_24_7
+        timestampUtc:
+          type: string
+          format: date-time
+          example: 2026-08-21T19:00:00Z
+
+    ParkingLocation:
+      type: object
+      properties:
+        id:
+          type: string
+          example: spot-sf-001
+        name:
+          type: string
+          example: Mission Bay Secure Underground Garage
+        hourlyRate:
+          type: number
+          example: 6.50
+        csi:
+          type: object
+          properties:
+            totalScore:
+              type: integer
+              example: 94
+            riskLevel:
+              type: string
+              enum: [low, moderate, high]
+              example: low
+
+    SafeWalkComparison:
+      type: object
+      properties:
+        illuminatedRoute:
+          type: object
+          properties:
+            safetyScore:
+              type: integer
+              example: 92
+            averageIlluminationLux:
+              type: number
+              example: 48.0
+            estimatedWalkingMinutes:
+              type: number
+              example: 4.2
+        directRoute:
+          type: object
+          properties:
+            safetyScore:
+              type: integer
+              example: 38
+            averageIlluminationLux:
+              type: number
+              example: 9.0
+            estimatedWalkingMinutes:
+              type: number
+              example: 3.1
+
+    GarageSecurityAudit:
+      type: object
+      required:
+        - facilityId
+        - facilityName
+        - cctvCoveragePercentage
+        - averageLumenOutputLux
+      properties:
+        facilityId:
+          type: string
+          example: spot-sf-001
+        facilityName:
+          type: string
+          example: Mission Bay Secure Garage
+        has247MannedGuards:
+          type: boolean
+          example: true
+        cctvCoveragePercentage:
+          type: integer
+          example: 95
+        hasPhysicalBarrierGates:
+          type: boolean
+          example: true
+        averageLumenOutputLux:
+          type: integer
+          example: 68
+        hasLicencePlateRecognition:
+          type: boolean
+          example: true
+        hasEmergencyHelpCallBoxes:
+          type: boolean
+          example: true
+
+    CertificationResult:
+      type: object
+      properties:
+        tier:
+          type: string
+          enum: [platinum, gold, silver, unverified]
+          example: platinum
+        isCertified:
+          type: boolean
+          example: true
+        auditScore:
+          type: integer
+          example: 92
+        csiBaselineBoost:
+          type: integer
+          example: 22
+        certifiedBadgeLabel:
+          type: string
+          example: SafePark Platinum Certified
+
+    HazardSubmissionRequest:
+      type: object
+      required:
+        - spotId
+        - hazardType
+        - notes
+        - lat
+        - lng
+      properties:
+        spotId:
+          type: string
+          example: spot-sf-002
+        hazardType:
+          type: string
+          enum:
+            - broken_glass_pavement
+            - failed_street_lamp
+            - broken_security_gate
+            - camera_tampered_or_down
+            - obstructed_sightline_alcove
+            - pavement_debris_puncture_risk
+          example: broken_glass_pavement
+        notes:
+          type: string
+          example: Fresh tempered glass shards on curb
+        lat:
+          type: number
+          example: 37.7785
+        lng:
+          type: number
+          example: -122.4042
+
+    HazardValidationResult:
+      type: object
+      properties:
+        isValid:
+          type: boolean
+          example: true
+        rejectionReason:
+          type: string
+        flaggedSubjectiveTerms:
+          type: array
+          items:
+            type: string
