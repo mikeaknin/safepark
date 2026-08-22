@@ -339,7 +339,14 @@ export class GeocodingAdapter implements IGeocodingRepository {
     // 2. Normalize query string
     const { normalizedQuery, isIntersection } = this.normalizeQuery(trimmed);
 
-    // 3. Query OpenStreetMap Nominatim with strict SF bounding parameters
+    // Check high-speed local municipal landmark catalog first
+    const localMatches = this.searchFallbackCatalog(trimmed);
+    if (localMatches.length > 0) {
+      this.setCachedResults(cacheKey, localMatches);
+      return localMatches;
+    }
+
+    // 3. Query OpenStreetMap Nominatim with strict SF bounding parameters and 1200ms timeout
     try {
       const viewboxParam = `${SAN_FRANCISCO_VIEWBOX.minLon},${SAN_FRANCISCO_VIEWBOX.maxLat},${SAN_FRANCISCO_VIEWBOX.maxLon},${SAN_FRANCISCO_VIEWBOX.minLat}`;
       const params = new URLSearchParams({
@@ -351,6 +358,12 @@ export class GeocodingAdapter implements IGeocodingRepository {
         viewbox: viewboxParam,
       });
 
+      const timeoutController = new AbortController();
+      const timeoutId = setTimeout(() => timeoutController.abort(), 1200);
+
+      // Combine user signal and timeout signal if provided
+      const combinedSignal = signal || timeoutController.signal;
+
       const response = await fetch(`${GeocodingAdapter.NOMINATIM_BASE_URL}?${params.toString()}`, {
         method: 'GET',
         headers: {
@@ -358,8 +371,10 @@ export class GeocodingAdapter implements IGeocodingRepository {
           'Accept': 'application/json',
           'Accept-Language': 'en-US,en;q=0.9',
         },
-        signal,
+        signal: combinedSignal,
       });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
@@ -375,11 +390,11 @@ export class GeocodingAdapter implements IGeocodingRepository {
         }
       }
     } catch (err: any) {
-      if (err?.name === 'AbortError') {
+      if (err?.name === 'AbortError' && signal?.aborted) {
         // Query was cancelled by user typing next keystroke
         return [];
       }
-      console.warn('Nominatim forward geocoding network error, utilizing local municipal fallback:', err?.message);
+      // Timeout or network error - fallback proceeds below
     }
 
     // 4. Client-side fallback matching against SF municipal landmarks and intersections

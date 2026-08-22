@@ -1,5 +1,7 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react';
 import { useApp } from '../../context/AppContext';
+import { useGeocodingAutocomplete } from '../../hooks/useGeocodingAutocomplete';
+import { GeocodedLocation } from '../../../domain/models/GeocodedLocation';
 import { SAFE_PARK_TOKENS } from '../../../theme/tokens';
 import {
   Search,
@@ -10,9 +12,11 @@ import {
   Building,
   Video,
   Sparkles,
-  Lock,
   RotateCcw,
-  FlaskConical
+  FlaskConical,
+  Loader2,
+  Navigation,
+  Compass
 } from 'lucide-react';
 
 interface SearchAndFilterHeaderProps {
@@ -23,11 +27,8 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
   onOpenLabTools,
 }) => {
   const {
-    searchQuery,
-    setSearchQuery,
     selectedDestination,
     setSelectedDestination,
-    destinationResults,
     filters,
     setFilters,
     resetFilters,
@@ -38,19 +39,43 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
     locations,
   } = useApp();
 
-  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
   const searchContainerRef = useRef<HTMLDivElement>(null);
+
+  const {
+    query,
+    setQuery,
+    suggestions,
+    isLoading,
+    isOpen,
+    setIsOpen,
+    clearQuery,
+    selectSuggestion,
+  } = useGeocodingAutocomplete(
+    (loc: GeocodedLocation) => {
+      setSelectedDestination({
+        id: loc.id,
+        name: loc.name,
+        address: loc.formattedAddress,
+        coordinates: loc.coordinates,
+      });
+    },
+    {
+      debounceMs: 300,
+      minChars: 2,
+      initialQuery: selectedDestination?.name || '',
+    }
+  );
 
   // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
-        setIsDropdownOpen(false);
+        setIsOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [setIsOpen]);
 
   const activeFilterCount =
     (filters.minCsi > 0 ? 1 : 0) +
@@ -58,6 +83,21 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
     (filters.gatedAccessOnly ? 1 : 0) +
     (filters.monitoredCctvOnly ? 1 : 0) +
     (filters.maxHourlyRate < 15 ? 1 : 0);
+
+  const getPlaceBadge = (loc: GeocodedLocation) => {
+    switch (loc.placeType) {
+      case 'poi':
+        return { label: 'Landmark', color: '#38BDF8', bg: 'rgba(56, 189, 248, 0.15)' };
+      case 'intersection':
+        return { label: 'Cross Street', color: '#22C55E', bg: 'rgba(34, 197, 94, 0.15)' };
+      case 'facility':
+        return { label: 'Garage', color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.15)' };
+      case 'neighborhood':
+        return { label: 'District', color: '#A855F7', bg: 'rgba(168, 85, 247, 0.15)' };
+      default:
+        return { label: 'Address', color: '#94A3B8', bg: 'rgba(148, 163, 184, 0.15)' };
+    }
+  };
 
   return (
     <header
@@ -69,48 +109,72 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
         left: 0,
         right: 0,
         zIndex: 30,
-        backgroundColor: 'rgba(15, 23, 42, 0.88)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(51, 65, 85, 0.7)',
-        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)',
-        paddingBottom: '10px',
-        paddingLeft: '14px',
-        paddingRight: '14px',
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)',
+        paddingLeft: '12px',
+        paddingRight: '12px',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+        pointerEvents: 'none',
       }}
     >
-      <div style={{ maxWidth: '1240px', margin: '0 auto' }}>
-        {/* Top Search Input Row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Search Box with Autocomplete */}
-          <div ref={searchContainerRef} style={{ position: 'relative', flex: 1 }}>
+      <div
+        style={{
+          maxWidth: '1240px',
+          margin: '0 auto',
+          pointerEvents: 'auto',
+        }}
+      >
+        {/* Full-Width Floating Glassmorphic Search Card */}
+        <div
+          ref={searchContainerRef}
+          style={{
+            position: 'relative',
+            backgroundColor: 'rgba(15, 23, 42, 0.92)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+            border: '1px solid rgba(51, 65, 85, 0.7)',
+            borderRadius: '16px',
+            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
+            padding: '6px 8px',
+          }}
+        >
+          {/* Top Search & Filter Bar */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            {/* Search Input Box */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 backgroundColor: '#1E293B',
-                border: isDropdownOpen ? `2px solid ${SAFE_PARK_TOKENS.colors.brand.primary}` : '1px solid #334155',
+                border: isOpen ? `2px solid ${SAFE_PARK_TOKENS.colors.brand.primary}` : '1px solid #334155',
                 borderRadius: '12px',
-                padding: '8px 12px',
-                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.25)',
+                padding: '0 12px',
+                flex: 1,
                 minHeight: '44px',
+                transition: 'border 0.2s ease',
               }}
             >
-              <Search
-                size={18}
-                color={SAFE_PARK_TOKENS.colors.brand.primary}
-                style={{ marginRight: '8px', flexShrink: 0 }}
-              />
+              {isLoading ? (
+                <Loader2
+                  size={18}
+                  color={SAFE_PARK_TOKENS.colors.brand.primary}
+                  style={{ marginRight: '8px', flexShrink: 0, animation: 'spin 1s linear infinite' }}
+                />
+              ) : (
+                <Search
+                  size={18}
+                  color={SAFE_PARK_TOKENS.colors.brand.primary}
+                  style={{ marginRight: '8px', flexShrink: 0 }}
+                />
+              )}
+
               <input
                 type="text"
-                value={searchQuery}
+                value={query}
                 onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setIsDropdownOpen(true);
+                  setQuery(e.target.value);
+                  setIsOpen(true);
                 }}
-                onFocus={() => setIsDropdownOpen(true)}
-                placeholder="Where are you parking? (e.g. Moscone, Oracle Park)..."
+                onFocus={() => setIsOpen(true)}
+                placeholder="Where to? (e.g. 772 Folsom, Mission & 16th, Oracle Park)..."
                 aria-label="Search destination for safe parking"
                 style={{
                   background: 'transparent',
@@ -122,21 +186,19 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
                   fontFamily: 'inherit',
                 }}
               />
-              {searchQuery && (
+
+              {query && (
                 <button
-                  onClick={() => {
-                    setSearchQuery('');
-                    setSelectedDestination(null);
-                  }}
+                  onClick={clearQuery}
                   aria-label="Clear search input"
                   style={{
                     background: 'none',
                     border: 'none',
                     color: '#94A3B8',
                     cursor: 'pointer',
-                    padding: '4px',
-                    minWidth: '32px',
-                    minHeight: '32px',
+                    padding: '6px',
+                    minWidth: '44px',
+                    minHeight: '44px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -147,261 +209,327 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
               )}
             </div>
 
-            {/* Autocomplete Dropdown */}
-            {isDropdownOpen && destinationResults.length > 0 && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: 'calc(100% + 6px)',
-                  left: 0,
-                  right: 0,
-                  backgroundColor: '#1E293B',
-                  borderRadius: '12px',
-                  border: '1px solid #475569',
-                  boxShadow: SAFE_PARK_TOKENS.shadows.sheet,
-                  zIndex: 50,
-                  maxHeight: '260px',
-                  overflowY: 'auto',
-                }}
-              >
-                <div
-                  style={{
-                    padding: '8px 12px',
-                    fontSize: '0.7rem',
-                    color: '#94A3B8',
-                    textTransform: 'uppercase',
-                    fontWeight: 700,
-                  }}
-                >
-                  Popular Destinations
-                </div>
-                {destinationResults.map((dest) => (
-                  <div
-                    key={dest.id}
-                    onClick={() => {
-                      setSelectedDestination(dest);
-                      setSearchQuery(dest.name);
-                      setIsDropdownOpen(false);
-                    }}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '10px',
-                      padding: '10px 12px',
-                      borderTop: '1px solid #334155',
-                      cursor: 'pointer',
-                      backgroundColor: selectedDestination?.id === dest.id ? '#0F172A' : 'transparent',
-                      minHeight: '44px',
-                    }}
-                  >
-                    <MapPin size={16} color={SAFE_PARK_TOKENS.colors.brand.primary} style={{ flexShrink: 0 }} />
-                    <div>
-                      <div style={{ fontSize: '0.85rem', color: '#FFFFFF', fontWeight: 600 }}>{dest.name}</div>
-                      <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>{dest.address}</div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Filter Modal Trigger */}
-          <button
-            onClick={() => setIsFilterModalOpen(true)}
-            aria-label="Open filter settings"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              backgroundColor: activeFilterCount > 0 ? SAFE_PARK_TOKENS.colors.brand.primary : '#1E293B',
-              color: '#FFFFFF',
-              border: activeFilterCount > 0 ? `1px solid ${SAFE_PARK_TOKENS.colors.brand.primary}` : '1px solid #334155',
-              borderRadius: '12px',
-              padding: '8px 12px',
-              fontSize: '0.8rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              minHeight: '44px',
-              minWidth: '44px',
-            }}
-          >
-            <SlidersHorizontal size={16} />
-            <span className="hidden sm:inline">Filters</span>
-            {activeFilterCount > 0 && (
-              <span
-                style={{
-                  backgroundColor: '#FFFFFF',
-                  color: SAFE_PARK_TOKENS.colors.brand.primary,
-                  width: '18px',
-                  height: '18px',
-                  borderRadius: '50%',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: '0.7rem',
-                  fontWeight: 700,
-                }}
-              >
-                {activeFilterCount}
-              </span>
-            )}
-          </button>
-
-          {/* Lab Tools Floating Trigger */}
-          {onOpenLabTools && (
+            {/* Filter Trigger Button */}
             <button
-              onClick={onOpenLabTools}
-              aria-label="Open Simulation Lab Tools"
+              onClick={() => setIsFilterModalOpen(true)}
+              aria-label="Open filter settings"
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '4px',
-                backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                color: '#38BDF8',
-                border: '1px solid rgba(56, 189, 248, 0.4)',
+                gap: '6px',
+                backgroundColor: activeFilterCount > 0 ? SAFE_PARK_TOKENS.colors.brand.primary : '#1E293B',
+                color: '#FFFFFF',
+                border: activeFilterCount > 0 ? `1px solid ${SAFE_PARK_TOKENS.colors.brand.primary}` : '1px solid #334155',
                 borderRadius: '12px',
-                padding: '8px 12px',
+                padding: '0 12px',
                 fontSize: '0.8rem',
-                fontWeight: 700,
+                fontWeight: 600,
                 cursor: 'pointer',
                 minHeight: '44px',
                 minWidth: '44px',
+                flexShrink: 0,
               }}
-              title="Simulation & Diagnostic Tools"
             >
-              <FlaskConical size={16} />
-              <span className="hidden sm:inline">Lab</span>
+              <SlidersHorizontal size={16} />
+              <span className="hidden sm:inline">Filters</span>
+              {activeFilterCount > 0 && (
+                <span
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    color: SAFE_PARK_TOKENS.colors.brand.primary,
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '50%',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.7rem',
+                    fontWeight: 700,
+                  }}
+                >
+                  {activeFilterCount}
+                </span>
+              )}
             </button>
-          )}
-        </div>
 
-        {/* Quick Horizontal Scrollable Filter Row */}
-        <div
-          style={{
-            display: 'flex',
-            gap: '6px',
-            overflowX: 'auto',
-            paddingTop: '8px',
-            paddingBottom: '2px',
-            WebkitOverflowScrolling: 'touch',
-            scrollbarWidth: 'none',
-          }}
-        >
-          {/* Low Risk Only */}
-          <button
-            onClick={() => setFilters((prev) => ({ ...prev, minCsi: prev.minCsi === 75 ? 0 : 75 }))}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              backgroundColor: filters.minCsi === 75 ? 'rgba(34, 197, 94, 0.2)' : '#1E293B',
-              color: filters.minCsi === 75 ? '#22C55E' : '#94A3B8',
-              border: filters.minCsi === 75 ? '1px solid #22C55E' : '1px solid #334155',
-              borderRadius: '20px',
-              padding: '6px 12px',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              minHeight: '36px',
-            }}
-          >
-            <ShieldCheck size={13} />
-            <span>Low Risk (≥75)</span>
-          </button>
+            {/* Discrete Lab Tools FAB */}
+            {onOpenLabTools && (
+              <button
+                onClick={onOpenLabTools}
+                aria-label="Open Simulation Lab Tools"
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                  color: '#38BDF8',
+                  border: '1px solid rgba(56, 189, 248, 0.4)',
+                  borderRadius: '12px',
+                  padding: '0 10px',
+                  fontSize: '0.8rem',
+                  fontWeight: 700,
+                  cursor: 'pointer',
+                  minHeight: '44px',
+                  minWidth: '44px',
+                  flexShrink: 0,
+                }}
+                title="Simulation & Diagnostic Tools"
+              >
+                <FlaskConical size={16} />
+                <span>Lab</span>
+              </button>
+            )}
+          </div>
 
-          {/* Garages Only */}
-          <button
-            onClick={() => setFilters((prev) => ({ ...prev, coveredOrGarageOnly: !prev.coveredOrGarageOnly }))}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              backgroundColor: filters.coveredOrGarageOnly ? 'rgba(44, 115, 210, 0.2)' : '#1E293B',
-              color: filters.coveredOrGarageOnly ? '#38BDF8' : '#94A3B8',
-              border: filters.coveredOrGarageOnly ? '1px solid #2C73D2' : '1px solid #334155',
-              borderRadius: '20px',
-              padding: '6px 12px',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              minHeight: '36px',
-            }}
-          >
-            <Building size={13} />
-            <span>Garages Only</span>
-          </button>
-
-          {/* 24/7 CCTV */}
-          <button
-            onClick={() => setFilters((prev) => ({ ...prev, monitoredCctvOnly: !prev.monitoredCctvOnly }))}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              backgroundColor: filters.monitoredCctvOnly ? 'rgba(44, 115, 210, 0.2)' : '#1E293B',
-              color: filters.monitoredCctvOnly ? '#38BDF8' : '#94A3B8',
-              border: filters.monitoredCctvOnly ? '1px solid #2C73D2' : '1px solid #334155',
-              borderRadius: '20px',
-              padding: '6px 12px',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              minHeight: '36px',
-            }}
-          >
-            <Video size={13} />
-            <span>24/7 CCTV</span>
-          </button>
-
-          {/* Lighting Heatmap */}
-          <button
-            onClick={() => setShowLightingHeatmap(!showLightingHeatmap)}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              backgroundColor: showLightingHeatmap ? 'rgba(34, 197, 94, 0.2)' : '#1E293B',
-              color: showLightingHeatmap ? '#22C55E' : '#94A3B8',
-              border: showLightingHeatmap ? '1px solid #22C55E' : '1px solid #334155',
-              borderRadius: '20px',
-              padding: '6px 12px',
-              fontSize: '0.75rem',
-              fontWeight: 600,
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-              minHeight: '36px',
-            }}
-          >
-            <Sparkles size={13} />
-            <span>{showLightingHeatmap ? 'Lighting Grid: ON' : 'Lighting: OFF'}</span>
-          </button>
-
-          {/* Reset Filters if any active */}
-          {activeFilterCount > 0 && (
-            <button
-              onClick={resetFilters}
+          {/* Autocomplete Dropdown List */}
+          {isOpen && suggestions.length > 0 && (
+            <div
               style={{
-                background: 'none',
-                border: 'none',
-                color: '#EF4444',
-                fontSize: '0.75rem',
-                cursor: 'pointer',
+                position: 'absolute',
+                top: 'calc(100% + 8px)',
+                left: 0,
+                right: 0,
+                backgroundColor: '#1E293B',
+                borderRadius: '14px',
+                border: '1px solid #475569',
+                boxShadow: '0 12px 36px rgba(0, 0, 0, 0.65)',
+                zIndex: 50,
+                maxHeight: '340px',
+                overflowY: 'auto',
+              }}
+            >
+              <div
+                style={{
+                  padding: '10px 14px 6px 14px',
+                  fontSize: '0.7rem',
+                  color: '#94A3B8',
+                  textTransform: 'uppercase',
+                  fontWeight: 700,
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                }}
+              >
+                <span>San Francisco Municipal Results</span>
+                <span style={{ fontSize: '0.65rem', color: '#64748B' }}>Bounded OSM</span>
+              </div>
+
+              {suggestions.map((loc) => {
+                const badge = getPlaceBadge(loc);
+                return (
+                  <div
+                    key={loc.id}
+                    onClick={() => selectSuggestion(loc)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '10px 14px',
+                      borderTop: '1px solid #334155',
+                      cursor: 'pointer',
+                      backgroundColor: selectedDestination?.name === loc.name ? '#0F172A' : 'transparent',
+                      minHeight: '48px',
+                      transition: 'background-color 0.15s ease',
+                    }}
+                    onMouseEnter={(e) => {
+                      (e.currentTarget as HTMLElement).style.backgroundColor = '#334155';
+                    }}
+                    onMouseLeave={(e) => {
+                      (e.currentTarget as HTMLElement).style.backgroundColor =
+                        selectedDestination?.name === loc.name ? '#0F172A' : 'transparent';
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '8px',
+                        backgroundColor: badge.bg,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      <MapPin size={16} color={badge.color} />
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span
+                          style={{
+                            fontSize: '0.9rem',
+                            color: '#FFFFFF',
+                            fontWeight: 700,
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {loc.name}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: '0.65rem',
+                            fontWeight: 700,
+                            color: badge.color,
+                            backgroundColor: badge.bg,
+                            padding: '1px 6px',
+                            borderRadius: '4px',
+                            textTransform: 'uppercase',
+                            flexShrink: 0,
+                          }}
+                        >
+                          {badge.label}
+                        </span>
+                      </div>
+                      <div
+                        style={{
+                          fontSize: '0.75rem',
+                          color: '#94A3B8',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          marginTop: '2px',
+                        }}
+                      >
+                        {loc.formattedAddress}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Quick Horizontal Scrollable Filter Row */}
+          <div
+            style={{
+              display: 'flex',
+              gap: '6px',
+              overflowX: 'auto',
+              paddingTop: '8px',
+              paddingBottom: '2px',
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'none',
+            }}
+          >
+            {/* Low Risk Only */}
+            <button
+              onClick={() => setFilters((prev) => ({ ...prev, minCsi: prev.minCsi === 75 ? 0 : 75 }))}
+              style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '4px',
-                padding: '6px 10px',
+                backgroundColor: filters.minCsi === 75 ? 'rgba(34, 197, 94, 0.2)' : '#1E293B',
+                color: filters.minCsi === 75 ? '#22C55E' : '#94A3B8',
+                border: filters.minCsi === 75 ? '1px solid #22C55E' : '1px solid #334155',
+                borderRadius: '20px',
+                padding: '6px 12px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
                 whiteSpace: 'nowrap',
                 minHeight: '36px',
               }}
             >
-              <RotateCcw size={12} /> Clear
+              <ShieldCheck size={13} />
+              <span>Low Risk (≥75)</span>
             </button>
-          )}
+
+            {/* Garages Only */}
+            <button
+              onClick={() => setFilters((prev) => ({ ...prev, coveredOrGarageOnly: !prev.coveredOrGarageOnly }))}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                backgroundColor: filters.coveredOrGarageOnly ? 'rgba(44, 115, 210, 0.2)' : '#1E293B',
+                color: filters.coveredOrGarageOnly ? '#38BDF8' : '#94A3B8',
+                border: filters.coveredOrGarageOnly ? '1px solid #2C73D2' : '1px solid #334155',
+                borderRadius: '20px',
+                padding: '6px 12px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                minHeight: '36px',
+              }}
+            >
+              <Building size={13} />
+              <span>Garages Only</span>
+            </button>
+
+            {/* 24/7 CCTV */}
+            <button
+              onClick={() => setFilters((prev) => ({ ...prev, monitoredCctvOnly: !prev.monitoredCctvOnly }))}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                backgroundColor: filters.monitoredCctvOnly ? 'rgba(44, 115, 210, 0.2)' : '#1E293B',
+                color: filters.monitoredCctvOnly ? '#38BDF8' : '#94A3B8',
+                border: filters.monitoredCctvOnly ? '1px solid #2C73D2' : '1px solid #334155',
+                borderRadius: '20px',
+                padding: '6px 12px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                minHeight: '36px',
+              }}
+            >
+              <Video size={13} />
+              <span>24/7 CCTV</span>
+            </button>
+
+            {/* Lighting Heatmap */}
+            <button
+              onClick={() => setShowLightingHeatmap(!showLightingHeatmap)}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                backgroundColor: showLightingHeatmap ? 'rgba(34, 197, 94, 0.2)' : '#1E293B',
+                color: showLightingHeatmap ? '#22C55E' : '#94A3B8',
+                border: showLightingHeatmap ? '1px solid #22C55E' : '1px solid #334155',
+                borderRadius: '20px',
+                padding: '6px 12px',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                minHeight: '36px',
+              }}
+            >
+              <Sparkles size={13} />
+              <span>{showLightingHeatmap ? 'Lighting Grid: ON' : 'Lighting: OFF'}</span>
+            </button>
+
+            {/* Reset Filters */}
+            {activeFilterCount > 0 && (
+              <button
+                onClick={resetFilters}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#EF4444',
+                  fontSize: '0.75rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  padding: '6px 10px',
+                  whiteSpace: 'nowrap',
+                  minHeight: '36px',
+                }}
+              >
+                <RotateCcw size={12} /> Clear
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -421,6 +549,7 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
             alignItems: 'center',
             justifyContent: 'center',
             padding: '16px',
+            pointerEvents: 'auto',
           }}
         >
           <div
