@@ -288,20 +288,22 @@ export const SpotCard: React.FC<SpotCardProps> = ({
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '4px',
+            gap: '6px',
             backgroundColor: '#0F172A',
             color: '#38BDF8',
             border: '1px solid #334155',
             borderRadius: '8px',
-            padding: '8px 6px',
-            fontSize: '0.75rem',
-            fontWeight: 600,
+            padding: '4px 8px',
             cursor: 'pointer',
             minHeight: '44px',
+            textAlign: 'left',
           }}
         >
-          <Footprints size={13} color="#22C55E" />
-          <span>Walk</span>
+          <Footprints size={15} color="#22C55E" style={{ flexShrink: 0 }} />
+          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
+            <span style={{ fontSize: '0.775rem', fontWeight: 700, color: '#FFFFFF' }}>On Foot</span>
+            <span style={{ fontSize: '0.6rem', color: '#94A3B8', fontWeight: 500 }}>Refined Walk Return</span>
+          </div>
         </button>
 
         {/* Report Physical Hazard */}

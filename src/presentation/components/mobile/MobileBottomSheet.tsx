@@ -205,23 +205,26 @@ export const MobileBottomSheet: React.FC<MobileBottomSheetProps> = ({
                 e.stopPropagation();
                 onSafeWalk(activeSpot);
               }}
+              aria-label={`View on foot refined walk return route for ${activeSpot.name}`}
               style={{
                 backgroundColor: '#0F172A',
-                color: '#22C55E',
+                color: '#38BDF8',
                 border: '1px solid #22C55E',
                 borderRadius: '8px',
-                padding: '8px 12px',
-                fontSize: '0.775rem',
-                fontWeight: 600,
+                padding: '4px 10px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
+                gap: '6px',
                 minHeight: '44px',
+                textAlign: 'left',
               }}
             >
-              <Footprints size={15} />
-              <span>Walk</span>
+              <Footprints size={15} color="#22C55E" style={{ flexShrink: 0 }} />
+              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
+                <span style={{ fontSize: '0.775rem', fontWeight: 700, color: '#FFFFFF' }}>On Foot</span>
+                <span style={{ fontSize: '0.6rem', color: '#94A3B8', fontWeight: 500 }}>Refined Walk Return</span>
+              </div>
             </button>
 
             <button
