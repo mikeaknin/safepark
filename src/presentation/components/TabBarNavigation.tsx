@@ -14,12 +14,12 @@ export const TabBarNavigation: React.FC = () => {
   const { currentView, setCurrentView } = useApp();
 
   const tabs: Array<{ id: ActiveAppView; label: string; icon: React.ReactNode }> = [
-    { id: 'driver', label: 'Explore', icon: <Compass size={20} /> },
-    { id: 'b2b_portal', label: 'Certified', icon: <Building2 size={20} /> },
-    { id: 'carplay', label: 'CarPlay', icon: <Car size={20} /> },
-    { id: 'enterprise_api', label: 'API Data', icon: <Database size={20} /> },
-    { id: 'user_profile', label: 'Profile', icon: <User size={20} /> },
-    { id: 'admin_ops', label: 'Admin', icon: <ShieldCheck size={20} /> },
+    { id: 'driver', label: 'Explore', icon: <Compass size={19} /> },
+    { id: 'b2b_portal', label: 'Certified', icon: <Building2 size={19} /> },
+    { id: 'carplay', label: 'CarPlay', icon: <Car size={19} /> },
+    { id: 'enterprise_api', label: 'Data', icon: <Database size={19} /> },
+    { id: 'user_profile', label: 'Profile', icon: <User size={19} /> },
+    { id: 'admin_ops', label: 'Admin', icon: <ShieldCheck size={19} /> },
   ];
 
   return (
@@ -39,11 +39,12 @@ export const TabBarNavigation: React.FC = () => {
         display: 'flex',
         justifyContent: 'space-around',
         alignItems: 'center',
-        paddingTop: '8px',
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
-        paddingLeft: '16px',
-        paddingRight: '16px',
+        paddingTop: '6px',
+        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 6px)',
+        paddingLeft: '8px',
+        paddingRight: '8px',
         boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.4)',
+        height: '60px',
       }}
     >
       {tabs.map((tab) => {
@@ -65,16 +66,17 @@ export const TabBarNavigation: React.FC = () => {
               border: 'none',
               color: isActive ? '#38BDF8' : '#94A3B8',
               cursor: 'pointer',
-              minWidth: '44px',
+              flex: 1,
+              minWidth: 0,
               minHeight: '44px',
-              padding: '4px 8px',
+              padding: '2px 4px',
               borderRadius: '8px',
               transition: 'all 0.15s ease',
             }}
           >
             <div
               style={{
-                transform: isActive ? 'scale(1.12)' : 'scale(1)',
+                transform: isActive ? 'scale(1.1)' : 'scale(1)',
                 transition: 'transform 0.15s ease',
                 display: 'flex',
                 alignItems: 'center',
@@ -85,10 +87,13 @@ export const TabBarNavigation: React.FC = () => {
             </div>
             <span
               style={{
-                fontSize: '0.675rem',
+                fontSize: '0.65rem',
                 fontWeight: isActive ? 700 : 500,
                 letterSpacing: '-0.01em',
                 color: isActive ? '#FFFFFF' : '#94A3B8',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
               }}
             >
               {tab.label}

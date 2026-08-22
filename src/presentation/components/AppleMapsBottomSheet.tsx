@@ -141,17 +141,17 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
       aria-label="Apple Maps Safe Parking Drawer"
       style={{
         position: 'fixed',
-        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)',
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
         left: 0,
         right: 0,
         height: `${currentHeight}px`,
         transform: isDragging ? `translateY(${Math.max(-100, Math.min(200, dragOffset))}px)` : 'translateY(0px)',
         transition: isDragging ? 'none' : 'height 300ms cubic-bezier(0.25, 1, 0.5, 1), transform 300ms cubic-bezier(0.25, 1, 0.5, 1)',
         backgroundColor: '#1E293B',
-        borderTop: '1px solid #334155',
-        borderTopLeftRadius: '20px',
-        borderTopRightRadius: '20px',
-        boxShadow: '0 -10px 36px rgba(0, 0, 0, 0.6)',
+        borderTop: '1px solid rgba(51, 65, 85, 0.8)',
+        borderTopLeftRadius: '22px',
+        borderTopRightRadius: '22px',
+        boxShadow: '0 -10px 36px rgba(0, 0, 0, 0.65)',
         zIndex: 35,
         display: 'flex',
         flexDirection: 'column',
@@ -168,7 +168,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
         style={{
           width: '100%',
           paddingTop: '8px',
-          paddingBottom: '6px',
+          paddingBottom: '4px',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -182,7 +182,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
         {/* iOS Standard 32x4px Centered Drag Pill */}
         <div
           style={{
-            width: '32px',
+            width: '36px',
             height: '4px',
             borderRadius: '2px',
             backgroundColor: '#64748B',
@@ -193,22 +193,22 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
         <div
           style={{
             width: '100%',
-            padding: '0 16px',
+            padding: '0 14px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
           }}
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
             <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               {snapPoint === 'peek'
-                ? 'Top Safe Spot'
+                ? 'Recommended Spot'
                 : snapPoint === 'mid'
                 ? `Ranked Facilities (${locations.length})`
                 : 'Facility Inspection & Route'}
             </span>
             {selectedDestination && (
-              <span style={{ fontSize: '0.7rem', color: '#38BDF8', fontWeight: 600 }}>
+              <span style={{ fontSize: '0.7rem', color: '#38BDF8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 • near {selectedDestination.name.split(' ')[0]}
               </span>
             )}
@@ -226,8 +226,9 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
               fontSize: '0.75rem',
               fontWeight: 700,
               cursor: 'pointer',
-              minHeight: '44px',
-              padding: '0 8px',
+              minHeight: '36px',
+              padding: '0 6px',
+              flexShrink: 0,
             }}
           >
             <span>{snapPoint === 'expanded' ? 'Collapse' : snapPoint === 'mid' ? 'Full View' : 'Explore All'}</span>
@@ -236,18 +237,19 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
         </div>
       </div>
 
-      {/* Peek Mode (120px fixed height): Top-Ranked Spot Card */}
+      {/* Peek Mode (120px fixed height): Clean Unclipped Spot Overview Card */}
       {snapPoint === 'peek' && topRankedSpot && activeSpotStatus && (
         <div
           style={{
-            padding: '0 16px 12px 16px',
+            padding: '4px 14px 10px 14px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             flex: 1,
+            gap: '8px',
           }}
         >
-          <div style={{ flex: 1, minWidth: 0, paddingRight: '12px' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <span
                 style={{
@@ -258,13 +260,14 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                   borderRadius: '4px',
                   fontSize: '0.7rem',
                   fontWeight: 800,
+                  flexShrink: 0,
                 }}
               >
                 CSI {topRankedSpot.csi.totalScore}
               </span>
               <span
                 style={{
-                  fontSize: '0.9rem',
+                  fontSize: '0.875rem',
                   fontWeight: 700,
                   color: '#FFFFFF',
                   whiteSpace: 'nowrap',
@@ -275,10 +278,10 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 {topRankedSpot.name}
               </span>
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '2px', display: 'flex', gap: '6px', alignItems: 'center' }}>
+            <div style={{ fontSize: '0.725rem', color: '#94A3B8', marginTop: '2px', display: 'flex', gap: '6px', alignItems: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               <span style={{ fontWeight: 700, color: '#38BDF8' }}>${topRankedSpot.hourlyRate}/hr</span>
               <span>•</span>
-              <span>{topRankedSpot.availableSpaces} spots</span>
+              <span>{topRankedSpot.availableSpaces} spaces</span>
               {currentLitRoute && (
                 <>
                   <span>•</span>
@@ -288,7 +291,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -300,19 +303,19 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 color: '#38BDF8',
                 border: '1px solid #22C55E',
                 borderRadius: '8px',
-                padding: '4px 10px',
+                padding: '4px 8px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '6px',
+                gap: '5px',
                 minHeight: '44px',
                 textAlign: 'left',
               }}
             >
               <Footprints size={15} color="#22C55E" style={{ flexShrink: 0 }} />
               <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
-                <span style={{ fontSize: '0.775rem', fontWeight: 700, color: '#FFFFFF' }}>On Foot</span>
-                <span style={{ fontSize: '0.6rem', color: '#94A3B8', fontWeight: 500 }}>Refined Walk Return</span>
+                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#FFFFFF' }}>On Foot</span>
+                <span style={{ fontSize: '0.575rem', color: '#94A3B8', fontWeight: 500 }}>Refined Walk</span>
               </div>
             </button>
 
@@ -327,7 +330,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 color: parkedLocation?.id === topRankedSpot.id ? '#0F172A' : '#FFFFFF',
                 border: 'none',
                 borderRadius: '8px',
-                padding: '8px 14px',
+                padding: '6px 12px',
                 fontSize: '0.775rem',
                 fontWeight: 700,
                 cursor: parkedLocation?.id === topRankedSpot.id ? 'default' : 'pointer',
@@ -351,32 +354,79 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '4px 16px 24px 16px',
+            padding: '8px 14px 20px 14px',
             WebkitOverflowScrolling: 'touch',
+            overscrollBehavior: 'contain',
           }}
         >
-          {locations.length === 0 ? (
-            <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8', fontSize: '0.85rem' }}>
-              No parking locations match your active filter criteria.
-            </div>
-          ) : (
-            locations.map((loc) => (
+          {/* Active Facility Inspection Card (if selected) */}
+          {selectedLocation && (
+            <div style={{ marginBottom: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Sparkles size={14} color="#38BDF8" />
+                  <span style={{ fontSize: '0.725rem', fontWeight: 800, color: '#38BDF8', textTransform: 'uppercase' }}>
+                    Selected Target Facility
+                  </span>
+                </div>
+                <button
+                  onClick={() => setSelectedLocation(null)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#94A3B8',
+                    fontSize: '0.7rem',
+                    cursor: 'pointer',
+                    minHeight: '36px',
+                    padding: '0 4px',
+                  }}
+                >
+                  Clear Selection
+                </button>
+              </div>
+
               <ParkingFacilityCard
-                key={loc.id}
-                location={loc}
-                isSelected={selectedLocation?.id === loc.id}
-                isParkedHere={parkedLocation?.id === loc.id}
+                location={selectedLocation}
+                isSelected={true}
+                isParkedHere={parkedLocation?.id === selectedLocation.id}
                 showFullDetails={snapPoint === 'expanded'}
-                onSelect={(l) => {
-                  setSelectedLocation(l);
-                }}
-                onInspectCsi={(l) => onInspectCsi(l)}
-                onSafeWalk={(l) => onSafeWalk(l)}
-                onParkHere={(l) => handleParkHere(l)}
-                onReportHazard={(l) => onReportHazard(l)}
+                onSelect={(loc) => setSelectedLocation(loc)}
+                onParkHere={(loc) => handleParkHere(loc)}
+                onInspectCsi={onInspectCsi}
+                onSafeWalk={onSafeWalk}
+                onReportHazard={onReportHazard}
               />
-            ))
+            </div>
           )}
+
+          {/* List of Nearby Ranked Parking Facilities */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px' }}>
+              <span style={{ fontSize: '0.725rem', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>
+                All Facilities Ranked by CSI
+              </span>
+              <span style={{ fontSize: '0.7rem', color: '#64748B' }}>
+                Sorted: Highest Safety First
+              </span>
+            </div>
+
+            {locations
+              .filter((loc) => loc.id !== selectedLocation?.id)
+              .map((loc) => (
+                <ParkingFacilityCard
+                  key={loc.id}
+                  location={loc}
+                  isSelected={selectedLocation?.id === loc.id}
+                  isParkedHere={parkedLocation?.id === loc.id}
+                  showFullDetails={snapPoint === 'expanded'}
+                  onSelect={(l) => setSelectedLocation(l)}
+                  onParkHere={(l) => handleParkHere(l)}
+                  onInspectCsi={onInspectCsi}
+                  onSafeWalk={onSafeWalk}
+                  onReportHazard={onReportHazard}
+                />
+              ))}
+          </div>
         </div>
       )}
     </section>

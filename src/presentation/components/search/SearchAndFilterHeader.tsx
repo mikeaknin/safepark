@@ -8,15 +8,8 @@ import {
   SlidersHorizontal,
   MapPin,
   X,
-  ShieldCheck,
-  Building,
-  Video,
-  Sparkles,
-  RotateCcw,
-  FlaskConical,
   Loader2,
-  Navigation,
-  Compass
+  FlaskConical
 } from 'lucide-react';
 
 interface SearchAndFilterHeaderProps {
@@ -34,8 +27,6 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
     resetFilters,
     isFilterModalOpen,
     setIsFilterModalOpen,
-    showLightingHeatmap,
-    setShowLightingHeatmap,
     locations,
   } = useApp();
 
@@ -109,143 +100,145 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
         left: 0,
         right: 0,
         zIndex: 30,
-        paddingLeft: '12px',
-        paddingRight: '12px',
+        paddingLeft: '14px',
+        paddingRight: '14px',
         paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
         pointerEvents: 'none',
       }}
     >
       <div
         style={{
-          maxWidth: '1240px',
+          maxWidth: '800px',
           margin: '0 auto',
           pointerEvents: 'auto',
+          width: '100%',
         }}
       >
-        {/* Full-Width Floating Glassmorphic Search Card */}
+        {/* Single Apple Maps-Style Full-Width Floating Search Bar */}
         <div
           ref={searchContainerRef}
           style={{
             position: 'relative',
-            backgroundColor: 'rgba(15, 23, 42, 0.92)',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-            border: '1px solid rgba(51, 65, 85, 0.7)',
-            borderRadius: '16px',
-            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)',
-            padding: '6px 8px',
+            width: '100%',
           }}
         >
-          {/* Top Search & Filter Bar */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            {/* Search Input Box */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                backgroundColor: '#1E293B',
-                border: isOpen ? `2px solid ${SAFE_PARK_TOKENS.colors.brand.primary}` : '1px solid #334155',
-                borderRadius: '12px',
-                padding: '0 12px',
-                flex: 1,
-                minHeight: '44px',
-                transition: 'border 0.2s ease',
-              }}
-            >
-              {isLoading ? (
-                <Loader2
-                  size={18}
-                  color={SAFE_PARK_TOKENS.colors.brand.primary}
-                  style={{ marginRight: '8px', flexShrink: 0, animation: 'spin 1s linear infinite' }}
-                />
-              ) : (
-                <Search
-                  size={18}
-                  color={SAFE_PARK_TOKENS.colors.brand.primary}
-                  style={{ marginRight: '8px', flexShrink: 0 }}
-                />
-              )}
-
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setIsOpen(true);
-                }}
-                onFocus={() => setIsOpen(true)}
-                placeholder="Where to? (e.g. 772 Folsom, Mission & 16th, Oracle Park)..."
-                aria-label="Search destination for safe parking"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#FFFFFF',
-                  fontSize: '0.9rem',
-                  width: '100%',
-                  outline: 'none',
-                  fontFamily: 'inherit',
-                }}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              backgroundColor: 'rgba(15, 23, 42, 0.94)',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              border: isOpen
+                ? `1.5px solid ${SAFE_PARK_TOKENS.colors.brand.primary}`
+                : '1px solid rgba(51, 65, 85, 0.8)',
+              borderRadius: '16px',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.55)',
+              padding: '0 12px',
+              minHeight: '48px',
+              width: '100%',
+              transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+            }}
+          >
+            {/* Search / Loading Icon */}
+            {isLoading ? (
+              <Loader2
+                size={18}
+                color={SAFE_PARK_TOKENS.colors.brand.primary}
+                style={{ marginRight: '10px', flexShrink: 0, animation: 'spin 1s linear infinite' }}
               />
+            ) : (
+              <Search
+                size={18}
+                color={SAFE_PARK_TOKENS.colors.brand.primary}
+                style={{ marginRight: '10px', flexShrink: 0 }}
+              />
+            )}
 
-              {query && (
-                <button
-                  onClick={clearQuery}
-                  aria-label="Clear search input"
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#94A3B8',
-                    cursor: 'pointer',
-                    padding: '6px',
-                    minWidth: '44px',
-                    minHeight: '44px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
+            {/* Input Text Box */}
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setIsOpen(true);
+              }}
+              onFocus={() => setIsOpen(true)}
+              placeholder="Search SF address, street, or spot..."
+              aria-label="Search destination for safe parking"
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#FFFFFF',
+                fontSize: '0.925rem',
+                width: '100%',
+                outline: 'none',
+                fontFamily: 'inherit',
+                minHeight: '44px',
+              }}
+            />
 
-            {/* Filter Trigger Button */}
+            {/* Clear Button */}
+            {query && (
+              <button
+                onClick={clearQuery}
+                aria-label="Clear search input"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#94A3B8',
+                  cursor: 'pointer',
+                  padding: '4px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  minWidth: '36px',
+                  minHeight: '36px',
+                  marginRight: '2px',
+                }}
+              >
+                <X size={16} />
+              </button>
+            )}
+
+            {/* Discreet Embedded Filter Icon */}
             <button
               onClick={() => setIsFilterModalOpen(true)}
               aria-label="Open filter settings"
               style={{
+                position: 'relative',
+                background: activeFilterCount > 0 ? 'rgba(44, 115, 210, 0.2)' : 'transparent',
+                border: activeFilterCount > 0 ? '1px solid #2C73D2' : 'none',
+                color: activeFilterCount > 0 ? '#38BDF8' : '#94A3B8',
+                borderRadius: '8px',
+                padding: '6px',
+                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                gap: '6px',
-                backgroundColor: activeFilterCount > 0 ? SAFE_PARK_TOKENS.colors.brand.primary : '#1E293B',
-                color: '#FFFFFF',
-                border: activeFilterCount > 0 ? `1px solid ${SAFE_PARK_TOKENS.colors.brand.primary}` : '1px solid #334155',
-                borderRadius: '12px',
-                padding: '0 12px',
-                fontSize: '0.8rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                minHeight: '44px',
-                minWidth: '44px',
-                flexShrink: 0,
+                minWidth: '36px',
+                minHeight: '36px',
+                marginLeft: '4px',
               }}
+              title="Parking Safety Filters"
             >
-              <SlidersHorizontal size={16} />
-              <span className="hidden sm:inline">Filters</span>
+              <SlidersHorizontal size={17} />
               {activeFilterCount > 0 && (
                 <span
                   style={{
-                    backgroundColor: '#FFFFFF',
-                    color: SAFE_PARK_TOKENS.colors.brand.primary,
-                    width: '18px',
-                    height: '18px',
+                    position: 'absolute',
+                    top: '-2px',
+                    right: '-2px',
+                    backgroundColor: '#22C55E',
+                    color: '#0F172A',
+                    width: '14px',
+                    height: '14px',
                     borderRadius: '50%',
-                    display: 'inline-flex',
+                    display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '0.7rem',
-                    fontWeight: 700,
+                    fontSize: '0.6rem',
+                    fontWeight: 800,
                   }}
                 >
                   {activeFilterCount}
@@ -253,31 +246,29 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
               )}
             </button>
 
-            {/* Discrete Lab Tools FAB */}
+            {/* Discreet Embedded Lab Icon */}
             {onOpenLabTools && (
               <button
                 onClick={onOpenLabTools}
                 aria-label="Open Simulation Lab Tools"
                 style={{
+                  background: 'rgba(56, 189, 248, 0.12)',
+                  border: '1px solid rgba(56, 189, 248, 0.3)',
+                  color: '#38BDF8',
+                  borderRadius: '8px',
+                  padding: '4px 8px',
+                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center',
                   gap: '4px',
-                  backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                  color: '#38BDF8',
-                  border: '1px solid rgba(56, 189, 248, 0.4)',
-                  borderRadius: '12px',
-                  padding: '0 10px',
-                  fontSize: '0.8rem',
+                  minHeight: '36px',
+                  marginLeft: '4px',
+                  fontSize: '0.75rem',
                   fontWeight: 700,
-                  cursor: 'pointer',
-                  minHeight: '44px',
-                  minWidth: '44px',
-                  flexShrink: 0,
                 }}
-                title="Simulation & Diagnostic Tools"
+                title="Simulation Lab Diagnostics"
               >
-                <FlaskConical size={16} />
+                <FlaskConical size={15} />
                 <span>Lab</span>
               </button>
             )}
@@ -291,12 +282,14 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
                 top: 'calc(100% + 8px)',
                 left: 0,
                 right: 0,
-                backgroundColor: '#1E293B',
-                borderRadius: '14px',
+                backgroundColor: 'rgba(30, 41, 59, 0.98)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                borderRadius: '16px',
                 border: '1px solid #475569',
-                boxShadow: '0 12px 36px rgba(0, 0, 0, 0.65)',
+                boxShadow: '0 12px 36px rgba(0, 0, 0, 0.7)',
                 zIndex: 50,
-                maxHeight: '340px',
+                maxHeight: '320px',
                 overflowY: 'auto',
               }}
             >
@@ -403,133 +396,6 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
               })}
             </div>
           )}
-
-          {/* Quick Horizontal Scrollable Filter Row */}
-          <div
-            style={{
-              display: 'flex',
-              gap: '6px',
-              overflowX: 'auto',
-              paddingTop: '8px',
-              paddingBottom: '2px',
-              WebkitOverflowScrolling: 'touch',
-              scrollbarWidth: 'none',
-            }}
-          >
-            {/* Low Risk Only */}
-            <button
-              onClick={() => setFilters((prev) => ({ ...prev, minCsi: prev.minCsi === 75 ? 0 : 75 }))}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                backgroundColor: filters.minCsi === 75 ? 'rgba(34, 197, 94, 0.2)' : '#1E293B',
-                color: filters.minCsi === 75 ? '#22C55E' : '#94A3B8',
-                border: filters.minCsi === 75 ? '1px solid #22C55E' : '1px solid #334155',
-                borderRadius: '20px',
-                padding: '6px 12px',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                minHeight: '36px',
-              }}
-            >
-              <ShieldCheck size={13} />
-              <span>Low Risk (≥75)</span>
-            </button>
-
-            {/* Garages Only */}
-            <button
-              onClick={() => setFilters((prev) => ({ ...prev, coveredOrGarageOnly: !prev.coveredOrGarageOnly }))}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                backgroundColor: filters.coveredOrGarageOnly ? 'rgba(44, 115, 210, 0.2)' : '#1E293B',
-                color: filters.coveredOrGarageOnly ? '#38BDF8' : '#94A3B8',
-                border: filters.coveredOrGarageOnly ? '1px solid #2C73D2' : '1px solid #334155',
-                borderRadius: '20px',
-                padding: '6px 12px',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                minHeight: '36px',
-              }}
-            >
-              <Building size={13} />
-              <span>Garages Only</span>
-            </button>
-
-            {/* 24/7 CCTV */}
-            <button
-              onClick={() => setFilters((prev) => ({ ...prev, monitoredCctvOnly: !prev.monitoredCctvOnly }))}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                backgroundColor: filters.monitoredCctvOnly ? 'rgba(44, 115, 210, 0.2)' : '#1E293B',
-                color: filters.monitoredCctvOnly ? '#38BDF8' : '#94A3B8',
-                border: filters.monitoredCctvOnly ? '1px solid #2C73D2' : '1px solid #334155',
-                borderRadius: '20px',
-                padding: '6px 12px',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                minHeight: '36px',
-              }}
-            >
-              <Video size={13} />
-              <span>24/7 CCTV</span>
-            </button>
-
-            {/* Lighting Heatmap */}
-            <button
-              onClick={() => setShowLightingHeatmap(!showLightingHeatmap)}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '4px',
-                backgroundColor: showLightingHeatmap ? 'rgba(34, 197, 94, 0.2)' : '#1E293B',
-                color: showLightingHeatmap ? '#22C55E' : '#94A3B8',
-                border: showLightingHeatmap ? '1px solid #22C55E' : '1px solid #334155',
-                borderRadius: '20px',
-                padding: '6px 12px',
-                fontSize: '0.75rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                minHeight: '36px',
-              }}
-            >
-              <Sparkles size={13} />
-              <span>{showLightingHeatmap ? 'Lighting Grid: ON' : 'Lighting: OFF'}</span>
-            </button>
-
-            {/* Reset Filters */}
-            {activeFilterCount > 0 && (
-              <button
-                onClick={resetFilters}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#EF4444',
-                  fontSize: '0.75rem',
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  padding: '6px 10px',
-                  whiteSpace: 'nowrap',
-                  minHeight: '36px',
-                }}
-              >
-                <RotateCcw size={12} /> Clear
-              </button>
-            )}
-          </div>
         </div>
       </div>
 
