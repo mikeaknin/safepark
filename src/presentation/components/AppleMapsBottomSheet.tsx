@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { ParkingLocation } from '../../domain/models/ParkingLocation';
 import { ParkingFacilityCard } from './ParkingFacilityCard';
@@ -6,12 +6,16 @@ import { SAFE_PARK_TOKENS, getStatusStyle } from '../../theme/tokens';
 import {
   ChevronUp,
   ChevronDown,
-  Car,
+  Navigation,
   Footprints,
-  Sparkles,
+  ShieldCheck,
+  Building2,
+  Car,
+  Filter,
 } from 'lucide-react';
 
-export type SheetSnapPoint = 'peek' | 'mid' | 'expanded';
+export type SnapPoint = 'peek' | 'mid' | 'expanded';
+export type SheetSnapPoint = SnapPoint;
 
 interface AppleMapsBottomSheetProps {
   onInspectCsi: (loc: ParkingLocation) => void;
@@ -28,30 +32,31 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
     locations,
     selectedLocation,
     setSelectedLocation,
+    selectedDestination,
     parkedLocation,
     handleParkHere,
-    selectedDestination,
   } = useApp();
 
-  const [snapPoint, setSnapPoint] = useState<SheetSnapPoint>('peek');
-  const [dragOffset, setDragOffset] = useState<number>(0);
+  const [snapPoint, setSnapPoint] = useState<SnapPoint>('peek');
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [dragOffset, setDragOffset] = useState<number>(0);
 
+  const sheetRef = useRef<HTMLElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef<number | null>(null);
-  const touchStartTime = useRef<number | null>(null);
   const lastTouchY = useRef<number | null>(null);
+  const touchStartTime = useRef<number | null>(null);
 
-  // Height mappings based on window viewport
-  const getSnapHeight = useCallback((snap: SheetSnapPoint): number => {
-    const vh = typeof window !== 'undefined' ? window.innerHeight : 800;
+  // Height calculations based on viewport
+  const getSnapHeight = useCallback((snap: SnapPoint): number => {
+    const vh = window.innerHeight || 800;
     switch (snap) {
       case 'peek':
-        return 120;
+        return 120; // 120px fixed Peek height
       case 'mid':
-        return Math.round(vh * 0.50);
+        return Math.round(vh * 0.50); // 50vh Mid height
       case 'expanded':
-        return Math.round(vh * 0.85);
+        return Math.round(vh * 0.85); // 85vh Full height
     }
   }, []);
 
@@ -66,46 +71,38 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
     if (touchStartY.current === null) return;
     const currentY = e.touches[0].clientY;
     const deltaY = currentY - touchStartY.current;
-
-    // Prevent collision with scroll container when expanded
-    if (snapPoint === 'expanded' && scrollContainerRef.current) {
-      const scrollTop = scrollContainerRef.current.scrollTop;
-      if (scrollTop > 0 && deltaY > 0) {
-        return;
-      }
-    }
-
     lastTouchY.current = currentY;
-    setDragOffset(deltaY);
+
+    // Resistance dampening if dragging beyond top or bottom
+    if (snapPoint === 'expanded' && deltaY < 0) {
+      setDragOffset(deltaY * 0.2);
+    } else if (snapPoint === 'peek' && deltaY > 0) {
+      setDragOffset(deltaY * 0.2);
+    } else {
+      setDragOffset(deltaY);
+    }
   };
 
   const handleTouchEnd = () => {
-    if (touchStartY.current === null || lastTouchY.current === null || touchStartTime.current === null) {
-      touchStartY.current = null;
-      lastTouchY.current = null;
-      touchStartTime.current = null;
+    if (touchStartY.current === null || lastTouchY.current === null) {
       setIsDragging(false);
-      setDragOffset(0);
       return;
     }
 
-    const deltaY = lastTouchY.current - touchStartY.current;
-    const deltaTime = Math.max(1, Date.now() - touchStartTime.current);
-    const velocity = deltaY / deltaTime; // px/ms
+    const totalDeltaY = lastTouchY.current - touchStartY.current;
+    const duration = Date.now() - (touchStartTime.current || 0);
+    const velocity = totalDeltaY / (duration || 1); // px per ms
 
-    // Determine target snap based on velocity & displacement
-    if (velocity < -0.5 || deltaY < -150) {
-      if (snapPoint === 'peek') {
-        setSnapPoint('mid');
-      } else if (snapPoint === 'mid') {
-        setSnapPoint('expanded');
-      }
-    } else if (velocity > 0.5 || deltaY > 150) {
-      if (snapPoint === 'expanded') {
-        setSnapPoint('mid');
-      } else if (snapPoint === 'mid') {
-        setSnapPoint('peek');
-      }
+    const threshold = 60; // px threshold to trigger snap change
+
+    if (velocity < -0.4 || totalDeltaY < -threshold) {
+      // Swiped UP
+      if (snapPoint === 'peek') setSnapPoint('mid');
+      else if (snapPoint === 'mid') setSnapPoint('expanded');
+    } else if (velocity > 0.4 || totalDeltaY > threshold) {
+      // Swiped DOWN
+      if (snapPoint === 'expanded') setSnapPoint('mid');
+      else if (snapPoint === 'mid') setSnapPoint('peek');
     }
 
     touchStartY.current = null;
@@ -132,7 +129,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
       aria-label="Apple Maps Safe Parking Drawer"
       style={{
         position: 'fixed',
-        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)',
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
         left: 0,
         right: 0,
         height: `${currentHeight}px`,
@@ -172,7 +169,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
           flexShrink: 0,
         }}
       >
-        {/* iOS Standard Centered Drag Pill (Slate 300) */}
+        {/* Centered Drag Pill */}
         <div
           style={{
             width: '36px',
@@ -186,7 +183,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
         <div
           style={{
             width: '100%',
-            padding: '0 14px',
+            padding: '0 16px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
@@ -234,12 +231,12 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
       {snapPoint === 'peek' && topRankedSpot && activeSpotStatus && (
         <div
           style={{
-            padding: '2px 14px 8px 14px',
+            padding: '4px 16px 8px 16px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             flex: 1,
-            gap: '10px',
+            gap: '12px',
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -260,7 +257,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
               </span>
               <span
                 style={{
-                  fontSize: '0.9rem',
+                  fontSize: '0.925rem',
                   fontWeight: 800,
                   color: '#0F172A',
                   overflow: 'hidden',
@@ -273,7 +270,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
               </span>
             </div>
             <div style={{ fontSize: '0.75rem', color: '#64748B', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'nowrap' }}>
-              <span style={{ fontWeight: 800, color: '#2563EB' }}>${topRankedSpot.hourlyRate}/hr</span>
+              <span style={{ fontWeight: 800, color: '#2563EB' }}>${topRankedSpot.hourlyRate.toFixed(2)}/hr</span>
               <span>•</span>
               <span>{topRankedSpot.availableSpaces} open</span>
               {currentLitRoute && (
@@ -285,7 +282,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -297,7 +294,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 color: '#1E293B',
                 border: '1px solid #CBD5E1',
                 borderRadius: '10px',
-                padding: '6px 10px',
+                padding: '8px 12px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
@@ -323,7 +320,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 color: '#FFFFFF',
                 border: 'none',
                 borderRadius: '10px',
-                padding: '6px 14px',
+                padding: '8px 14px',
                 fontSize: '0.775rem',
                 fontWeight: 800,
                 cursor: parkedLocation?.id === topRankedSpot.id ? 'default' : 'pointer',
@@ -348,80 +345,29 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '10px 14px 20px 14px',
-            overscrollBehavior: 'contain',
-            WebkitOverflowScrolling: 'touch',
+            padding: '12px 16px 24px 16px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+            backgroundColor: '#F8FAFC',
           }}
         >
-          {/* Active Facility Inspection Card (if selected) */}
-          {selectedLocation && (
-            <div style={{ marginBottom: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Sparkles size={14} color="#2563EB" />
-                  <span style={{ fontSize: '0.725rem', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase' }}>
-                    Selected Target Facility
-                  </span>
-                </div>
-                <button
-                  onClick={() => setSelectedLocation(null)}
-                  style={{
-                    background: 'none',
-                    border: 'none',
-                    color: '#64748B',
-                    fontSize: '0.7rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    minHeight: '36px',
-                    padding: '0 4px',
-                  }}
-                >
-                  Clear Selection
-                </button>
-              </div>
-
-              <ParkingFacilityCard
-                location={selectedLocation}
-                isSelected={true}
-                isParkedHere={parkedLocation?.id === selectedLocation.id}
-                showFullDetails={snapPoint === 'expanded'}
-                onSelect={(loc) => setSelectedLocation(loc)}
-                onParkHere={(loc) => handleParkHere(loc)}
-                onInspectCsi={onInspectCsi}
-                onSafeWalk={onSafeWalk}
-                onReportHazard={onReportHazard}
-              />
-            </div>
-          )}
-
-          {/* List of Nearby Ranked Parking Facilities */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px' }}>
-              <span style={{ fontSize: '0.725rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>
-                All Facilities Ranked by CSI
-              </span>
-              <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>
-                Sorted: Highest Safety First
-              </span>
-            </div>
-
-            {locations
-              .filter((loc) => loc.id !== selectedLocation?.id)
-              .map((loc) => (
-                <ParkingFacilityCard
-                  key={loc.id}
-                  location={loc}
-                  isSelected={selectedLocation?.id === loc.id}
-                  isParkedHere={parkedLocation?.id === loc.id}
-                  showFullDetails={snapPoint === 'expanded'}
-                  onSelect={(l) => setSelectedLocation(l)}
-                  onParkHere={(l) => handleParkHere(l)}
-                  onInspectCsi={onInspectCsi}
-                  onSafeWalk={onSafeWalk}
-                  onReportHazard={onReportHazard}
-                />
-              ))}
-          </div>
+          {locations.map((loc) => (
+            <ParkingFacilityCard
+              key={loc.id}
+              location={loc}
+              isSelected={selectedLocation?.id === loc.id}
+              isParkedHere={parkedLocation?.id === loc.id}
+              showFullDetails={snapPoint === 'expanded'}
+              onSelect={(l) => {
+                setSelectedLocation(l);
+              }}
+              onInspectCsi={onInspectCsi}
+              onSafeWalk={onSafeWalk}
+              onParkHere={handleParkHere}
+              onReportHazard={onReportHazard}
+            />
+          ))}
         </div>
       )}
     </section>

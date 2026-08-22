@@ -12,7 +12,7 @@ import { PushNotificationService } from '../../domain/services/PushNotificationS
 import { GeocodingAdapter } from '../../data/adapters/GeocodingAdapter';
 import { DynamicParkingGenerator } from '../../domain/services/DynamicParkingGenerator';
 
-export type ActiveAppView = 'driver' | 'carplay' | 'b2b_portal' | 'enterprise_api' | 'user_profile' | 'admin_ops';
+export type ActiveAppView = 'driver' | 'safe_garages' | 'profile' | 'carplay' | 'b2b_portal' | 'enterprise_api' | 'user_profile' | 'admin_ops';
 export type MotionState = 'driving' | 'parked' | 'walking';
 
 export interface SearchDestination {

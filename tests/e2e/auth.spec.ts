@@ -7,7 +7,7 @@ test.describe('Authentication & Driver Profile Flow', () => {
 
   test('should navigate to Driver Profile tab and show default driver account', async ({ page }) => {
     // Navigate to Driver Profile view
-    await page.click('[data-testid="tab-user_profile"]');
+    await page.click('[data-testid="tab-profile"]');
 
     // Verify user profile details
     await expect(page.locator('text=Tesla Model Y / Dark Silver')).toBeVisible();
@@ -15,7 +15,7 @@ test.describe('Authentication & Driver Profile Flow', () => {
   });
 
   test('should support OAuth Sign-In and persist session in LocalStorage', async ({ page }) => {
-    await page.click('[data-testid="tab-user_profile"]');
+    await page.click('[data-testid="tab-profile"]');
 
     // Click Apple Auth button
     await page.click('button:has-text("Apple Auth")');

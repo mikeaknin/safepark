@@ -35,6 +35,7 @@ export const SearchAndFilterHeader: React.FC = () => {
         address: loc.formattedAddress,
         coordinates: loc.coordinates,
       });
+      setIsOpen(false);
     },
     {
       debounceMs: 300,
@@ -43,15 +44,19 @@ export const SearchAndFilterHeader: React.FC = () => {
     }
   );
 
-  // Close dropdown on outside click
+  // Close dropdown on outside click or touch (e.g. tapping map)
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent | TouchEvent) => {
       if (searchContainerRef.current && !searchContainerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
   }, [setIsOpen]);
 
   const getPlaceBadge = (loc: GeocodedLocation) => {
@@ -105,7 +110,7 @@ export const SearchAndFilterHeader: React.FC = () => {
             style={{
               display: 'flex',
               alignItems: 'center',
-              backgroundColor: 'rgba(255, 255, 255, 0.96)',
+              backgroundColor: 'rgba(255, 255, 255, 0.98)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
               border: isOpen
@@ -134,7 +139,7 @@ export const SearchAndFilterHeader: React.FC = () => {
               />
             )}
 
-            {/* Input Text Box (Crisp Slate 900 Text with Slate 400 Placeholder) */}
+            {/* Input Text Box */}
             <input
               type="text"
               value={query}
@@ -143,7 +148,7 @@ export const SearchAndFilterHeader: React.FC = () => {
                 setIsOpen(true);
               }}
               onFocus={() => setIsOpen(true)}
-              placeholder="Search SF address, neighborhood, or landmark..."
+              placeholder="Search SF address, neighborhood, or spot..."
               aria-label="Search destination for safe parking"
               style={{
                 background: 'transparent',
@@ -161,7 +166,10 @@ export const SearchAndFilterHeader: React.FC = () => {
             {/* Clear Button */}
             {query && (
               <button
-                onClick={clearQuery}
+                onClick={() => {
+                  clearQuery();
+                  setIsOpen(false);
+                }}
                 aria-label="Clear search input"
                 style={{
                   background: 'none',
@@ -181,7 +189,7 @@ export const SearchAndFilterHeader: React.FC = () => {
             )}
           </div>
 
-          {/* Autocomplete Dropdown List (Daylight Surface) */}
+          {/* Autocomplete Dropdown List */}
           {isOpen && suggestions.length > 0 && (
             <div
               style={{
@@ -222,7 +230,10 @@ export const SearchAndFilterHeader: React.FC = () => {
                 return (
                   <div
                     key={loc.id}
-                    onClick={() => selectSuggestion(loc)}
+                    onClick={() => {
+                      selectSuggestion(loc);
+                      setIsOpen(false);
+                    }}
                     style={{
                       display: 'flex',
                       alignItems: 'center',
@@ -300,18 +311,18 @@ export const SearchAndFilterHeader: React.FC = () => {
                           {badge.label}
                         </span>
                       </div>
-                      <div
+                      <p
                         style={{
                           fontSize: '0.75rem',
                           color: '#64748B',
+                          marginTop: '2px',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',
-                          marginTop: '2px',
                         }}
                       >
                         {loc.formattedAddress}
-                      </div>
+                      </p>
                     </div>
                   </div>
                 );

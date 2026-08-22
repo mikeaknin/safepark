@@ -11,11 +11,8 @@ import { SafeWalkModal } from './components/navigation/SafeWalkModal';
 import { ExitAlertModal } from './components/triggers/ExitAlertModal';
 import { OnboardingModal } from './components/onboarding/OnboardingModal';
 import { StripeCheckoutModal } from './components/monetization/StripeCheckoutModal';
-import { GarageOperatorPortal } from './views/GarageOperatorPortal';
-import { CarPlayView } from './views/CarPlayView';
-import { EnterpriseApiDashboard } from './views/EnterpriseApiDashboard';
+import { SafeGaragesView } from './views/SafeGaragesView';
 import { UserProfileView } from './views/UserProfileView';
-import { AdminOpsDashboard } from './views/AdminOpsDashboard';
 import { SafeParkLogo } from './components/SafeParkLogo';
 
 export const App: React.FC = () => {
@@ -50,7 +47,7 @@ export const App: React.FC = () => {
         flexDirection: 'column',
       }}
     >
-      {/* Dynamic Toast Feedback Overlay (Daylight White Surface) */}
+      {/* Dynamic Toast Feedback Overlay */}
       {toastMessage && (
         <aside
           role="status"
@@ -82,16 +79,13 @@ export const App: React.FC = () => {
       {/* Subterranean Garage Concrete Shield Banner */}
       <SubterraneanOfflineBanner />
 
-      {/* Primary Consumer Driver Experience (100% Fullscreen Map Viewport) */}
+      {/* 1. Explore Fullscreen Map Viewport */}
       {currentView === 'driver' && (
         <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
-          {/* 100% Mobile Fullscreen Vector Leaflet/Canvas Base */}
           <InteractiveMapCanvas isFullscreen={true} />
 
-          {/* Clean Floating Apple Maps Search Header */}
           <SearchAndFilterHeader />
 
-          {/* Tri-Modal Apple Maps Bottom Sheet */}
           <AppleMapsBottomSheet
             onInspectCsi={(loc) => setInspectingCsiLocation(loc)}
             onSafeWalk={(loc) => setSafeWalkLocation(loc)}
@@ -100,19 +94,18 @@ export const App: React.FC = () => {
         </div>
       )}
 
-      {/* Secondary Desktop / Multi-Sided Navigation Views */}
+      {/* 2. Secondary Consumer Views (Safe Garages & Profile) */}
       {currentView !== 'driver' && (
         <div
           style={{
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 70px)',
             overflowY: 'auto',
             backgroundColor: '#F8FAFC',
           }}
         >
-          {/* Top Bar for Secondary Views */}
+          {/* Mobile Top Header */}
           <header
             style={{
               backgroundColor: '#FFFFFF',
@@ -133,17 +126,14 @@ export const App: React.FC = () => {
             <SafeParkLogo size={32} showText={true} />
           </header>
 
-          <main style={{ flex: 1, maxWidth: '1240px', width: '100%', margin: '0 auto', padding: '16px' }}>
-            {currentView === 'carplay' && <CarPlayView />}
-            {currentView === 'b2b_portal' && <GarageOperatorPortal />}
-            {currentView === 'enterprise_api' && <EnterpriseApiDashboard />}
-            {currentView === 'user_profile' && <UserProfileView />}
-            {currentView === 'admin_ops' && <AdminOpsDashboard />}
+          <main style={{ flex: 1, width: '100%', margin: '0 auto' }}>
+            {(currentView === 'safe_garages' || currentView === 'b2b_portal') && <SafeGaragesView />}
+            {(currentView === 'profile' || currentView === 'user_profile') && <UserProfileView />}
           </main>
         </div>
       )}
 
-      {/* iOS-Style Fixed Bottom Tab Navigation Bar */}
+      {/* Fixed Bottom Tab Navigation Bar */}
       <BottomNavBar />
 
       {/* Modals & Dialogs */}

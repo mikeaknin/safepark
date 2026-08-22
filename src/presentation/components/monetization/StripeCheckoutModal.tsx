@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SAFE_PARK_TOKENS } from '../../../theme/tokens';
 import { B2C_PLANS, StripePaymentService } from '../../../domain/services/StripePaymentService';
+import { AuthService } from '../../../domain/services/AuthService';
 import { useApp } from '../../context/AppContext';
 import {
   CreditCard,
@@ -43,16 +44,9 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
 
     try {
       const result = await StripePaymentService.processB2CCheckout(selectedPlan);
+      const upgradedUser = await AuthService.upgradeSubscription(selectedPlan);
       setIsProcessing(false);
-      setCurrentUser({
-        id: 'usr-sf-8821',
-        email: 'alex.rivera@example.com',
-        fullName: 'Alex Rivera',
-        role: 'driver',
-        subscriptionTier: 'premium_monthly',
-        authProvider: 'apple',
-        accessToken: 'jwt_premium_token_2026',
-      });
+      setCurrentUser(upgradedUser);
       showToast(`🎉 ${result.message}`);
       onClose();
     } catch (err) {

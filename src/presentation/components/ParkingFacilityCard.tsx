@@ -10,6 +10,7 @@ import {
   Car,
   CheckCircle2,
   AlertTriangle,
+  Navigation,
 } from 'lucide-react';
 
 export interface ParkingFacilityCardProps {
@@ -44,17 +45,17 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
       onClick={() => onSelect(location)}
       style={{
         backgroundColor: '#FFFFFF',
-        borderRadius: '16px',
+        borderRadius: '18px',
         border: isParkedHere
           ? '2px solid #15803D'
           : isSelected
           ? '2px solid #2563EB'
           : '1px solid #E2E8F0',
         boxShadow: isParkedHere
-          ? '0 4px 16px rgba(21, 128, 61, 0.15)'
+          ? '0 4px 16px rgba(21, 128, 61, 0.12)'
           : isSelected
-          ? '0 4px 16px rgba(37, 99, 235, 0.15)'
-          : '0 2px 10px rgba(15, 23, 42, 0.05)',
+          ? '0 4px 16px rgba(37, 99, 235, 0.12)'
+          : '0 2px 10px rgba(15, 23, 42, 0.04)',
         padding: '16px',
         marginBottom: '12px',
         cursor: 'pointer',
@@ -89,8 +90,8 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
       )}
 
       {/* Header Row: Title & CSI Badge */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-        <div style={{ flex: 1, minWidth: 0, paddingRight: '8px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', gap: '10px' }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
           <h3
             style={{
               fontSize: '1rem',
@@ -109,7 +110,9 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
               </span>
             )}
           </h3>
-          <p style={{ fontSize: '0.8rem', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{location.address}</p>
+          <p style={{ fontSize: '0.775rem', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {location.address}
+          </p>
         </div>
 
         <Badge score={location.csi.totalScore} size="md" />
@@ -120,14 +123,14 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '10px',
+          gap: '8px',
           fontSize: '0.775rem',
           color: '#475569',
           marginBottom: '12px',
           flexWrap: 'wrap',
         }}
       >
-        <span style={{ fontWeight: 800, color: '#2563EB' }}>${location.hourlyRate}/hr</span>
+        <span style={{ fontWeight: 800, color: '#2563EB', fontSize: '0.85rem' }}>${location.hourlyRate.toFixed(2)}/hr</span>
         <span>•</span>
         <span style={{ fontWeight: 600 }}>{location.availableSpaces} spots open</span>
         <span>•</span>
@@ -144,7 +147,7 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
               backgroundColor: '#EFF6FF',
               padding: '1px 6px',
               borderRadius: '4px',
-              fontSize: '0.7rem',
+              fontSize: '0.675rem',
               fontWeight: 700,
             }}
           >
@@ -164,24 +167,24 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
             border: '1px solid #E2E8F0',
           }}
         >
-          <div style={{ fontSize: '0.725rem', fontWeight: 800, color: '#64748B', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+          <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748B', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             CSI Sub-Score Breakdown
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', textAlign: 'center' }}>
             <div>
-              <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 600 }}>Crime Index</div>
+              <div style={{ fontSize: '0.675rem', color: '#64748B', fontWeight: 600 }}>Crime Index</div>
               <div style={{ fontSize: '0.95rem', fontWeight: 800, color: location.csi.components.crimeScore?.rawScore >= 75 ? '#15803D' : '#B45309' }}>
                 {Math.round(location.csi.components.crimeScore?.rawScore || 0)}/100
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 600 }}>Lighting Grid</div>
+              <div style={{ fontSize: '0.675rem', color: '#64748B', fontWeight: 600 }}>Lighting Grid</div>
               <div style={{ fontSize: '0.95rem', fontWeight: 800, color: location.csi.components.lightingScore?.rawScore >= 75 ? '#15803D' : '#B45309' }}>
                 {Math.round(location.csi.components.lightingScore?.rawScore || 0)}/100
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 600 }}>Infrastructure</div>
+              <div style={{ fontSize: '0.675rem', color: '#64748B', fontWeight: 600 }}>Physical Sec</div>
               <div style={{ fontSize: '0.95rem', fontWeight: 800, color: location.csi.components.infrastructureScore?.rawScore >= 75 ? '#15803D' : '#B45309' }}>
                 {Math.round(location.csi.components.infrastructureScore?.rawScore || 0)}/100
               </div>
@@ -201,7 +204,7 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
             }}
             aria-label={`View on foot return walk route for ${location.name}`}
             style={{
-              flex: '1 1 120px',
+              flex: '1 1 110px',
               backgroundColor: '#F1F5F9',
               color: '#1E293B',
               border: '1px solid #CBD5E1',
@@ -212,52 +215,48 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
-              minHeight: '44px',
+              minHeight: '40px',
               fontSize: '0.775rem',
               fontWeight: 700,
               transition: 'background-color 0.15s ease',
             }}
           >
-            <Footprints size={15} color="#15803D" />
-            <span>Walk Route</span>
-            {litRoute && (
-              <span style={{ fontSize: '0.7rem', color: '#15803D', fontWeight: 700 }}>
-                ({litRoute.estimatedWalkingMinutes}m)
-              </span>
-            )}
+            <Footprints size={14} color="#15803D" />
+            <span>Safe Walk {litRoute ? `(${litRoute.estimatedWalkingMinutes}m)` : ''}</span>
           </button>
         )}
 
-        {/* Inspect CSI Details */}
+        {/* CSI Score Inspector */}
         {onInspectCsi && (
           <button
             onClick={(e) => {
               e.stopPropagation();
               onInspectCsi(location);
             }}
-            aria-label={`Inspect CSI Score Breakdown for ${location.name}`}
+            aria-label={`Inspect CSI Score breakdown for ${location.name}`}
             style={{
-              backgroundColor: '#F1F5F9',
+              backgroundColor: '#FFFFFF',
               color: '#475569',
               border: '1px solid #CBD5E1',
               borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
               padding: '8px 12px',
-              fontSize: '0.775rem',
-              fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '4px',
-              minHeight: '44px',
+              minHeight: '40px',
+              fontSize: '0.775rem',
+              fontWeight: 700,
+              transition: 'all 0.15s ease',
             }}
           >
-            <Info size={15} color="#2563EB" />
-            <span>Details</span>
+            <Info size={14} color="#2563EB" />
+            <span>Why CSI {location.csi.totalScore}?</span>
           </button>
         )}
 
-        {/* Park Here Primary CTA */}
+        {/* Primary Action: Park Here */}
         {onParkHere && (
           <button
             onClick={(e) => {
@@ -265,31 +264,32 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
               onParkHere(location);
             }}
             disabled={isParkedHere}
+            aria-label={`Park vehicle at ${location.name}`}
             style={{
-              flex: '1 1 100px',
+              flex: '1 1 120px',
               backgroundColor: isParkedHere ? '#15803D' : '#2563EB',
               color: '#FFFFFF',
               border: 'none',
               borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
               padding: '8px 14px',
-              fontSize: '0.8rem',
-              fontWeight: 800,
               cursor: isParkedHere ? 'default' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
-              minHeight: '44px',
-              boxShadow: isParkedHere ? '0 4px 12px rgba(21, 128, 61, 0.25)' : '0 4px 12px rgba(37, 99, 235, 0.25)',
-              transition: 'background-color 0.15s ease',
+              minHeight: '40px',
+              fontSize: '0.8rem',
+              fontWeight: 800,
+              boxShadow: isParkedHere ? '0 4px 12px rgba(21, 128, 61, 0.3)' : '0 4px 12px rgba(37, 99, 235, 0.3)',
+              transition: 'all 0.15s ease',
             }}
           >
             <Car size={15} />
-            <span>{isParkedHere ? 'Parked Here' : 'Park Here'}</span>
+            <span>{isParkedHere ? 'Parked Here ✓' : 'Park Here'}</span>
           </button>
         )}
 
-        {/* Report Hazard */}
+        {/* Report Hazard button */}
         {onReportHazard && (
           <button
             onClick={(e) => {
@@ -298,21 +298,21 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
             }}
             aria-label={`Report street hazard near ${location.name}`}
             style={{
-              backgroundColor: '#FFFFFF',
+              backgroundColor: 'transparent',
               color: '#64748B',
-              border: '1px solid #CBD5E1',
+              border: 'none',
               borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-              padding: '8px',
+              padding: '6px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              minHeight: '44px',
-              minWidth: '44px',
+              minWidth: '36px',
+              minHeight: '40px',
             }}
-            title="Report Physical Hazard"
+            title="Report physical street hazard"
           >
-            <AlertTriangle size={15} color="#D97706" />
+            <AlertTriangle size={15} color="#B45309" />
           </button>
         )}
       </div>

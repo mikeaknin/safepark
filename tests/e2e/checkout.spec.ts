@@ -1,13 +1,13 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Stripe Payment & SaaS Checkout Flows', () => {
+test.describe('Stripe Payment & Consumer Safe Garages Flows', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
   });
 
   test('should open B2C Stripe Checkout modal and upgrade driver to Premium tier', async ({ page }) => {
     // Navigate to Driver Profile
-    await page.click('[data-testid="tab-user_profile"]');
+    await page.click('[data-testid="tab-profile"]');
 
     // Click Upgrade to Premium
     await page.click('button:has-text("Upgrade to Premium ($4.99/mo)")');
@@ -24,24 +24,19 @@ test.describe('Stripe Payment & SaaS Checkout Flows', () => {
     await expect(page.locator('text=Unlimited Crime Alerts Active')).toBeVisible();
   });
 
-  test('should execute B2B Garage Certification audit and Stripe SaaS subscription', async ({ page }) => {
-    // Navigate to B2B Operator View
-    await page.click('[data-testid="tab-b2b_portal"]');
+  test('should navigate to Safe Garages tab and show vetted high-CSI covered facilities', async ({ page }) => {
+    // Navigate to Safe Garages View
+    await page.click('[data-testid="tab-safe_garages"]');
 
-    // Verify Operator Audit Portal renders
-    await expect(page.locator('main h1')).toContainText('SafePark Certified™ Facility Portal');
+    // Verify Safe Garages view renders
+    await expect(page.locator('h1:has-text("Vetted Safe Garages")')).toBeVisible();
+    await expect(page.locator('text=Gated & Secured').first()).toBeVisible();
+    await expect(page.locator('text=24/7 CCTV Monitoring').first()).toBeVisible();
 
-    // Run audit calculation
-    await page.click('button:has-text("Calculate SafePark Certification Tier")');
+    // Click Navigate on Map
+    await page.locator('button:has-text("Navigate on Map")').first().click();
 
-    // Verify Audit score and boost calculated
-    await expect(page.locator('text=Audit & Rating Results')).toBeVisible();
-    await expect(page.locator('text=SafePark Platinum Certified')).toBeVisible();
-
-    // Click SaaS subscription activation
-    await page.click('button:has-text("Subscribe to SaaS Certification")');
-
-    // Apply to live consumer driver map
-    await page.click('button:has-text("Apply Verified Certification to Live Driver Map")');
+    // Verify returned to map view
+    await expect(page.locator('input[type="text"]').first()).toBeVisible();
   });
 });

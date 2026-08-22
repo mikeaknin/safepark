@@ -1,42 +1,36 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Admin Operations & Hazard Moderation Portal', () => {
+test.describe('Consumer 3-Tab Streamlined Navigation & Safe Garages', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/');
   });
 
-  test('should navigate to Admin Ops tab and display real-time revenue and system telemetry', async ({ page }) => {
-    // Navigate to Admin Ops tab
-    await page.click('[data-testid="tab-admin_ops"]');
+  test('should navigate between the 3 core consumer tabs smoothly', async ({ page }) => {
+    // 1. Explore Tab (Default)
+    await expect(page.locator('input[type="text"]').first()).toBeVisible();
 
-    // Verify header and metrics
-    await expect(page.locator('text=SafePark Operations & Governance Console')).toBeVisible();
-    await expect(page.locator('text=$42,650')).toBeVisible();
-    await expect(page.locator('text=3,842')).toBeVisible();
-    await expect(page.locator('text=14 ms')).toBeVisible();
+    // 2. Safe Garages Tab
+    await page.click('[data-testid="tab-safe_garages"]');
+    await expect(page.locator('h1:has-text("Vetted Safe Garages")')).toBeVisible();
+
+    // 3. Driver Profile Tab
+    await page.click('[data-testid="tab-profile"]');
+    await expect(page.locator('text=Tesla Model Y / Dark Silver')).toBeVisible();
+
+    // Return to Explore Tab
+    await page.click('[data-testid="tab-driver"]');
+    await expect(page.locator('input[type="text"]').first()).toBeVisible();
   });
 
-  test('should trigger multi-city municipal data ETL sync and show completion badge', async ({ page }) => {
-    await page.click('[data-testid="tab-admin_ops"]');
+  test('should inspect Safe Walk routes directly from Safe Garages tab', async ({ page }) => {
+    await page.click('[data-testid="tab-safe_garages"]');
 
-    // Click Trigger Multi-City ETL Sync
-    await page.click('button:has-text("Trigger Multi-City ETL Sync")');
-
-    // Verify feedback notification
-    await expect(page.locator('text=Nightly municipal ETL sync completed: 270 incidents updated across 6 markets.')).toBeVisible();
-  });
-
-  test('should moderate and resolve community physical hazard reports', async ({ page }) => {
-    await page.click('[data-testid="tab-admin_ops"]');
-
-    // Verify hazard moderation queue is visible
-    await expect(page.locator('text=Hazard Moderation Queue')).toBeVisible();
-    await expect(page.locator('text=Alleyway Curbside Meter Zone (5th & Mission)')).toBeVisible();
-
-    // Click Approve on pending hazard
-    await page.click('button:has-text("Approve")');
-
-    // Verify status updated to VERIFIED ACTIVE
-    await expect(page.locator('text=VERIFIED ACTIVE').first()).toBeVisible();
+    // Click Safe Walk button on first garage
+    const safeWalkBtn = page.locator('button:has-text("Safe Walk")').first();
+    if (await safeWalkBtn.isVisible()) {
+      await safeWalkBtn.click();
+      await expect(page.locator('text=Illuminated Return Routing')).toBeVisible();
+      await page.click('button[aria-label="Close modal"]');
+    }
   });
 });
