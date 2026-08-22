@@ -236,21 +236,20 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
           </button>
         </div>
       </div>
-
       {/* Peek Mode (120px fixed height): Clean Unclipped Spot Overview Card */}
       {snapPoint === 'peek' && topRankedSpot && activeSpotStatus && (
         <div
           style={{
-            padding: '4px 14px 10px 14px',
+            padding: '2px 14px 8px 14px',
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
             flex: 1,
-            gap: '8px',
+            gap: '10px',
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
               <span
                 style={{
                   backgroundColor: `${activeSpotStatus.hex}22`,
@@ -270,18 +269,19 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                   fontSize: '0.875rem',
                   fontWeight: 700,
                   color: '#FFFFFF',
-                  whiteSpace: 'nowrap',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
                 }}
+                title={topRankedSpot.name}
               >
                 {topRankedSpot.name}
               </span>
             </div>
-            <div style={{ fontSize: '0.725rem', color: '#94A3B8', marginTop: '2px', display: 'flex', gap: '6px', alignItems: 'center', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              <span style={{ fontWeight: 700, color: '#38BDF8' }}>${topRankedSpot.hourlyRate}/hr</span>
+            <div style={{ fontSize: '0.75rem', color: '#94A3B8', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'nowrap' }}>
+              <span style={{ fontWeight: 800, color: '#38BDF8' }}>${topRankedSpot.hourlyRate}/hr</span>
               <span>•</span>
-              <span>{topRankedSpot.availableSpaces} spaces</span>
+              <span>{topRankedSpot.availableSpaces} open</span>
               {currentLitRoute && (
                 <>
                   <span>•</span>
@@ -297,26 +297,24 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 e.stopPropagation();
                 onSafeWalk(topRankedSpot);
               }}
-              aria-label={`View on foot refined walk return route for ${topRankedSpot.name}`}
+              aria-label={`View illuminated return walk for ${topRankedSpot.name}`}
               style={{
-                backgroundColor: '#0F172A',
-                color: '#38BDF8',
-                border: '1px solid #22C55E',
+                backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                color: '#22C55E',
+                border: '1px solid rgba(34, 197, 94, 0.4)',
                 borderRadius: '8px',
-                padding: '4px 8px',
+                padding: '6px 10px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px',
-                minHeight: '44px',
-                textAlign: 'left',
+                minHeight: '40px',
+                fontSize: '0.75rem',
+                fontWeight: 700,
               }}
             >
-              <Footprints size={15} color="#22C55E" style={{ flexShrink: 0 }} />
-              <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#FFFFFF' }}>On Foot</span>
-                <span style={{ fontSize: '0.575rem', color: '#94A3B8', fontWeight: 500 }}>Refined Walk</span>
-              </div>
+              <Footprints size={14} />
+              <span>Route</span>
             </button>
 
             <button
@@ -330,17 +328,18 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 color: parkedLocation?.id === topRankedSpot.id ? '#0F172A' : '#FFFFFF',
                 border: 'none',
                 borderRadius: '8px',
-                padding: '6px 12px',
+                padding: '6px 14px',
                 fontSize: '0.775rem',
-                fontWeight: 700,
+                fontWeight: 800,
                 cursor: parkedLocation?.id === topRankedSpot.id ? 'default' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '4px',
-                minHeight: '44px',
+                gap: '5px',
+                minHeight: '40px',
+                boxShadow: parkedLocation?.id === topRankedSpot.id ? SAFE_PARK_TOKENS.shadows.glowGreen : SAFE_PARK_TOKENS.shadows.glowBlue,
               }}
             >
-              <Car size={15} />
+              <Car size={14} />
               <span>{parkedLocation?.id === topRankedSpot.id ? 'Parked' : 'Park Here'}</span>
             </button>
           </div>

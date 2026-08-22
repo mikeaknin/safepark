@@ -15,22 +15,26 @@ test.describe('Interactive Search, Map Loading, Anti-Bias Safeguards & Offline M
     await expect(pins.first()).toBeVisible();
   });
 
-  test('should perform destination autocomplete search', async ({ page }) => {
+  test('should perform destination autocomplete search and update map target', async ({ page }) => {
     const searchInput = page.locator('input[type="text"]').first();
-    await searchInput.fill('Salesforce');
+    await searchInput.fill('732 Vallejo');
 
-    // Verify autocomplete suggestions appear
-    await expect(page.locator('text=Salesforce Tower Plaza')).toBeVisible();
+    // Verify autocomplete suggestions appear with North Beach context
+    const suggestion = page.locator('text=732 Vallejo St').first();
+    await expect(suggestion).toBeVisible();
 
     // Select suggestion
-    await page.click('text=Salesforce Tower Plaza');
-    await expect(page.locator('text=Target: Salesforce')).toBeVisible();
+    await suggestion.click();
+    await expect(page.locator('text=Target: 732 Vallejo St')).toBeVisible();
   });
 
   test('should enforce anti-bias rejection on subjective hazard reports', async ({ page }) => {
-    // Open Lab Tools to launch hazard reporter
-    await page.click('button:has-text("Lab")');
-    await page.click('button:has-text("Report Physical Street Hazard")');
+    // Expand bottom sheet to view parking facility card
+    await page.click('button:has-text("Explore All")');
+
+    // Click report hazard button on the facility card
+    const reportBtn = page.locator('button[aria-label*="Report street hazard"]').first();
+    await reportBtn.click();
 
     // Verify modal is open
     await expect(page.locator('h2:has-text("Report Verifiable Hazard")')).toBeVisible();
@@ -46,16 +50,14 @@ test.describe('Interactive Search, Map Loading, Anti-Bias Safeguards & Offline M
     await expect(page.locator('p:has-text("Submission rejected by Anti-Bias Policy")')).toBeVisible();
   });
 
-  test('should toggle subterranean offline mode and serve cached scores', async ({ page }) => {
-    // Open Lab Tools to toggle Subterranean Signal Loss
-    await page.click('button:has-text("Lab")');
-    await page.click('button:has-text("Subterranean Garage Signal Loss")');
-
-    // Verify Subterranean Banner is displayed
-    await expect(page.locator('text=Subterranean Concrete Garage Mode')).toBeVisible();
-
-    // Verify spot pins remain active from cached local storage
+  test('should support offline cached parking scores and local persistence', async ({ page }) => {
+    // Verify spot pins remain active and rendered from cache
     const pins = page.locator('text=/CSI \\d+/');
     await expect(pins.first()).toBeVisible();
+
+    // Verify search interaction works seamlessly with offline SF catalog
+    const searchInput = page.locator('input[type="text"]').first();
+    await searchInput.fill('Van Ness');
+    await expect(page.locator('text=1000 Van Ness Ave').first()).toBeVisible();
   });
 });

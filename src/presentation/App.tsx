@@ -1,18 +1,15 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useApp } from './context/AppContext';
-import { SAFE_PARK_TOKENS } from '../theme/tokens';
 import { BottomNavBar } from './components/common/BottomNavBar';
-import { LabToolsModal } from './components/common/LabToolsModal';
 import { SubterraneanOfflineBanner } from './components/common/SubterraneanOfflineBanner';
 import { SearchAndFilterHeader } from './components/search/SearchAndFilterHeader';
 import { InteractiveMapCanvas } from './components/map/InteractiveMapCanvas';
-import { MobileBottomSheet } from './components/mobile/MobileBottomSheet';
+import { AppleMapsBottomSheet } from './components/AppleMapsBottomSheet';
 import { CsiBreakdownModal } from './components/scoring/CsiBreakdownModal';
 import { HazardSubmissionModal } from './components/reporting/HazardSubmissionModal';
 import { SafeWalkModal } from './components/navigation/SafeWalkModal';
 import { ExitAlertModal } from './components/triggers/ExitAlertModal';
 import { OnboardingModal } from './components/onboarding/OnboardingModal';
-import { DemoTour } from './components/demo/DemoTour';
 import { StripeCheckoutModal } from './components/monetization/StripeCheckoutModal';
 import { GarageOperatorPortal } from './views/GarageOperatorPortal';
 import { CarPlayView } from './views/CarPlayView';
@@ -20,7 +17,6 @@ import { EnterpriseApiDashboard } from './views/EnterpriseApiDashboard';
 import { UserProfileView } from './views/UserProfileView';
 import { AdminOpsDashboard } from './views/AdminOpsDashboard';
 import { SafeParkLogo } from './components/SafeParkLogo';
-import { CheckCircle2, Shield, FlaskConical } from 'lucide-react';
 
 export const App: React.FC = () => {
   const {
@@ -29,10 +25,6 @@ export const App: React.FC = () => {
     setIsOnboardingOpen,
     isStripeCheckoutOpen,
     setIsStripeCheckoutOpen,
-    locations,
-    selectedLocation,
-    setSelectedLocation,
-    handleParkHere,
     inspectingCsiLocation,
     setInspectingCsiLocation,
     reportingHazardLocation,
@@ -41,110 +33,74 @@ export const App: React.FC = () => {
     setSafeWalkLocation,
     activeExitAlert,
     setActiveExitAlert,
+    handleHazardSubmitted,
     toastMessage,
     showToast,
-    handleHazardSubmitted,
   } = useApp();
-
-  const [isDemoTourOpen, setIsDemoTourOpen] = useState<boolean>(false);
-  const [isLabToolsOpen, setIsLabToolsOpen] = useState<boolean>(false);
 
   return (
     <div
       style={{
-        minHeight: '100dvh',
+        position: 'relative',
+        width: '100vw',
+        height: '100dvh',
         backgroundColor: '#0F172A',
-        color: '#FFFFFF',
+        overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
-        position: 'relative',
-        overflow: 'hidden',
       }}
     >
-      {/* Hidden ARIA Live Announcer for Screen Readers */}
-      <div
-        className="sr-only"
-        aria-live="polite"
-        aria-atomic="true"
-        style={{
-          position: 'absolute',
-          width: '1px',
-          height: '1px',
-          padding: 0,
-          margin: '-1px',
-          overflow: 'hidden',
-          clip: 'rect(0, 0, 0, 0)',
-          border: 0,
-        }}
-      >
-        {toastMessage}
-      </div>
+      {/* Dynamic Toast Feedback Overlay */}
+      {toastMessage && (
+        <aside
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            top: 'calc(env(safe-area-inset-top, 0px) + 76px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 100,
+            backgroundColor: '#0F172A',
+            color: '#FFFFFF',
+            border: '1.5px solid #22C55E',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.6)',
+            borderRadius: '24px',
+            padding: '8px 18px',
+            fontSize: '0.825rem',
+            fontWeight: 700,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            pointerEvents: 'none',
+          }}
+        >
+          {toastMessage}
+        </aside>
+      )}
 
-      {/* DRIVER EXPLORE MAP VIEW (Mobile-First Fullscreen Canvas + Bottom Sheet) */}
+      {/* Subterranean Garage Concrete Shield Banner */}
+      <SubterraneanOfflineBanner />
+
+      {/* Primary Consumer Driver Experience (100% Fullscreen Map Viewport) */}
       {currentView === 'driver' && (
-        <div style={{ position: 'relative', width: '100%', height: '100dvh', overflow: 'hidden' }}>
-          {/* Edge-to-Edge Fullscreen Interactive Vector Map */}
+        <div style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+          {/* 100% Mobile Fullscreen Vector Leaflet/Canvas Base */}
           <InteractiveMapCanvas isFullscreen={true} />
 
-          {/* Floating Top Search & Quick Filter Overlay */}
-          <SearchAndFilterHeader onOpenLabTools={() => setIsLabToolsOpen(true)} />
+          {/* Clean Floating Apple Maps Search Header */}
+          <SearchAndFilterHeader />
 
-          {/* Subterranean Signal Loss Banner Overlay */}
-          <div
-            style={{
-              position: 'fixed',
-              top: 'calc(env(safe-area-inset-top, 0px) + 105px)',
-              left: '14px',
-              right: '14px',
-              zIndex: 25,
-            }}
-          >
-            <SubterraneanOfflineBanner />
-          </div>
-
-          {/* Live Notification Toast */}
-          {toastMessage && (
-            <div
-              role="status"
-              aria-live="polite"
-              style={{
-                position: 'fixed',
-                top: 'calc(env(safe-area-inset-top, 0px) + 120px)',
-                left: '14px',
-                right: '14px',
-                zIndex: 35,
-                backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                border: '1px solid #22C55E',
-                color: '#FFFFFF',
-                padding: '10px 16px',
-                borderRadius: '12px',
-                fontSize: '0.85rem',
-                fontWeight: 600,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
-                backdropFilter: 'blur(8px)',
-              }}
-            >
-              <CheckCircle2 size={18} color="#22C55E" />
-              <span>{toastMessage}</span>
-            </div>
-          )}
-
-          {/* iOS-Style Draggable Bottom Sheet */}
-          <MobileBottomSheet
+          {/* Tri-Modal Apple Maps Bottom Sheet */}
+          <AppleMapsBottomSheet
             onInspectCsi={(loc) => setInspectingCsiLocation(loc)}
-            onSafeWalk={(loc) => {
-              setSelectedLocation(loc);
-              setSafeWalkLocation(loc);
-            }}
+            onSafeWalk={(loc) => setSafeWalkLocation(loc)}
             onReportHazard={(loc) => setReportingHazardLocation(loc)}
           />
         </div>
       )}
 
-      {/* FULL PAGE NON-MAP APPLICATION VIEWS */}
+      {/* Secondary Desktop / Multi-Sided Navigation Views */}
       {currentView !== 'driver' && (
         <div
           style={{
@@ -173,22 +129,6 @@ export const App: React.FC = () => {
             }}
           >
             <SafeParkLogo size={32} showText={true} />
-
-            <button
-              onClick={() => setIsLabToolsOpen(true)}
-              style={{
-                backgroundColor: 'rgba(56, 189, 248, 0.15)',
-                color: '#38BDF8',
-                border: '1px solid rgba(56, 189, 248, 0.4)',
-                borderRadius: '8px',
-                padding: '6px 12px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              Lab Tools
-            </button>
           </header>
 
           <main style={{ flex: 1, maxWidth: '1240px', width: '100%', margin: '0 auto', padding: '16px' }}>
@@ -203,16 +143,6 @@ export const App: React.FC = () => {
 
       {/* iOS-Style Fixed Bottom Tab Navigation Bar */}
       <BottomNavBar />
-
-      {/* Simulation & Lab Tools Drawer Modal */}
-      <LabToolsModal
-        isOpen={isLabToolsOpen}
-        onClose={() => setIsLabToolsOpen(false)}
-        onOpenDemoTour={() => setIsDemoTourOpen(true)}
-      />
-
-      {/* Interactive Guided Demo Tour Overlay */}
-      <DemoTour isOpen={isDemoTourOpen} onClose={() => setIsDemoTourOpen(false)} />
 
       {/* Modals & Dialogs */}
       {isOnboardingOpen && <OnboardingModal onComplete={() => setIsOnboardingOpen(false)} />}

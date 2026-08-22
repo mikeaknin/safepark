@@ -10,6 +10,7 @@ import { CsiEngine } from '../../domain/services/CsiEngine';
 import { AuthService, AuthUser } from '../../domain/services/AuthService';
 import { PushNotificationService } from '../../domain/services/PushNotificationService';
 import { GeocodingAdapter } from '../../data/adapters/GeocodingAdapter';
+import { DynamicParkingGenerator } from '../../domain/services/DynamicParkingGenerator';
 
 export type ActiveAppView = 'driver' | 'carplay' | 'b2b_portal' | 'enterprise_api' | 'user_profile' | 'admin_ops';
 export type MotionState = 'driving' | 'parked' | 'walking';
@@ -192,9 +193,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Load and recalculate parking spots based on environment & filters
+  // Load and recalculate parking spots dynamically based on destination, environment & filters
   const refreshLocations = async () => {
-    const rawSpots = await parkingRepo.getAllParkingLocations();
+    let rawSpots: ParkingLocation[] = [];
+    if (selectedDestination) {
+      rawSpots = DynamicParkingGenerator.generateSpotsAroundDestination(
+        selectedDestination,
+        !isNightMode
+      );
+    } else {
+      rawSpots = await parkingRepo.getAllParkingLocations();
+    }
+
     const scoredSpots = rawSpots.map(spot => {
       const lighting = { ...spot.lighting, isDaytime: !isNightMode };
       const csi = CsiEngine.calculate(
@@ -226,18 +236,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     filtered.sort((a, b) => b.csi.totalScore - a.csi.totalScore);
     setLocations(filtered);
 
-    // Keep selected location in sync
-    if (selectedLocation) {
-      const match = filtered.find(l => l.id === selectedLocation.id);
-      setSelectedLocation(match || filtered[0] || null);
-    } else if (filtered.length > 0) {
+    // Set first/top-ranked spot as selected
+    if (filtered.length > 0) {
       setSelectedLocation(filtered[0]);
+    } else {
+      setSelectedLocation(null);
     }
   };
 
   useEffect(() => {
     refreshLocations();
-  }, [isNightMode, filters]);
+  }, [selectedDestination, isNightMode, filters]);
 
   // Subscribe to background exit detection triggers and dispatch native push
   useEffect(() => {

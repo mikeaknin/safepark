@@ -5,29 +5,15 @@ import { GeocodedLocation } from '../../../domain/models/GeocodedLocation';
 import { SAFE_PARK_TOKENS } from '../../../theme/tokens';
 import {
   Search,
-  SlidersHorizontal,
   MapPin,
   X,
   Loader2,
-  FlaskConical
 } from 'lucide-react';
 
-interface SearchAndFilterHeaderProps {
-  onOpenLabTools?: () => void;
-}
-
-export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
-  onOpenLabTools,
-}) => {
+export const SearchAndFilterHeader: React.FC = () => {
   const {
     selectedDestination,
     setSelectedDestination,
-    filters,
-    setFilters,
-    resetFilters,
-    isFilterModalOpen,
-    setIsFilterModalOpen,
-    locations,
   } = useApp();
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -68,13 +54,6 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [setIsOpen]);
 
-  const activeFilterCount =
-    (filters.minCsi > 0 ? 1 : 0) +
-    (filters.coveredOrGarageOnly ? 1 : 0) +
-    (filters.gatedAccessOnly ? 1 : 0) +
-    (filters.monitoredCctvOnly ? 1 : 0) +
-    (filters.maxHourlyRate < 15 ? 1 : 0);
-
   const getPlaceBadge = (loc: GeocodedLocation) => {
     switch (loc.placeType) {
       case 'poi':
@@ -93,7 +72,7 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
   return (
     <header
       role="search"
-      aria-label="Destination Search and Risk Filters"
+      aria-label="Destination Search"
       style={{
         position: 'fixed',
         top: 0,
@@ -108,13 +87,13 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
     >
       <div
         style={{
-          maxWidth: '800px',
+          maxWidth: '720px',
           margin: '0 auto',
           pointerEvents: 'auto',
           width: '100%',
         }}
       >
-        {/* Single Apple Maps-Style Full-Width Floating Search Bar */}
+        {/* Single Apple Maps-Style Full-Width Clean Floating Search Bar */}
         <div
           ref={searchContainerRef}
           style={{
@@ -126,16 +105,16 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
             style={{
               display: 'flex',
               alignItems: 'center',
-              backgroundColor: 'rgba(15, 23, 42, 0.94)',
-              backdropFilter: 'blur(16px)',
-              WebkitBackdropFilter: 'blur(16px)',
+              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
               border: isOpen
                 ? `1.5px solid ${SAFE_PARK_TOKENS.colors.brand.primary}`
-                : '1px solid rgba(51, 65, 85, 0.8)',
+                : '1px solid rgba(51, 65, 85, 0.85)',
               borderRadius: '16px',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.55)',
-              padding: '0 12px',
-              minHeight: '48px',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6)',
+              padding: '0 14px',
+              minHeight: '50px',
               width: '100%',
               transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
             }}
@@ -164,13 +143,14 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
                 setIsOpen(true);
               }}
               onFocus={() => setIsOpen(true)}
-              placeholder="Search SF address, street, or spot..."
+              placeholder="Search SF address, neighborhood, or landmark..."
               aria-label="Search destination for safe parking"
               style={{
                 background: 'transparent',
                 border: 'none',
                 color: '#FFFFFF',
                 fontSize: '0.925rem',
+                fontWeight: 500,
                 width: '100%',
                 outline: 'none',
                 fontFamily: 'inherit',
@@ -188,88 +168,15 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
                   border: 'none',
                   color: '#94A3B8',
                   cursor: 'pointer',
-                  padding: '4px',
+                  padding: '6px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   minWidth: '36px',
                   minHeight: '36px',
-                  marginRight: '2px',
                 }}
               >
                 <X size={16} />
-              </button>
-            )}
-
-            {/* Discreet Embedded Filter Icon */}
-            <button
-              onClick={() => setIsFilterModalOpen(true)}
-              aria-label="Open filter settings"
-              style={{
-                position: 'relative',
-                background: activeFilterCount > 0 ? 'rgba(44, 115, 210, 0.2)' : 'transparent',
-                border: activeFilterCount > 0 ? '1px solid #2C73D2' : 'none',
-                color: activeFilterCount > 0 ? '#38BDF8' : '#94A3B8',
-                borderRadius: '8px',
-                padding: '6px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minWidth: '36px',
-                minHeight: '36px',
-                marginLeft: '4px',
-              }}
-              title="Parking Safety Filters"
-            >
-              <SlidersHorizontal size={17} />
-              {activeFilterCount > 0 && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '-2px',
-                    right: '-2px',
-                    backgroundColor: '#22C55E',
-                    color: '#0F172A',
-                    width: '14px',
-                    height: '14px',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: '0.6rem',
-                    fontWeight: 800,
-                  }}
-                >
-                  {activeFilterCount}
-                </span>
-              )}
-            </button>
-
-            {/* Discreet Embedded Lab Icon */}
-            {onOpenLabTools && (
-              <button
-                onClick={onOpenLabTools}
-                aria-label="Open Simulation Lab Tools"
-                style={{
-                  background: 'rgba(56, 189, 248, 0.12)',
-                  border: '1px solid rgba(56, 189, 248, 0.3)',
-                  color: '#38BDF8',
-                  borderRadius: '8px',
-                  padding: '4px 8px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                  minHeight: '36px',
-                  marginLeft: '4px',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
-                }}
-                title="Simulation Lab Diagnostics"
-              >
-                <FlaskConical size={15} />
-                <span>Lab</span>
               </button>
             )}
           </div>
@@ -283,29 +190,30 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
                 left: 0,
                 right: 0,
                 backgroundColor: 'rgba(30, 41, 59, 0.98)',
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
                 borderRadius: '16px',
                 border: '1px solid #475569',
-                boxShadow: '0 12px 36px rgba(0, 0, 0, 0.7)',
+                boxShadow: '0 12px 36px rgba(0, 0, 0, 0.75)',
                 zIndex: 50,
-                maxHeight: '320px',
+                maxHeight: '340px',
                 overflowY: 'auto',
               }}
             >
               <div
                 style={{
-                  padding: '10px 14px 6px 14px',
+                  padding: '10px 16px 6px 16px',
                   fontSize: '0.7rem',
                   color: '#94A3B8',
                   textTransform: 'uppercase',
                   fontWeight: 700,
+                  letterSpacing: '0.04em',
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
                 }}
               >
-                <span>San Francisco Municipal Results</span>
+                <span>San Francisco Locations</span>
                 <span style={{ fontSize: '0.65rem', color: '#64748B' }}>Bounded OSM</span>
               </div>
 
@@ -319,11 +227,11 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
                       display: 'flex',
                       alignItems: 'center',
                       gap: '12px',
-                      padding: '10px 14px',
+                      padding: '10px 16px',
                       borderTop: '1px solid #334155',
                       cursor: 'pointer',
                       backgroundColor: selectedDestination?.name === loc.name ? '#0F172A' : 'transparent',
-                      minHeight: '48px',
+                      minHeight: '52px',
                       transition: 'background-color 0.15s ease',
                     }}
                     onMouseEnter={(e) => {
@@ -336,9 +244,9 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
                   >
                     <div
                       style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '8px',
+                        width: '34px',
+                        height: '34px',
+                        borderRadius: '10px',
                         backgroundColor: badge.bg,
                         display: 'flex',
                         alignItems: 'center',
@@ -346,7 +254,7 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
                         flexShrink: 0,
                       }}
                     >
-                      <MapPin size={16} color={badge.color} />
+                      <MapPin size={17} color={badge.color} />
                     </div>
 
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -363,15 +271,27 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
                         >
                           {loc.name}
                         </span>
+                        {loc.neighborhood && (
+                          <span
+                            style={{
+                              fontSize: '0.725rem',
+                              color: '#38BDF8',
+                              fontWeight: 600,
+                              whiteSpace: 'nowrap',
+                            }}
+                          >
+                            • {loc.neighborhood}
+                          </span>
+                        )}
                         <span
                           style={{
-                            fontSize: '0.65rem',
+                            fontSize: '0.625rem',
                             fontWeight: 700,
                             color: badge.color,
                             backgroundColor: badge.bg,
                             padding: '1px 6px',
                             borderRadius: '4px',
-                            textTransform: 'uppercase',
+                            marginLeft: 'auto',
                             flexShrink: 0,
                           }}
                         >
@@ -398,188 +318,6 @@ export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
           )}
         </div>
       </div>
-
-      {/* Filter Modal Popover */}
-      {isFilterModalOpen && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="filter-modal-title"
-          style={{
-            position: 'fixed',
-            inset: 0,
-            backgroundColor: 'rgba(15, 23, 42, 0.85)',
-            backdropFilter: 'blur(6px)',
-            zIndex: 1500,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '16px',
-            pointerEvents: 'auto',
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: '#1E293B',
-              borderRadius: SAFE_PARK_TOKENS.borderRadius.lg,
-              border: '1px solid #475569',
-              boxShadow: SAFE_PARK_TOKENS.shadows.sheet,
-              maxWidth: '480px',
-              width: '100%',
-              padding: '24px',
-              color: '#FFFFFF',
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <SlidersHorizontal size={18} color={SAFE_PARK_TOKENS.colors.brand.primary} />
-                <h3 id="filter-modal-title" style={{ fontSize: '1.15rem', color: '#FFFFFF' }}>
-                  Parking Safety Filters
-                </h3>
-              </div>
-              <button
-                onClick={() => setIsFilterModalOpen(false)}
-                aria-label="Close filters dialog"
-                style={{
-                  background: '#334155',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '32px',
-                  height: '32px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: '#FFFFFF',
-                  cursor: 'pointer',
-                }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {/* CSI Threshold Slider */}
-            <div style={{ marginBottom: '18px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <label htmlFor="csi-range-input" style={{ fontSize: '0.85rem', fontWeight: 600, color: '#CBD5E1' }}>
-                  Minimum Composite Safety Index (CSI)
-                </label>
-                <span
-                  className="tabular-nums"
-                  style={{
-                    color: filters.minCsi >= 75 ? '#22C55E' : filters.minCsi >= 50 ? '#F59E0B' : '#FFFFFF',
-                    fontWeight: 700,
-                  }}
-                >
-                  ≥ {filters.minCsi}
-                </span>
-              </div>
-              <input
-                id="csi-range-input"
-                type="range"
-                min="0"
-                max="85"
-                step="5"
-                value={filters.minCsi}
-                onChange={(e) => setFilters((prev) => ({ ...prev, minCsi: Number(e.target.value) }))}
-                style={{ width: '100%', accentColor: SAFE_PARK_TOKENS.colors.brand.primary, cursor: 'pointer', minHeight: '44px' }}
-              />
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748B', marginTop: '4px' }}>
-                <span>All Spots (0)</span>
-                <span>Moderate Risk (50)</span>
-                <span>Certified Low Risk (75+)</span>
-              </div>
-            </div>
-
-            {/* Max Hourly Rate */}
-            <div style={{ marginBottom: '18px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <label htmlFor="max-rate-input" style={{ fontSize: '0.85rem', fontWeight: 600, color: '#CBD5E1' }}>
-                  Maximum Hourly Rate
-                </label>
-                <span className="tabular-nums" style={{ color: '#FFFFFF', fontWeight: 700 }}>
-                  ${filters.maxHourlyRate}/hr
-                </span>
-              </div>
-              <input
-                id="max-rate-input"
-                type="range"
-                min="2"
-                max="15"
-                step="0.5"
-                value={filters.maxHourlyRate}
-                onChange={(e) => setFilters((prev) => ({ ...prev, maxHourlyRate: Number(e.target.value) }))}
-                style={{ width: '100%', accentColor: SAFE_PARK_TOKENS.colors.brand.primary, cursor: 'pointer', minHeight: '44px' }}
-              />
-            </div>
-
-            {/* Feature Checkboxes */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: '#CBD5E1', cursor: 'pointer', minHeight: '36px' }}>
-                <input
-                  type="checkbox"
-                  checked={filters.coveredOrGarageOnly}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, coveredOrGarageOnly: e.target.checked }))}
-                  style={{ width: '20px', height: '20px', accentColor: SAFE_PARK_TOKENS.colors.brand.primary }}
-                />
-                <span>Covered or Underground Garage Only</span>
-              </label>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: '#CBD5E1', cursor: 'pointer', minHeight: '36px' }}>
-                <input
-                  type="checkbox"
-                  checked={filters.gatedAccessOnly}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, gatedAccessOnly: e.target.checked }))}
-                  style={{ width: '20px', height: '20px', accentColor: SAFE_PARK_TOKENS.colors.brand.primary }}
-                />
-                <span>Gated Perimeter Barrier Controls</span>
-              </label>
-
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: '#CBD5E1', cursor: 'pointer', minHeight: '36px' }}>
-                <input
-                  type="checkbox"
-                  checked={filters.monitoredCctvOnly}
-                  onChange={(e) => setFilters((prev) => ({ ...prev, monitoredCctvOnly: e.target.checked }))}
-                  style={{ width: '20px', height: '20px', accentColor: SAFE_PARK_TOKENS.colors.brand.primary }}
-                />
-                <span>24/7 Monitored Active CCTV</span>
-              </label>
-            </div>
-
-            {/* Modal Actions */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <button
-                onClick={resetFilters}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#94A3B8',
-                  fontSize: '0.85rem',
-                  cursor: 'pointer',
-                  minHeight: '44px',
-                }}
-              >
-                Reset All
-              </button>
-              <button
-                onClick={() => setIsFilterModalOpen(false)}
-                style={{
-                  backgroundColor: SAFE_PARK_TOKENS.colors.brand.primary,
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: '8px',
-                  padding: '10px 18px',
-                  fontSize: '0.85rem',
-                  fontWeight: 600,
-                  cursor: 'pointer',
-                  minHeight: '44px',
-                }}
-              >
-                Apply Filters ({locations.length} Results)
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </header>
   );
 };
