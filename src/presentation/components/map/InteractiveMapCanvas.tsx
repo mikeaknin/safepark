@@ -2,12 +2,10 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { getStatusStyle, SAFE_PARK_TOKENS } from '../../../theme/tokens';
 import {
-  Footprints,
   Car,
   MapPin,
   LocateFixed,
   ShieldCheck,
-  Navigation,
 } from 'lucide-react';
 
 interface InteractiveMapCanvasProps {
@@ -23,7 +21,6 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     setSelectedLocation,
     selectedDestination,
     showLightingHeatmap,
-    isNightMode,
     motionState,
     parkedLocation,
   } = useApp();
@@ -82,7 +79,6 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
 
   // Coordinate Projection Helper: Maps Lat/Lng relative to mapCenter on a 0-100% canvas
   const projectCoordinate = (lat: number, lng: number) => {
-    // Zoom factor scaling for 400-meter radius
     const scaleLng = 11800;
     const scaleLat = 9400;
 
@@ -98,9 +94,6 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
   const destCoords = selectedDestination?.coordinates || mapCenter;
   const destProjected = projectCoordinate(destCoords.lat, destCoords.lng);
 
-  // Active neighborhood label
-  const activeNeighborhood = selectedDestination?.name || 'San Francisco, CA';
-
   return (
     <div
       ref={mapContainerRef}
@@ -111,17 +104,17 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         inset: isFullscreen ? 0 : undefined,
         width: '100%',
         height: isFullscreen ? '100dvh' : '440px',
-        backgroundColor: isNightMode ? '#0B1120' : '#1E293B',
+        backgroundColor: '#F8FAFC', // Daylight Slate 50 Foundation
         borderRadius: isFullscreen ? 0 : SAFE_PARK_TOKENS.borderRadius.lg,
-        border: isFullscreen ? 'none' : '1px solid #334155',
+        border: isFullscreen ? 'none' : '1px solid #E2E8F0',
         overflow: 'hidden',
         boxShadow: isFullscreen ? 'none' : SAFE_PARK_TOKENS.shadows.card,
-        transition: 'background-color 0.4s ease',
+        transition: 'background-color 0.3s ease',
         touchAction: 'pan-x pan-y pinch-zoom',
         zIndex: isFullscreen ? 0 : 1,
       }}
     >
-      {/* Dynamic Vector Street Grid & Lighting Heatmap Render Engine */}
+      {/* Daylight Vector Street Grid & Lighting Heatmap Render Engine */}
       <svg
         width="100%"
         height="100%"
@@ -135,59 +128,67 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         }}
       >
         <defs>
-          <pattern id="streetGrid" width="48" height="48" patternUnits="userSpaceOnUse">
-            <path d="M 48 0 L 0 0 0 48" fill="none" stroke={isNightMode ? '#17255433' : '#33415555'} strokeWidth="1" />
+          <pattern id="daylightGrid" width="48" height="48" patternUnits="userSpaceOnUse">
+            <path d="M 48 0 L 0 0 0 48" fill="none" stroke="#E2E8F0" strokeWidth="1" />
           </pattern>
 
-          {/* Radial Lighting Glow Gradients */}
-          <radialGradient id="highLuxZone" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#22C55E" stopOpacity={isNightMode ? '0.45' : '0.2'} />
-            <stop offset="60%" stopColor="#22C55E" stopOpacity={isNightMode ? '0.15' : '0.05'} />
-            <stop offset="100%" stopColor="#0B1120" stopOpacity="0" />
+          {/* Daylight Radial Lighting Glow Gradients */}
+          <radialGradient id="highLuxZoneDay" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#22C55E" stopOpacity="0.22" />
+            <stop offset="60%" stopColor="#22C55E" stopOpacity="0.08" />
+            <stop offset="100%" stopColor="#F8FAFC" stopOpacity="0" />
           </radialGradient>
 
-          <radialGradient id="moderateLuxZone" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#F59E0B" stopOpacity={isNightMode ? '0.35' : '0.15'} />
-            <stop offset="60%" stopColor="#F59E0B" stopOpacity={isNightMode ? '0.1' : '0.03'} />
-            <stop offset="100%" stopColor="#0B1120" stopOpacity="0" />
+          <radialGradient id="moderateLuxZoneDay" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#F59E0B" stopOpacity="0.18" />
+            <stop offset="60%" stopColor="#F59E0B" stopOpacity="0.05" />
+            <stop offset="100%" stopColor="#F8FAFC" stopOpacity="0" />
           </radialGradient>
 
-          <radialGradient id="darkAlleyZone" cx="50%" cy="50%" r="50%">
-            <stop offset="0%" stopColor="#EF4444" stopOpacity={isNightMode ? '0.35' : '0.15'} />
-            <stop offset="100%" stopColor="#0B1120" stopOpacity="0" />
+          <radialGradient id="darkAlleyZoneDay" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#EF4444" stopOpacity="0.18" />
+            <stop offset="100%" stopColor="#F8FAFC" stopOpacity="0" />
           </radialGradient>
         </defs>
 
         {/* Vector Base Grid */}
-        <rect width="100%" height="100%" fill="url(#streetGrid)" />
+        <rect width="100%" height="100%" fill="url(#daylightGrid)" />
 
-        {/* Dynamic Vector Streets Centered on Destination */}
-        <g opacity={isPanning ? 0.6 : 1} style={{ transition: 'opacity 0.3s ease' }}>
-          <path d="M 0 220 Q 400 190 1400 240" stroke="#334155" strokeWidth="24" fill="none" />
-          <path d="M 0 440 L 1400 420" stroke="#334155" strokeWidth="22" fill="none" />
-          <path d="M 0 660 L 1400 640" stroke="#334155" strokeWidth="20" fill="none" />
-          <path d="M 320 0 L 360 900" stroke="#334155" strokeWidth="22" fill="none" />
-          <path d="M 720 0 L 690 900" stroke="#334155" strokeWidth="22" fill="none" />
+        {/* High-Clarity Daylight Vector Streets (Carto Voyager Palette) */}
+        <g opacity={isPanning ? 0.7 : 1} style={{ transition: 'opacity 0.3s ease' }}>
+          {/* Road Borders */}
+          <path d="M 0 220 Q 400 190 1400 240" stroke="#CBD5E1" strokeWidth="26" fill="none" />
+          <path d="M 0 440 L 1400 420" stroke="#CBD5E1" strokeWidth="24" fill="none" />
+          <path d="M 0 660 L 1400 640" stroke="#CBD5E1" strokeWidth="22" fill="none" />
+          <path d="M 320 0 L 360 900" stroke="#CBD5E1" strokeWidth="24" fill="none" />
+          <path d="M 720 0 L 690 900" stroke="#CBD5E1" strokeWidth="24" fill="none" />
 
-          {/* Street Centerlines */}
-          <path d="M 0 220 Q 400 190 1400 240" stroke="#475569" strokeWidth="2" strokeDasharray="6 6" fill="none" />
-          <path d="M 0 440 L 1400 420" stroke="#475569" strokeWidth="2" strokeDasharray="6 6" fill="none" />
-          <path d="M 0 660 L 1400 640" stroke="#475569" strokeWidth="2" strokeDasharray="6 6" fill="none" />
-          <path d="M 320 0 L 360 900" stroke="#475569" strokeWidth="2" strokeDasharray="6 6" fill="none" />
-          <path d="M 720 0 L 690 900" stroke="#475569" strokeWidth="2" strokeDasharray="6 6" fill="none" />
+          {/* Clean White Road Surfaces */}
+          <path d="M 0 220 Q 400 190 1400 240" stroke="#FFFFFF" strokeWidth="22" fill="none" />
+          <path d="M 0 440 L 1400 420" stroke="#FFFFFF" strokeWidth="20" fill="none" />
+          <path d="M 0 660 L 1400 640" stroke="#FFFFFF" strokeWidth="18" fill="none" />
+          <path d="M 320 0 L 360 900" stroke="#FFFFFF" strokeWidth="20" fill="none" />
+          <path d="M 720 0 L 690 900" stroke="#FFFFFF" strokeWidth="20" fill="none" />
+
+          {/* Subtle Road Centerlines */}
+          <path d="M 0 220 Q 400 190 1400 240" stroke="#94A3B8" strokeWidth="1.5" strokeDasharray="5 5" fill="none" />
+          <path d="M 0 440 L 1400 420" stroke="#94A3B8" strokeWidth="1.5" strokeDasharray="5 5" fill="none" />
+          <path d="M 0 660 L 1400 640" stroke="#94A3B8" strokeWidth="1.5" strokeDasharray="5 5" fill="none" />
+          <path d="M 320 0 L 360 900" stroke="#94A3B8" strokeWidth="1.5" strokeDasharray="5 5" fill="none" />
+          <path d="M 720 0 L 690 900" stroke="#94A3B8" strokeWidth="1.5" strokeDasharray="5 5" fill="none" />
         </g>
 
         {/* LIGHTING DENSITY HEATMAP LAYER */}
         {showLightingHeatmap && (
           <g id="lightingHeatmapLayer">
-            <circle cx="34%" cy="40%" r="130" fill="url(#highLuxZone)" />
-            <circle cx="68%" cy="36%" r="120" fill="url(#highLuxZone)" />
-            <circle cx="50%" cy="62%" r="105" fill="url(#moderateLuxZone)" />
-            <circle cx="82%" cy="24%" r="90" fill="url(#darkAlleyZone)" />
+            <circle cx="34%" cy="40%" r="130" fill="url(#highLuxZoneDay)" />
+            <circle cx="68%" cy="36%" r="120" fill="url(#highLuxZoneDay)" />
+            <circle cx="50%" cy="62%" r="105" fill="url(#moderateLuxZoneDay)" />
+            <circle cx="82%" cy="24%" r="90" fill="url(#darkAlleyZoneDay)" />
           </g>
         )}
 
-        {/* Live Turn-by-Turn Safe Walk Back Illuminated Return Path */}
+        {/* Turn-by-Turn Safe Walk Back Illuminated Return Path */}
         {selectedLocation && (
           <g id="safeWalkRouting">
             {(() => {
@@ -207,11 +208,10 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
                     y1={sY}
                     x2={dX}
                     y2={dY}
-                    stroke="#22C55E"
+                    stroke="#16A34A"
                     strokeWidth="5"
                     strokeLinecap="round"
                     strokeDasharray="7 7"
-                    opacity="0.9"
                   />
                   {/* Outer Safety Aura */}
                   <line
@@ -222,7 +222,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
                     stroke="#22C55E"
                     strokeWidth="14"
                     strokeLinecap="round"
-                    opacity="0.2"
+                    opacity="0.25"
                   />
                 </>
               );
@@ -237,28 +237,28 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
           position: 'absolute',
           top: isFullscreen ? 'calc(env(safe-area-inset-top, 0px) + 72px)' : '14px',
           right: '14px',
-          backgroundColor: 'rgba(15, 23, 42, 0.9)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          backdropFilter: 'blur(16px)',
+          WebkitBackdropFilter: 'blur(16px)',
           padding: '6px 12px',
           borderRadius: '20px',
-          border: '1px solid rgba(51, 65, 85, 0.8)',
+          border: '1px solid #CBD5E1',
           fontSize: '0.725rem',
-          fontWeight: 600,
-          color: gpsActive ? '#22C55E' : '#38BDF8',
+          fontWeight: 700,
+          color: '#0F172A',
           display: 'flex',
           alignItems: 'center',
           gap: '6px',
           pointerEvents: 'auto',
           zIndex: 10,
-          boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.08)',
         }}
       >
-        <LocateFixed size={13} />
+        <LocateFixed size={13} color="#2563EB" />
         <span>{selectedDestination ? `${selectedDestination.name.split(' ')[0]} • SF Grid` : 'SF Live Grid'}</span>
       </div>
 
-      {/* Target Destination Drop Pin with Radar Pulse Aura */}
+      {/* Target Destination Drop Pin (Cobalt Blue with Dark Text Pill) */}
       {selectedDestination && (
         <div
           style={{
@@ -282,47 +282,48 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
               width: '28px',
               height: '28px',
               borderRadius: '50%',
-              backgroundColor: SAFE_PARK_TOKENS.colors.brand.primary,
-              opacity: 0.3,
+              backgroundColor: '#2563EB',
+              opacity: 0.2,
               animation: 'pulse 1.8s infinite',
             }}
           />
 
-          {/* Destination Pill Badge */}
+          {/* Destination Pill Badge (Crisp White Surface & Slate 900 Text) */}
           <div
             style={{
-              backgroundColor: SAFE_PARK_TOKENS.colors.brand.primary,
-              color: '#FFFFFF',
+              backgroundColor: '#FFFFFF',
+              color: '#0F172A',
               padding: '5px 12px',
               borderRadius: SAFE_PARK_TOKENS.borderRadius.pill,
               fontSize: '0.75rem',
               fontWeight: 800,
-              boxShadow: '0 4px 16px rgba(44, 115, 210, 0.6)',
+              boxShadow: '0 4px 14px rgba(15, 23, 42, 0.15)',
               display: 'flex',
               alignItems: 'center',
-              gap: '5px',
+              gap: '6px',
               whiteSpace: 'nowrap',
-              border: '1.5px solid rgba(255, 255, 255, 0.4)',
+              border: '1.5px solid #CBD5E1',
             }}
           >
-            <MapPin size={13} />
+            <MapPin size={13} color="#2563EB" />
             <span>Target: {selectedDestination.name}</span>
           </div>
 
+          {/* Cobalt Blue Pin Arrow */}
           <div
             style={{
               width: 0,
               height: 0,
               borderLeft: '6px solid transparent',
               borderRight: '6px solid transparent',
-              borderTop: `8px solid ${SAFE_PARK_TOKENS.colors.brand.primary}`,
+              borderTop: '8px solid #2563EB',
             }}
           />
         </div>
       )}
 
-      {/* Dynamic Interactive Parking Spot Pins */}
-      {locations.map((loc, index) => {
+      {/* Dynamic Interactive Parking Spot Pins (Daylight Contrast) */}
+      {locations.map((loc) => {
         const isSelected = selectedLocation?.id === loc.id;
         const isParkedHere = parkedLocation?.id === loc.id;
         const status = getStatusStyle(loc.csi.totalScore);
@@ -359,23 +360,25 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
                   position: 'absolute',
                   inset: '-6px',
                   borderRadius: '50%',
-                  backgroundColor: status.hex,
-                  opacity: 0.45,
+                  backgroundColor: status.dot,
+                  opacity: 0.3,
                   animation: 'pulse 1.4s infinite',
                 }}
               />
             )}
 
-            {/* Spot Badge Pin */}
+            {/* Spot Badge Pin (Pure White with Dark Text & Colored Accent) */}
             <div
               style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '5px',
-                backgroundColor: isSelected ? '#FFFFFF' : '#1E293B',
-                color: isSelected ? '#0F172A' : '#FFFFFF',
-                border: `2px solid ${status.hex}`,
-                boxShadow: isSelected ? `0 0 16px ${status.hex}` : SAFE_PARK_TOKENS.shadows.card,
+                backgroundColor: '#FFFFFF',
+                color: '#0F172A',
+                border: `2px solid ${status.dot}`,
+                boxShadow: isSelected
+                  ? `0 0 0 2px #2563EB, 0 4px 14px rgba(15, 23, 42, 0.18)`
+                  : '0 2px 8px rgba(15, 23, 42, 0.12)',
                 padding: isSelected ? '4px 10px' : '3px 8px',
                 borderRadius: '16px',
                 fontSize: '0.725rem',
@@ -385,21 +388,21 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
               }}
             >
               {isParkedHere ? (
-                <Car size={13} color="#22C55E" />
+                <Car size={13} color="#15803D" />
               ) : loc.csi.totalScore >= 75 ? (
-                <ShieldCheck size={13} color={status.hex} />
+                <ShieldCheck size={13} color="#15803D" />
               ) : (
                 <div
                   style={{
                     width: '7px',
                     height: '7px',
                     borderRadius: '50%',
-                    backgroundColor: status.hex,
+                    backgroundColor: status.dot,
                   }}
                 />
               )}
               <span>CSI {loc.csi.totalScore}</span>
-              <span style={{ opacity: 0.65, fontSize: '0.65rem' }}>${loc.hourlyRate}</span>
+              <span style={{ color: '#64748B', fontSize: '0.675rem' }}>${loc.hourlyRate}</span>
             </div>
 
             {/* Pin Pointer Arrow */}
@@ -409,7 +412,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
                 height: 0,
                 borderLeft: '4px solid transparent',
                 borderRight: '4px solid transparent',
-                borderTop: `5px solid ${status.hex}`,
+                borderTop: `5px solid ${status.dot}`,
                 marginTop: '-1px',
               }}
             />

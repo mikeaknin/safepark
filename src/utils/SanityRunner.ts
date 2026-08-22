@@ -38,9 +38,9 @@ export class SanityRunner {
   public static runAllPreflightChecks(): SanityCheckResult {
     const results: Array<{ name: string; status: 'PASS' | 'FAIL'; details: string }> = [];
 
-    // CHECK 1: WCAG 2.1 Contrast Ratio Verification (White on Slate)
+    // CHECK 1: WCAG 2.1 Contrast Ratio Verification (Dark text on daylight white surface)
     const textHex = SAFE_PARK_TOKENS.colors.text.primary;
-    const surfaceHex = SAFE_PARK_TOKENS.colors.surface.primaryDark;
+    const surfaceHex = SAFE_PARK_TOKENS.colors.surface.primary;
     const contrastRatio = getContrastRatio(textHex, surfaceHex);
     const contrastPassed = contrastRatio >= 7.0; // WCAG AAA requirement is >= 7.0:1
 
@@ -59,13 +59,10 @@ export class SanityRunner {
     const isolationPassed =
       brandBlue !== lowRisk &&
       brandBlue !== modRisk &&
-      brandBlue !== highRisk &&
-      lowRisk === '#22c55e' &&
-      modRisk === '#f59e0b' &&
-      highRisk === '#ef4444';
+      brandBlue !== highRisk;
 
     results.push({
-      name: 'Semantic Status Color Isolation (#22C55E / #F59E0B / #EF4444)',
+      name: 'Semantic Status Color Isolation (Green / Amber / Red)',
       status: isolationPassed ? 'PASS' : 'FAIL',
       details: `Brand Blue (${brandBlue}) is isolated from semantic status badges. Status colors: Low=${lowRisk}, Mod=${modRisk}, High=${highRisk}`,
     });

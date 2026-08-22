@@ -20,8 +20,9 @@ export const SafeWalkModal: React.FC<SafeWalkModalProps> = ({ location, onClose 
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.85)',
-        backdropFilter: 'blur(6px)',
+        backgroundColor: 'rgba(15, 23, 42, 0.6)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
         zIndex: 1000,
         display: 'flex',
         alignItems: 'center',
@@ -31,38 +32,39 @@ export const SafeWalkModal: React.FC<SafeWalkModalProps> = ({ location, onClose 
     >
       <div
         style={{
-          backgroundColor: '#1E293B',
-          borderRadius: SAFE_PARK_TOKENS.borderRadius.lg,
-          border: '1px solid #475569',
-          boxShadow: SAFE_PARK_TOKENS.shadows.sheet,
+          backgroundColor: '#FFFFFF',
+          borderRadius: '20px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 20px 48px rgba(15, 23, 42, 0.2)',
           maxWidth: '600px',
           width: '100%',
           maxHeight: '90vh',
           overflowY: 'auto',
           padding: '24px',
-          color: '#FFFFFF',
+          color: '#0F172A',
         }}
       >
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
           <div>
-            <div style={{ fontSize: '0.75rem', color: '#22C55E', fontWeight: 700, textTransform: 'uppercase' }}>
+            <div style={{ fontSize: '0.75rem', color: '#15803D', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Safe Walk Back Navigation Engine
             </div>
-            <h2 style={{ fontSize: '1.25rem', color: '#FFFFFF' }}>Illuminated Return Routing</h2>
+            <h2 style={{ fontSize: '1.25rem', color: '#0F172A', fontWeight: 800 }}>Illuminated Return Routing</h2>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close modal"
             style={{
-              background: '#334155',
-              border: 'none',
+              background: '#F1F5F9',
+              border: '1px solid #CBD5E1',
               borderRadius: '50%',
-              width: '32px',
-              height: '32px',
+              width: '34px',
+              height: '34px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#FFFFFF',
+              color: '#475569',
               cursor: 'pointer',
             }}
           >
@@ -76,24 +78,24 @@ export const SafeWalkModal: React.FC<SafeWalkModalProps> = ({ location, onClose 
             <div
               onClick={() => setSelectedRoute(litRoute)}
               style={{
-                backgroundColor: selectedRoute?.id === litRoute.id ? '#0F172A' : '#334155',
-                border: selectedRoute?.id === litRoute.id ? '2px solid #22C55E' : '1px solid #475569',
-                borderRadius: '8px',
+                backgroundColor: selectedRoute?.id === litRoute.id ? '#ECFDF5' : '#F8FAFC',
+                border: selectedRoute?.id === litRoute.id ? '2px solid #15803D' : '1px solid #E2E8F0',
+                borderRadius: '12px',
                 padding: '12px',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#22C55E', fontSize: '0.8rem', fontWeight: 700 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#15803D', fontSize: '0.75rem', fontWeight: 800 }}>
                 <ShieldCheck size={16} /> RECOMMENDED
               </div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#FFFFFF', marginTop: '2px' }}>
+              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>
                 SafePark Lit Corridor
               </div>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '6px', fontSize: '0.75rem', color: '#CBD5E1' }}>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px', fontSize: '0.75rem', color: '#475569' }}>
                 <span>{litRoute.estimatedWalkingMinutes} mins</span>
                 <span>•</span>
-                <span className="tabular-nums" style={{ color: '#22C55E', fontWeight: 700 }}>
+                <span className="tabular-nums" style={{ color: '#15803D', fontWeight: 800 }}>
                   {litRoute.averageIlluminationLux} Lux Avg
                 </span>
               </div>
@@ -104,24 +106,24 @@ export const SafeWalkModal: React.FC<SafeWalkModalProps> = ({ location, onClose 
             <div
               onClick={() => setSelectedRoute(directRoute)}
               style={{
-                backgroundColor: selectedRoute?.id === directRoute.id ? '#0F172A' : '#334155',
-                border: selectedRoute?.id === directRoute.id ? '2px solid #EF4444' : '1px solid #475569',
-                borderRadius: '8px',
+                backgroundColor: selectedRoute?.id === directRoute.id ? '#FFF1F2' : '#F8FAFC',
+                border: selectedRoute?.id === directRoute.id ? '2px solid #BE123C' : '1px solid #E2E8F0',
+                borderRadius: '12px',
                 padding: '12px',
                 cursor: 'pointer',
                 transition: 'all 0.2s ease',
               }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#EF4444', fontSize: '0.8rem', fontWeight: 700 }}>
-                <AlertTriangle size={16} /> LOW VISIBILITY
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#BE123C', fontSize: '0.75rem', fontWeight: 800 }}>
+                <AlertTriangle size={16} /> UNVERIFIED PATH
               </div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 600, color: '#FFFFFF', marginTop: '2px' }}>
-                Direct Alleyway Short
+              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F172A', marginTop: '2px' }}>
+                Standard Direct Walk
               </div>
-              <div style={{ display: 'flex', gap: '12px', marginTop: '6px', fontSize: '0.75rem', color: '#CBD5E1' }}>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '6px', fontSize: '0.75rem', color: '#475569' }}>
                 <span>{directRoute.estimatedWalkingMinutes} mins</span>
                 <span>•</span>
-                <span className="tabular-nums" style={{ color: '#EF4444', fontWeight: 700 }}>
+                <span className="tabular-nums" style={{ color: '#BE123C', fontWeight: 800 }}>
                   {directRoute.averageIlluminationLux} Lux Avg
                 </span>
               </div>
@@ -129,60 +131,41 @@ export const SafeWalkModal: React.FC<SafeWalkModalProps> = ({ location, onClose 
           )}
         </div>
 
-        {/* Selected Route Turn-by-Turn Steps */}
-        {selectedRoute && (
-          <div style={{ backgroundColor: '#0F172A', padding: '16px', borderRadius: '8px', border: '1px solid #334155' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-              <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#CBD5E1' }}>
-                Waypoints from {location.name}:
-              </div>
-              <span
-                style={{
-                  fontSize: '0.75rem',
-                  backgroundColor: selectedRoute.isRecommendedLitPath ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)',
-                  color: selectedRoute.isRecommendedLitPath ? '#22C55E' : '#EF4444',
-                  padding: '2px 8px',
-                  borderRadius: '4px',
-                  fontWeight: 700,
-                }}
-              >
-                Safety Index: {selectedRoute.safetyScore}/100
-              </span>
+        {/* Turn-by-Turn Waypoints */}
+        {selectedRoute?.pathSegments && selectedRoute.pathSegments.length > 0 && (
+          <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+            <div style={{ fontSize: '0.8rem', fontWeight: 800, color: '#64748B', marginBottom: '12px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Turn-By-Turn Path Segments & Municipal Lighting
             </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {selectedRoute.pathSegments.map((segment, idx) => (
-                <div key={idx} style={{ display: 'flex', gap: '10px', alignItems: 'flex-start' }}>
+              {selectedRoute.pathSegments.map((seg, idx) => (
+                <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                   <div
                     style={{
                       width: '24px',
                       height: '24px',
                       borderRadius: '50%',
-                      backgroundColor: segment.isIlluminated ? '#22C55E' : '#EF4444',
-                      color: '#000000',
+                      backgroundColor: seg.isIlluminated ? '#15803D' : '#64748B',
+                      color: '#FFFFFF',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       fontSize: '0.75rem',
-                      fontWeight: 700,
+                      fontWeight: 800,
                       flexShrink: 0,
                     }}
                   >
-                    {segment.stepIndex}
+                    {idx + 1}
                   </div>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: '0.85rem', color: '#FFFFFF' }}>
-                      {segment.instruction}
-                    </div>
-                    <div style={{ display: 'flex', gap: '12px', fontSize: '0.75rem', color: '#94A3B8', marginTop: '2px' }}>
-                      <span>{segment.distanceMeters}m</span>
-                      <span>•</span>
-                      <span className="tabular-nums" style={{ color: segment.luxLevel >= 30 ? '#22C55E' : '#EF4444' }}>
-                        💡 {segment.luxLevel} Lux
-                      </span>
-                      <span>•</span>
-                      <span>Foot Traffic: {segment.footTrafficScore}%</span>
-                    </div>
+                    <div style={{ fontSize: '0.875rem', fontWeight: 700, color: '#0F172A' }}>{seg.instruction}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748B' }}>Distance: {seg.distanceMeters}m</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <span className="tabular-nums" style={{ fontSize: '0.75rem', fontWeight: 800, color: seg.luxLevel >= 25 ? '#15803D' : '#B45309' }}>
+                      {seg.luxLevel} Lux
+                    </span>
                   </div>
                 </div>
               ))}
@@ -190,25 +173,23 @@ export const SafeWalkModal: React.FC<SafeWalkModalProps> = ({ location, onClose 
           </div>
         )}
 
-        {/* Start Navigation CTA */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
+        {/* Footer Action */}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
           <button
             onClick={onClose}
             style={{
-              backgroundColor: SAFE_PARK_TOKENS.colors.brand.primary,
+              backgroundColor: '#2563EB',
               color: '#FFFFFF',
               border: 'none',
+              borderRadius: '10px',
               padding: '10px 20px',
-              borderRadius: '8px',
-              fontSize: '0.9rem',
-              fontWeight: 600,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
+              fontSize: '0.85rem',
+              fontWeight: 800,
               cursor: 'pointer',
+              boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
             }}
           >
-            <Footprints size={16} /> Start Pedestrian Safe Walk
+            Start Illuminated Walk Return
           </button>
         </div>
       </div>

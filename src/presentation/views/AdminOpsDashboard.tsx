@@ -35,7 +35,6 @@ interface HazardModerationItem {
 }
 
 export const AdminOpsDashboard: React.FC = () => {
-  const [selectedCity, setSelectedCity] = useState<string>('san_francisco');
   const [moderationFilter, setModerationFilter] = useState<'all' | 'pending' | 'verified_active' | 'resolved'>('all');
   const [isSyncing, setIsSyncing] = useState<boolean>(false);
   const [syncFeedback, setSyncFeedback] = useState<string | null>(null);
@@ -99,14 +98,14 @@ export const AdminOpsDashboard: React.FC = () => {
     );
   };
 
-  const handleRejectHazard = (id: string) => {
+  const handleRejectBiasHazard = (id: string) => {
     setHazards((prev) =>
       prev.map((h) =>
         h.id === id
           ? {
               ...h,
               status: 'rejected_bias',
-              rejectionReason: 'Subjective terms or non-physical observation violation',
+              rejectionReason: 'Subjective non-verifiable narrative violates SafePark Anti-Bias Policy.',
               csiPenalty: 0,
             }
           : h
@@ -117,10 +116,13 @@ export const AdminOpsDashboard: React.FC = () => {
   const handleTriggerEtlSync = () => {
     setIsSyncing(true);
     setSyncFeedback(null);
+
     setTimeout(() => {
       setIsSyncing(false);
-      setSyncFeedback('✅ Nightly municipal ETL sync completed: 270 incidents updated across 6 markets.');
-    }, 1200);
+      setSyncFeedback(
+        'Nightly municipal ETL sync completed: 270 incidents updated across 6 markets.'
+      );
+    }, 400);
   };
 
   const filteredHazards = hazards.filter((h) => {
@@ -128,14 +130,17 @@ export const AdminOpsDashboard: React.FC = () => {
     return h.status === moderationFilter;
   });
 
+  const cityList = Object.values(MUNICIPAL_CITIES);
+
   return (
-    <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '16px 0', color: '#FFFFFF' }}>
-      {/* Header Banner */}
+    <div style={{ maxWidth: '1160px', margin: '0 auto', padding: '16px 0' }}>
+      {/* Dashboard Top Header */}
       <div
         style={{
-          backgroundColor: '#1E293B',
-          borderRadius: SAFE_PARK_TOKENS.borderRadius.lg,
-          border: '1px solid #334155',
+          backgroundColor: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
           padding: '24px',
           marginBottom: '20px',
           display: 'flex',
@@ -146,383 +151,374 @@ export const AdminOpsDashboard: React.FC = () => {
         }}
       >
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
             <span
               style={{
-                backgroundColor: 'rgba(239, 68, 68, 0.2)',
-                color: '#EF4444',
-                border: '1px solid #EF4444',
-                padding: '2px 8px',
-                borderRadius: '4px',
-                fontSize: '0.7rem',
+                backgroundColor: '#ECFDF5',
+                color: '#15803D',
+                padding: '3px 10px',
+                borderRadius: '9999px',
+                fontSize: '0.75rem',
                 fontWeight: 800,
-                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                border: '1px solid #A7F3D0',
               }}
             >
-              RESTRICTED INTERNAL ACCESS
+              Enterprise Admin Ops
             </span>
-            <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>SOC-2 Type II Certified</span>
+            <span style={{ color: '#64748B', fontSize: '0.8rem' }}>SafePark Core Infrastructure Telemetry</span>
           </div>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FFFFFF', marginTop: '6px' }}>
+          <h1 style={{ fontSize: '1.5rem', color: '#0F172A', fontWeight: 800 }}>
             SafePark Operations & Governance Console
           </h1>
-          <p style={{ fontSize: '0.85rem', color: '#94A3B8', marginTop: '2px' }}>
-            Real-time telemetry, municipal data ETL health, community hazard moderation & Stripe revenue monitoring.
-          </p>
         </div>
 
-        <div style={{ display: 'flex', gap: '10px' }}>
+        {/* Global Manual ETL Ingestion Trigger Button */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <button
             onClick={handleTriggerEtlSync}
             disabled={isSyncing}
             style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: SAFE_PARK_TOKENS.colors.brand.primary,
+              backgroundColor: '#2563EB',
               color: '#FFFFFF',
               border: 'none',
-              borderRadius: '8px',
-              padding: '10px 16px',
+              borderRadius: '10px',
+              padding: '10px 18px',
               fontSize: '0.85rem',
-              fontWeight: 600,
-              cursor: isSyncing ? 'default' : 'pointer',
-              boxShadow: SAFE_PARK_TOKENS.shadows.glowBlue,
+              fontWeight: 800,
+              cursor: isSyncing ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 4px 14px rgba(37, 99, 235, 0.25)',
             }}
           >
-            <RefreshCw size={15} className={isSyncing ? 'animate-spin' : ''} />
-            <span>{isSyncing ? 'Ingesting Municipal Portals...' : 'Trigger Multi-City ETL Sync'}</span>
+            <RefreshCw size={16} style={{ animation: isSyncing ? 'spin 1s linear infinite' : 'none' }} />
+            <span>{isSyncing ? 'Ingesting Feeds...' : 'Trigger Multi-City ETL Sync'}</span>
           </button>
         </div>
       </div>
 
+      {/* Real-Time Telemetry & Revenue KPIs */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '14px', marginBottom: '24px' }}>
+        {/* Monthly Recurring Revenue */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '18px', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Monthly Recurring Revenue</span>
+            <DollarSign size={18} color="#15803D" />
+          </div>
+          <div className="tabular-nums" style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0F172A' }}>$42,650</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#15803D', marginTop: '4px', fontWeight: 700 }}>
+            <TrendingUp size={14} />
+            <span>+24.8% from prior month</span>
+          </div>
+        </div>
+
+        {/* Active Driver Subscriptions */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '18px', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Active Driver Pro Users</span>
+            <Users size={18} color="#2563EB" />
+          </div>
+          <div className="tabular-nums" style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0F172A' }}>3,842</div>
+          <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>82% Annual Plan Conversion</div>
+        </div>
+
+        {/* Latency */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '18px', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>API Latency</span>
+            <Activity size={18} color="#15803D" />
+          </div>
+          <div className="tabular-nums" style={{ fontSize: '1.6rem', fontWeight: 800, color: '#15803D' }}>14 ms</div>
+          <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>Global Edge CDN Average</div>
+        </div>
+
+        {/* System Health */}
+        <div style={{ backgroundColor: '#FFFFFF', borderRadius: '14px', border: '1px solid #E2E8F0', padding: '18px', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>ETL Health</span>
+            <Server size={18} color="#B45309" />
+          </div>
+          <div className="tabular-nums" style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0F172A' }}>99.98%</div>
+          <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>Multi-City Municipal Ingestion Active</div>
+        </div>
+      </div>
+
+      {/* Sync Completion Notification Alert */}
       {syncFeedback && (
         <div
           style={{
-            backgroundColor: 'rgba(34, 197, 94, 0.15)',
-            border: '1px solid #22C55E',
-            color: '#FFFFFF',
-            padding: '10px 16px',
-            borderRadius: '8px',
+            backgroundColor: '#ECFDF5',
+            border: '1.5px solid #A7F3D0',
+            borderRadius: '12px',
+            padding: '14px 18px',
             marginBottom: '20px',
-            fontSize: '0.85rem',
             display: 'flex',
             alignItems: 'center',
-            gap: '8px',
+            gap: '10px',
+            color: '#065F46',
+            fontSize: '0.85rem',
+            fontWeight: 700,
           }}
         >
-          <CheckCircle2 size={16} color="#22C55E" />
+          <CheckCircle2 size={18} color="#15803D" />
           <span>{syncFeedback}</span>
         </div>
       )}
 
-      {/* KPI Cards Strip */}
+      {/* Municipal ETL Ingestion Overview Table */}
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-          gap: '14px',
+          backgroundColor: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
+          padding: '24px',
           marginBottom: '24px',
         }}
       >
-        <div
-          style={{
-            backgroundColor: '#1E293B',
-            border: '1px solid #334155',
-            borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-            padding: '16px',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', color: '#94A3B8', textTransform: 'uppercase' }}>Monthly Recurring Revenue</span>
-            <DollarSign size={16} color="#22C55E" />
-          </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FFFFFF', margin: '6px 0' }}>$42,650</div>
-          <div style={{ fontSize: '0.75rem', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <TrendingUp size={13} /> +18.4% vs last month
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <h2 style={{ fontSize: '1.15rem', color: '#0F172A', fontWeight: 800 }}>
+              Multi-City Municipal Ingestion Pipeline
+            </h2>
+            <p style={{ fontSize: '0.8rem', color: '#64748B' }}>
+              Standardized ETL schema normalizing vehicle break-in and larceny data across city portals.
+            </p>
           </div>
         </div>
 
-        <div
-          style={{
-            backgroundColor: '#1E293B',
-            border: '1px solid #334155',
-            borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-            padding: '16px',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', color: '#94A3B8', textTransform: 'uppercase' }}>Active Premium Drivers</span>
-            <Users size={16} color="#38BDF8" />
-          </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FFFFFF', margin: '6px 0' }}>3,842</div>
-          <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>$4.99/mo subscription tier</div>
-        </div>
-
-        <div
-          style={{
-            backgroundColor: '#1E293B',
-            border: '1px solid #334155',
-            borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-            padding: '16px',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', color: '#94A3B8', textTransform: 'uppercase' }}>B2B Certified Garages</span>
-            <CheckCircle2 size={16} color="#F59E0B" />
-          </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#FFFFFF', margin: '6px 0' }}>128</div>
-          <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Platinum & Gold SaaS tiers</div>
-        </div>
-
-        <div
-          style={{
-            backgroundColor: '#1E293B',
-            border: '1px solid #334155',
-            borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-            padding: '16px',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.75rem', color: '#94A3B8', textTransform: 'uppercase' }}>API & DB Latency</span>
-            <Activity size={16} color="#22C55E" />
-          </div>
-          <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#22C55E', margin: '6px 0' }}>14 ms</div>
-          <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>99.99% SLA uptime (6 markets)</div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.825rem' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #E2E8F0', color: '#64748B', textTransform: 'uppercase', fontSize: '0.7rem' }}>
+                <th style={{ padding: '10px 14px', fontWeight: 800 }}>City & Jurisdiction</th>
+                <th style={{ padding: '10px 14px', fontWeight: 800 }}>Data Endpoint (Socrata API)</th>
+                <th style={{ padding: '10px 14px', fontWeight: 800 }}>Portal Name</th>
+                <th style={{ padding: '10px 14px', fontWeight: 800 }}>Sync Status</th>
+                <th style={{ padding: '10px 14px', fontWeight: 800 }}>Daily Ingestion Rate</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cityList.map((city) => (
+                <tr key={city.cityId} style={{ borderBottom: '1px solid #F1F5F9', color: '#334155' }}>
+                  <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0F172A' }}>{city.cityName}</td>
+                  <td style={{ padding: '12px 14px', fontFamily: 'monospace', fontSize: '0.75rem', color: '#2563EB' }}>
+                    {city.endpointUrl.split('/resource/')[1] || city.endpointUrl}
+                  </td>
+                  <td style={{ padding: '12px 14px' }}>
+                    <span style={{ backgroundColor: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 600 }}>
+                      {city.portalName}
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 14px' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#15803D', fontWeight: 700 }}>
+                      <CheckCircle2 size={13} /> Active (Hourly Cron)
+                    </span>
+                  </td>
+                  <td style={{ padding: '12px 14px', fontWeight: 800, color: '#0F172A' }}>
+                    ~{city.cityId === 'san_francisco' ? '420' : city.cityId === 'nyc' ? '740' : '260'} reports/day
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
-      {/* Grid: Municipal Ingestion Grid & Hazard Moderation Queue */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
-        {/* Left Column: Multi-Market Ingestion Health */}
-        <div
-          style={{
-            backgroundColor: '#1E293B',
-            borderRadius: SAFE_PARK_TOKENS.borderRadius.lg,
-            border: '1px solid #334155',
-            padding: '20px',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Server size={18} color="#38BDF8" />
-              <h2 style={{ fontSize: '1.1rem', color: '#FFFFFF' }}>Municipal ETL Data Feeds</h2>
-            </div>
-            <span style={{ fontSize: '0.75rem', color: '#22C55E', fontWeight: 700 }}>6 Markets Active</span>
+      {/* Community Hazard Moderation Queue */}
+      <div
+        style={{
+          backgroundColor: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
+          padding: '24px',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <h2 style={{ fontSize: '1.15rem', color: '#0F172A', fontWeight: 800 }}>
+              Hazard Moderation Queue
+            </h2>
+            <p style={{ fontSize: '0.8rem', color: '#64748B' }}>
+              Review driver hazard submissions, verify photographic proof, and enforce Anti-Bias policies.
+            </p>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {Object.values(MUNICIPAL_CITIES).map((city) => (
-              <div
-                key={city.cityId}
-                onClick={() => setSelectedCity(city.cityId)}
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {(['all', 'pending', 'verified_active', 'resolved'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setModerationFilter(tab)}
                 style={{
-                  backgroundColor: selectedCity === city.cityId ? '#0F172A' : '#1E293B',
-                  border: selectedCity === city.cityId ? '1px solid #38BDF8' : '1px solid #334155',
+                  backgroundColor: moderationFilter === tab ? '#2563EB' : '#F1F5F9',
+                  color: moderationFilter === tab ? '#FFFFFF' : '#475569',
+                  border: `1px solid ${moderationFilter === tab ? '#2563EB' : '#CBD5E1'}`,
                   borderRadius: '8px',
-                  padding: '12px 14px',
+                  padding: '6px 12px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
                   cursor: 'pointer',
-                  transition: 'all 0.15s ease',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
+                  textTransform: 'capitalize',
                 }}
               >
-                <div>
-                  <div style={{ fontSize: '0.9rem', fontWeight: 600, color: '#FFFFFF', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <MapPin size={13} color="#38BDF8" />
-                    <span>{city.cityName}, {city.state}</span>
-                  </div>
-                  <div style={{ fontSize: '0.75rem', color: '#94A3B8', marginTop: '2px' }}>
-                    {city.portalName}
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#22C55E' }}>
-                    CSI {city.baselineCsiScore}
-                  </div>
-                  <div style={{ fontSize: '0.7rem', color: '#94A3B8' }}>
-                    Synced 12m ago
-                  </div>
-                </div>
-              </div>
+                {tab.replace('_', ' ')}
+              </button>
             ))}
           </div>
         </div>
 
-        {/* Right Column: Physical Hazard Moderation Queue */}
-        <div
-          style={{
-            backgroundColor: '#1E293B',
-            borderRadius: SAFE_PARK_TOKENS.borderRadius.lg,
-            border: '1px solid #334155',
-            padding: '20px',
-          }}
-        >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ShieldAlert size={18} color="#F59E0B" />
-              <h2 style={{ fontSize: '1.1rem', color: '#FFFFFF' }}>Hazard Moderation Queue</h2>
-            </div>
+        {/* Hazard Items List */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {filteredHazards.map((item) => (
+            <div
+              key={item.id}
+              style={{
+                backgroundColor: '#F8FAFC',
+                border: '1px solid #E2E8F0',
+                borderRadius: '12px',
+                padding: '16px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                flexWrap: 'wrap',
+                gap: '12px',
+              }}
+            >
+              <div style={{ flex: '1 1 300px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                  <span
+                    style={{
+                      backgroundColor:
+                        item.status === 'pending'
+                          ? '#FFFBEB'
+                          : item.status === 'verified_active'
+                          ? '#ECFDF5'
+                          : item.status === 'resolved'
+                          ? '#F1F5F9'
+                          : '#FFF1F2',
+                      color:
+                        item.status === 'pending'
+                          ? '#B45309'
+                          : item.status === 'verified_active'
+                          ? '#065F46'
+                          : item.status === 'resolved'
+                          ? '#475569'
+                          : '#9F1239',
+                      border: `1px solid ${
+                        item.status === 'pending'
+                          ? '#FDE68A'
+                          : item.status === 'verified_active'
+                          ? '#A7F3D0'
+                          : item.status === 'resolved'
+                          ? '#E2E8F0'
+                          : '#FECDD3'
+                      }`,
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    {item.status === 'verified_active' ? 'VERIFIED ACTIVE' : item.status.replace('_', ' ')}
+                  </span>
+                  <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0F172A' }}>
+                    {item.locationName}
+                  </span>
+                  <span style={{ fontSize: '0.75rem', color: '#64748B' }}>({item.city})</span>
+                </div>
 
-            {/* Filter Tabs */}
-            <div style={{ display: 'flex', gap: '4px', backgroundColor: '#0F172A', padding: '3px', borderRadius: '6px' }}>
-              {(['all', 'pending', 'verified_active', 'resolved'] as const).map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setModerationFilter(filter)}
-                  style={{
-                    backgroundColor: moderationFilter === filter ? '#334155' : 'transparent',
-                    color: moderationFilter === filter ? '#FFFFFF' : '#94A3B8',
-                    border: 'none',
-                    borderRadius: '4px',
-                    padding: '4px 8px',
-                    fontSize: '0.7rem',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    textTransform: 'capitalize',
-                  }}
-                >
-                  {filter.replace('_', ' ')}
-                </button>
-              ))}
-            </div>
-          </div>
+                <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '4px' }}>
+                  <strong>Hazard:</strong> {item.hazardType.replace(/_/g, ' ')} — "{item.notes}"
+                </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {filteredHazards.length === 0 ? (
-              <div style={{ padding: '30px', textAlign: 'center', color: '#94A3B8', fontSize: '0.85rem' }}>
-                No hazard reports matching filter.
+                {item.rejectionReason && (
+                  <div style={{ fontSize: '0.75rem', color: '#BE123C', marginTop: '4px', fontWeight: 600 }}>
+                    ⚠️ {item.rejectionReason}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: '12px', marginTop: '6px', fontSize: '0.75rem', color: '#64748B' }}>
+                  <span>Reported {item.reportedAt}</span>
+                  <span>•</span>
+                  <span>Photo Evidence: {item.hasPhoto ? 'Attached ✓' : 'None'}</span>
+                  {item.csiPenalty !== 0 && (
+                    <>
+                      <span>•</span>
+                      <span style={{ color: '#BE123C', fontWeight: 700 }}>Penalty: {item.csiPenalty} CSI Pts</span>
+                    </>
+                  )}
+                </div>
               </div>
-            ) : (
-              filteredHazards.map((hazard) => (
-                <div
-                  key={hazard.id}
-                  style={{
-                    backgroundColor: '#0F172A',
-                    border: '1px solid #334155',
-                    borderRadius: '8px',
-                    padding: '14px',
-                  }}
-                >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                    <div>
-                      <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFFFFF' }}>
-                        {hazard.locationName}
-                      </div>
-                      <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>{hazard.city} • {hazard.reportedAt}</div>
-                    </div>
 
-                    <span
+              {/* Action Buttons */}
+              <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                {item.status === 'pending' && (
+                  <>
+                    <button
+                      onClick={() => handleApproveHazard(item.id)}
                       style={{
-                        backgroundColor:
-                          hazard.status === 'verified_active'
-                            ? 'rgba(239, 68, 68, 0.15)'
-                            : hazard.status === 'resolved'
-                            ? 'rgba(34, 197, 94, 0.15)'
-                            : 'rgba(245, 158, 11, 0.15)',
-                        color:
-                          hazard.status === 'verified_active'
-                            ? '#EF4444'
-                            : hazard.status === 'resolved'
-                            ? '#22C55E'
-                            : '#F59E0B',
-                        border: `1px solid ${
-                          hazard.status === 'verified_active'
-                            ? '#EF4444'
-                            : hazard.status === 'resolved'
-                            ? '#22C55E'
-                            : '#F59E0B'
-                        }`,
-                        padding: '2px 8px',
-                        borderRadius: '4px',
-                        fontSize: '0.7rem',
+                        backgroundColor: '#15803D',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '8px 14px',
+                        fontSize: '0.775rem',
                         fontWeight: 700,
-                        textTransform: 'uppercase',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
                       }}
                     >
-                      {hazard.status.replace('_', ' ')}
-                    </span>
-                  </div>
+                      <Check size={14} />
+                      <span>Approve</span>
+                    </button>
+                    <button
+                      onClick={() => handleRejectBiasHazard(item.id)}
+                      style={{
+                        backgroundColor: '#FFF1F2',
+                        color: '#BE123C',
+                        border: '1px solid #FECDD3',
+                        borderRadius: '8px',
+                        padding: '8px 14px',
+                        fontSize: '0.775rem',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Reject (Anti-Bias)
+                    </button>
+                  </>
+                )}
 
-                  <p style={{ fontSize: '0.8rem', color: '#CBD5E1', margin: '8px 0' }}>
-                    "{hazard.notes}"
-                  </p>
-
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-                    <span style={{ fontSize: '0.75rem', color: '#EF4444', fontWeight: 600 }}>
-                      CSI Impact: {hazard.csiPenalty} pts
-                    </span>
-
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      {hazard.status === 'pending' && (
-                        <>
-                          <button
-                            onClick={() => handleApproveHazard(hazard.id)}
-                            style={{
-                              backgroundColor: '#22C55E',
-                              color: '#0F172A',
-                              border: 'none',
-                              borderRadius: '4px',
-                              padding: '4px 10px',
-                              fontSize: '0.75rem',
-                              fontWeight: 700,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                          >
-                            <Check size={12} /> Approve
-                          </button>
-                          <button
-                            onClick={() => handleRejectHazard(hazard.id)}
-                            style={{
-                              backgroundColor: '#334155',
-                              color: '#EF4444',
-                              border: 'none',
-                              borderRadius: '4px',
-                              padding: '4px 10px',
-                              fontSize: '0.75rem',
-                              fontWeight: 600,
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px',
-                            }}
-                          >
-                            <X size={12} /> Reject Bias
-                          </button>
-                        </>
-                      )}
-
-                      {hazard.status === 'verified_active' && (
-                        <button
-                          onClick={() => handleResolveHazard(hazard.id)}
-                          style={{
-                            backgroundColor: '#334155',
-                            color: '#22C55E',
-                            border: '1px solid #22C55E',
-                            borderRadius: '4px',
-                            padding: '4px 10px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '4px',
-                          }}
-                        >
-                          <CheckCircle2 size={12} /> Mark Fixed / Repaired
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+                {item.status === 'verified_active' && (
+                  <button
+                    onClick={() => handleResolveHazard(item.id)}
+                    style={{
+                      backgroundColor: '#2563EB',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 14px',
+                      fontSize: '0.775rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                    }}
+                  >
+                    <CheckCircle2 size={14} />
+                    <span>Mark Repaired / Resolved</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

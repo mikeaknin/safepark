@@ -1,5 +1,6 @@
 /**
  * SafePark Centralized UI Token Dictionary
+ * Daylight High-Contrast Apple Maps-Style Design Tokens
  * Strict adherence to WCAG 2.1 AA / AAA Accessibility Standards
  */
 
@@ -7,56 +8,69 @@ export const SAFE_PARK_TOKENS = {
   colors: {
     // Brand Tokens (Strictly for UI chrome, CTAs, navigation accents)
     brand: {
-      primary: '#2C73D2',      // Primary Brand Blue
-      primaryHover: '#225cb0',
-      primaryActive: '#1a498f',
-      primaryLight: '#E8F1FC',
+      primary: '#2563EB',      // iOS Navigation Blue (Blue 600)
+      primaryHover: '#1D4ED8', // Blue 700
+      primaryActive: '#1E40AF', // Blue 800
+      primaryLight: '#EFF6FF', // Blue 50
     },
 
-    // Surface & Layout (Dark Slate high contrast palette)
+    // Surface & Layout (Daylight High-Contrast Slate Palette)
     surface: {
-      primaryDark: '#1E293B',  // Slate 800 (Primary Dark Surface - 12.60:1 WCAG AAA against white)
-      secondaryDark: '#0F172A', // Slate 900 (Canvas Background)
-      cardDark: '#334155',     // Slate 700 (Elevated Map Cards)
-      borderDark: '#475569',   // Slate 600 (Subtle dividers)
-      overlay: 'rgba(15, 23, 42, 0.85)',
+      primary: '#FFFFFF',      // Pure White Card Surface
+      primaryDark: '#1E293B',  // Slate 800 (for secondary dark containers & contrast checks)
+      secondaryDark: '#0F172A',// Slate 900 (dark code panels)
+      canvas: '#F8FAFC',       // Slate 50 Background Canvas
+      secondary: '#F1F5F9',    // Slate 100 Elevated Surface
+      card: '#FFFFFF',         // Crisp White Cards
+      cardDark: '#334155',     // Slate 700
+      border: '#E2E8F0',       // Slate 200 Borders
+      borderMedium: '#CBD5E1', // Slate 300 Dividers
+      borderDark: '#475569',   // Slate 600
+      overlay: 'rgba(15, 23, 42, 0.45)', // Translucent backdrop
     },
 
-    // Foreground / Content
+    // Foreground / Content Typography
     text: {
-      primary: '#FFFFFF',      // White Foreground (12.60:1 contrast ratio against #1E293B)
-      secondary: '#94A3B8',    // Slate 400 (Readable metadata)
-      muted: '#64748B',        // Slate 500
-      inverse: '#0F172A',      // Slate 900
+      primary: '#0F172A',      // Slate 900 (High contrast in-vehicle text)
+      secondary: '#475569',    // Slate 600 (Readable secondary specs)
+      muted: '#64748B',        // Slate 500 (Subtitles & timestamps)
+      light: '#94A3B8',        // Slate 400 (Placeholders)
+      inverse: '#FFFFFF',      // White Text for dark action buttons
     },
 
-    // STRICT STATUS ISOLATION (Semantic Only - NEVER use Brand Blue for status)
+    // STRICT STATUS ISOLATION (Semantic High-Contrast Daylight Palette)
     status: {
       lowRisk: {
-        hex: '#22C55E',        // Low Risk Green (CSI 75 - 100)
+        hex: '#15803D',        // Emerald 700
         label: 'Low Risk',
-        bg: 'rgba(34, 197, 94, 0.15)',
-        border: '#22C55E',
+        bg: '#ECFDF5',         // Emerald 50
+        border: '#A7F3D0',     // Emerald 200
+        text: '#065F46',       // Emerald 800
+        dot: '#22C55E',        // Vibrant Emerald Dot
       },
       moderateRisk: {
-        hex: '#F59E0B',        // Moderate Risk Amber (CSI 50 - 74)
+        hex: '#B45309',        // Amber 700
         label: 'Moderate Risk',
-        bg: 'rgba(245, 158, 11, 0.15)',
-        border: '#F59E0B',
+        bg: '#FFFBEB',         // Amber 50
+        border: '#FDE68A',     // Amber 200
+        text: '#92400E',       // Amber 800
+        dot: '#F59E0B',        // Vibrant Amber Dot
       },
       highRisk: {
-        hex: '#EF4444',        // High Risk Red (CSI 0 - 49)
+        hex: '#BE123C',        // Rose 700
         label: 'High Risk',
-        bg: 'rgba(239, 68, 68, 0.15)',
-        border: '#EF4444',
+        bg: '#FFF1F2',         // Rose 50
+        border: '#FECDD3',     // Rose 200
+        text: '#9F1239',       // Rose 800
+        dot: '#EF4444',        // Vibrant Rose Dot
       }
     }
   },
 
   typography: {
     fontFamilies: {
-      header: "'Poppins', sans-serif",
-      body: "'Inter', sans-serif",
+      header: "'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      body: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
       tabularMetric: "'JetBrains Mono', monospace",
     },
     weights: {
@@ -64,6 +78,7 @@ export const SAFE_PARK_TOKENS = {
       medium: 500,
       semiBold: 600,
       bold: 700,
+      extraBold: 800,
     },
     fontFeatureSettings: {
       tabularNumbers: "'tnum' on, 'lnum' on",
@@ -80,19 +95,22 @@ export const SAFE_PARK_TOKENS = {
   },
 
   borderRadius: {
-    sm: '6px',
-    md: '10px',
+    sm: '8px',
+    md: '12px',
     lg: '16px',
+    xl: '20px',
     pill: '9999px',
   },
 
   shadows: {
-    card: '0 4px 20px -2px rgba(0, 0, 0, 0.35)',
-    sheet: '0 -4px 30px 0 rgba(0, 0, 0, 0.5)',
-    glowBlue: '0 0 15px rgba(44, 115, 210, 0.4)',
-    glowGreen: '0 0 15px rgba(34, 197, 94, 0.4)',
-    glowAmber: '0 0 15px rgba(245, 158, 11, 0.4)',
-    glowRed: '0 0 15px rgba(239, 68, 68, 0.4)',
+    sm: '0 1px 2px 0 rgba(0, 0, 0, 0.05)',
+    card: '0 4px 16px -2px rgba(15, 23, 42, 0.08)',
+    sheet: '0 -4px 32px 0 rgba(15, 23, 42, 0.12)',
+    dropdown: '0 12px 36px 0 rgba(15, 23, 42, 0.16)',
+    glowBlue: '0 4px 14px 0 rgba(37, 99, 235, 0.25)',
+    glowGreen: '0 4px 14px 0 rgba(21, 128, 61, 0.25)',
+    glowAmber: '0 4px 14px 0 rgba(180, 83, 9, 0.25)',
+    glowRed: '0 4px 14px 0 rgba(190, 18, 60, 0.25)',
   }
 } as const;
 

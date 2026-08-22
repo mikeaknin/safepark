@@ -25,7 +25,7 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
   onClose,
   targetPlanId = 'premium_monthly',
 }) => {
-  const { showToast } = useApp();
+  const { showToast, setCurrentUser } = useApp();
   const [selectedPlan, setSelectedPlan] = useState<'premium_monthly' | 'premium_annual'>(targetPlanId);
   const [cardNumber, setCardNumber] = useState('4242 •••• •••• 4242');
   const [expiry, setExpiry] = useState('12/28');
@@ -44,6 +44,15 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
     try {
       const result = await StripePaymentService.processB2CCheckout(selectedPlan);
       setIsProcessing(false);
+      setCurrentUser({
+        id: 'usr-sf-8821',
+        email: 'alex.rivera@example.com',
+        fullName: 'Alex Rivera',
+        role: 'driver',
+        subscriptionTier: 'premium_monthly',
+        authProvider: 'apple',
+        accessToken: 'jwt_premium_token_2026',
+      });
       showToast(`🎉 ${result.message}`);
       onClose();
     } catch (err) {
@@ -57,8 +66,9 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.88)',
+        backgroundColor: 'rgba(15, 23, 42, 0.6)',
         backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
         zIndex: 3500,
         display: 'flex',
         alignItems: 'center',
@@ -70,206 +80,197 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
     >
       <div
         style={{
-          backgroundColor: '#1E293B',
-          borderRadius: SAFE_PARK_TOKENS.borderRadius.lg,
-          border: '1px solid #475569',
-          boxShadow: SAFE_PARK_TOKENS.shadows.sheet,
+          backgroundColor: '#FFFFFF',
+          borderRadius: '20px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 20px 48px rgba(15, 23, 42, 0.2)',
           maxWidth: '540px',
           width: '100%',
           maxHeight: '92vh',
           overflowY: 'auto',
           padding: '24px',
-          color: '#FFFFFF',
+          color: '#0F172A',
         }}
       >
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#38BDF8', fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#2563EB', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               <Sparkles size={14} /> SAFEPARK DRIVER PRO
             </div>
-            <h2 style={{ fontSize: '1.3rem', color: '#FFFFFF', marginTop: '2px' }}>
+            <h2 style={{ fontSize: '1.3rem', color: '#0F172A', fontWeight: 800, marginTop: '2px' }}>
               Upgrade to Premium Protection
             </h2>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close modal"
             style={{
-              background: '#334155',
-              border: 'none',
+              background: '#F1F5F9',
+              border: '1px solid #CBD5E1',
               borderRadius: '50%',
-              width: '30px',
-              height: '30px',
+              width: '34px',
+              height: '34px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#FFFFFF',
+              color: '#475569',
               cursor: 'pointer',
             }}
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
 
-        {/* Plan Selector Tabs */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '18px' }}>
+        {/* Plan Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
           {B2C_PLANS.map((plan) => {
             const isSelected = selectedPlan === plan.id;
             return (
               <div
                 key={plan.id}
-                onClick={() => setSelectedPlan(plan.id)}
+                onClick={() => setSelectedPlan(plan.id as any)}
                 style={{
-                  backgroundColor: isSelected ? '#0F172A' : '#1E293B',
-                  border: isSelected ? `2px solid ${SAFE_PARK_TOKENS.colors.brand.primary}` : '1px solid #334155',
-                  borderRadius: '10px',
-                  padding: '12px',
+                  backgroundColor: isSelected ? '#EFF6FF' : '#F8FAFC',
+                  border: isSelected ? '2px solid #2563EB' : '1px solid #E2E8F0',
+                  borderRadius: '12px',
+                  padding: '14px',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
                   position: 'relative',
                 }}
               >
-                {plan.id === 'premium_annual' && (
+                {plan.interval === 'year' && (
                   <span
                     style={{
                       position: 'absolute',
-                      top: '-8px',
-                      right: '8px',
-                      backgroundColor: '#22C55E',
-                      color: '#0F172A',
-                      padding: '1px 6px',
-                      borderRadius: '4px',
+                      top: '-9px',
+                      right: '10px',
+                      backgroundColor: '#15803D',
+                      color: '#FFFFFF',
                       fontSize: '0.65rem',
                       fontWeight: 800,
+                      padding: '2px 8px',
+                      borderRadius: '9999px',
                     }}
                   >
                     SAVE 33%
                   </span>
                 )}
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#FFFFFF' }}>{plan.name}</div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: '4px', marginTop: '4px' }}>
-                  <span className="tabular-nums" style={{ fontSize: '1.25rem', fontWeight: 800, color: '#22C55E' }}>
-                    ${plan.price}
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>{plan.name}</div>
+                <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#2563EB', marginTop: '4px' }}>
+                  ${plan.price}
+                  <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 500 }}>
+                    /{plan.interval === 'month' ? 'mo' : 'yr'}
                   </span>
-                  <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>/{plan.interval}</span>
                 </div>
               </div>
             );
           })}
         </div>
 
-        {/* Plan Features Checklist */}
-        <div style={{ backgroundColor: '#0F172A', borderRadius: '8px', padding: '12px', marginBottom: '18px', border: '1px solid #334155' }}>
-          <div style={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>
-            Included Premium Features:
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {currentPlanObj.features.map((feat, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#CBD5E1' }}>
-                <CheckCircle2 size={14} color="#22C55E" style={{ flexShrink: 0 }} />
-                <span>{feat}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Stripe Secured Card Form */}
+        {/* Stripe Elements Card Input */}
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', color: '#CBD5E1', marginBottom: '4px', fontWeight: 600 }}>
-              Cardholder Name
-            </label>
-            <input
-              type="text"
-              value={cardHolder}
-              onChange={(e) => setCardHolder(e.target.value)}
-              required
-              style={{
-                width: '100%',
-                backgroundColor: '#0F172A',
-                border: '1px solid #475569',
-                borderRadius: '6px',
-                padding: '9px 12px',
-                color: '#FFFFFF',
-                fontSize: '0.85rem',
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: '14px' }}>
-            <label style={{ display: 'block', fontSize: '0.8rem', color: '#CBD5E1', marginBottom: '4px', fontWeight: 600 }}>
-              Card Number (Stripe Encrypted)
-            </label>
-            <div style={{ position: 'relative' }}>
-              <input
-                type="text"
-                value={cardNumber}
-                onChange={(e) => setCardNumber(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  backgroundColor: '#0F172A',
-                  border: '1px solid #475569',
-                  borderRadius: '6px',
-                  padding: '9px 12px 9px 36px',
-                  color: '#FFFFFF',
-                  fontSize: '0.85rem',
-                  fontFamily: 'monospace',
-                }}
-              />
-              <CreditCard size={18} color="#94A3B8" style={{ position: 'absolute', left: '10px', top: '10px' }} />
+          <div style={{ backgroundColor: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>
+                <CreditCard size={16} color="#2563EB" />
+                <span>Card Information</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.7rem', color: '#15803D', fontWeight: 700 }}>
+                <Lock size={12} />
+                <span>Stripe Encrypted (PCI-DSS)</span>
+              </div>
             </div>
-          </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '18px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#CBD5E1', marginBottom: '4px', fontWeight: 600 }}>
-                Expiry
-              </label>
-              <input
-                type="text"
-                value={expiry}
-                onChange={(e) => setExpiry(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  backgroundColor: '#0F172A',
-                  border: '1px solid #475569',
-                  borderRadius: '6px',
-                  padding: '9px 12px',
-                  color: '#FFFFFF',
-                  fontSize: '0.85rem',
-                  fontFamily: 'monospace',
-                }}
-              />
-            </div>
-            <div>
-              <label style={{ display: 'block', fontSize: '0.8rem', color: '#CBD5E1', marginBottom: '4px', fontWeight: 600 }}>
-                CVC / CVV
-              </label>
-              <input
-                type="text"
-                value={cvc}
-                onChange={(e) => setCvc(e.target.value)}
-                required
-                style={{
-                  width: '100%',
-                  backgroundColor: '#0F172A',
-                  border: '1px solid #475569',
-                  borderRadius: '6px',
-                  padding: '9px 12px',
-                  color: '#FFFFFF',
-                  fontSize: '0.85rem',
-                  fontFamily: 'monospace',
-                }}
-              />
-            </div>
-          </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', fontWeight: 600 }}>
+                  Cardholder Name
+                </label>
+                <input
+                  type="text"
+                  value={cardHolder}
+                  onChange={(e) => setCardHolder(e.target.value)}
+                  style={{
+                    width: '100%',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    color: '#0F172A',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                  }}
+                  required
+                />
+              </div>
 
-          {/* Secure Stripe Badge */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '0.75rem', color: '#94A3B8', marginBottom: '16px' }}>
-            <Lock size={13} color="#22C55E" />
-            <span>256-bit TLS Encryption via Stripe Gateway (PCI-DSS Level 1)</span>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', fontWeight: 600 }}>
+                  Card Number (Stripe Encrypted)
+                </label>
+                <input
+                  type="text"
+                  value={cardNumber}
+                  onChange={(e) => setCardNumber(e.target.value)}
+                  style={{
+                    width: '100%',
+                    backgroundColor: '#FFFFFF',
+                    border: '1px solid #CBD5E1',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    color: '#0F172A',
+                    fontSize: '0.85rem',
+                    fontFamily: 'monospace',
+                  }}
+                  required
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', fontWeight: 600 }}>
+                    Expires
+                  </label>
+                  <input
+                    type="text"
+                    value={expiry}
+                    onChange={(e) => setExpiry(e.target.value)}
+                    style={{
+                      width: '100%',
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #CBD5E1',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      color: '#0F172A',
+                      fontSize: '0.85rem',
+                    }}
+                    required
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748B', marginBottom: '4px', fontWeight: 600 }}>
+                    CVC
+                  </label>
+                  <input
+                    type="text"
+                    value={cvc}
+                    onChange={(e) => setCvc(e.target.value)}
+                    style={{
+                      width: '100%',
+                      backgroundColor: '#FFFFFF',
+                      border: '1px solid #CBD5E1',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      color: '#0F172A',
+                      fontSize: '0.85rem',
+                    }}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           <button
@@ -277,23 +278,29 @@ export const StripeCheckoutModal: React.FC<StripeCheckoutModalProps> = ({
             disabled={isProcessing}
             style={{
               width: '100%',
-              backgroundColor: SAFE_PARK_TOKENS.colors.brand.primary,
+              backgroundColor: '#2563EB',
               color: '#FFFFFF',
               border: 'none',
+              borderRadius: '12px',
               padding: '12px',
-              borderRadius: '8px',
               fontSize: '0.95rem',
-              fontWeight: 700,
-              cursor: isProcessing ? 'wait' : 'pointer',
+              fontWeight: 800,
+              cursor: isProcessing ? 'not-allowed' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '8px',
-              boxShadow: SAFE_PARK_TOKENS.shadows.glowBlue,
+              boxShadow: '0 4px 14px rgba(37, 99, 235, 0.3)',
             }}
           >
-            <Lock size={16} />
-            {isProcessing ? 'Authorizing with Stripe...' : `Pay $${currentPlanObj.price} & Activate Premium`}
+            {isProcessing ? (
+              <span>Processing with Stripe...</span>
+            ) : (
+              <>
+                <span>Pay ${currentPlanObj.price} & Activate Premium</span>
+                <ArrowRight size={16} />
+              </>
+            )}
           </button>
         </form>
       </div>

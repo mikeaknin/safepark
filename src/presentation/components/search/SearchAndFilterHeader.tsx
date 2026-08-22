@@ -57,15 +57,15 @@ export const SearchAndFilterHeader: React.FC = () => {
   const getPlaceBadge = (loc: GeocodedLocation) => {
     switch (loc.placeType) {
       case 'poi':
-        return { label: 'Landmark', color: '#38BDF8', bg: 'rgba(56, 189, 248, 0.15)' };
+        return { label: 'Landmark', color: '#1D4ED8', bg: '#EFF6FF', border: '#BFDBFE' };
       case 'intersection':
-        return { label: 'Cross Street', color: '#22C55E', bg: 'rgba(34, 197, 94, 0.15)' };
+        return { label: 'Cross Street', color: '#047857', bg: '#ECFDF5', border: '#A7F3D0' };
       case 'facility':
-        return { label: 'Garage', color: '#F59E0B', bg: 'rgba(245, 158, 11, 0.15)' };
+        return { label: 'Garage', color: '#B45309', bg: '#FFFBEB', border: '#FDE68A' };
       case 'neighborhood':
-        return { label: 'District', color: '#A855F7', bg: 'rgba(168, 85, 247, 0.15)' };
+        return { label: 'District', color: '#7E22CE', bg: '#FAF5FF', border: '#E9D5FF' };
       default:
-        return { label: 'Address', color: '#94A3B8', bg: 'rgba(148, 163, 184, 0.15)' };
+        return { label: 'Address', color: '#475569', bg: '#F1F5F9', border: '#E2E8F0' };
     }
   };
 
@@ -93,7 +93,7 @@ export const SearchAndFilterHeader: React.FC = () => {
           width: '100%',
         }}
       >
-        {/* Single Apple Maps-Style Full-Width Clean Floating Search Bar */}
+        {/* Daylight Apple Maps Full-Width Floating Search Bar */}
         <div
           ref={searchContainerRef}
           style={{
@@ -105,14 +105,14 @@ export const SearchAndFilterHeader: React.FC = () => {
             style={{
               display: 'flex',
               alignItems: 'center',
-              backgroundColor: 'rgba(15, 23, 42, 0.95)',
+              backgroundColor: 'rgba(255, 255, 255, 0.96)',
               backdropFilter: 'blur(20px)',
               WebkitBackdropFilter: 'blur(20px)',
               border: isOpen
                 ? `1.5px solid ${SAFE_PARK_TOKENS.colors.brand.primary}`
-                : '1px solid rgba(51, 65, 85, 0.85)',
+                : '1px solid rgba(203, 213, 225, 0.85)',
               borderRadius: '16px',
-              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.6)',
+              boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.12)',
               padding: '0 14px',
               minHeight: '50px',
               width: '100%',
@@ -129,12 +129,12 @@ export const SearchAndFilterHeader: React.FC = () => {
             ) : (
               <Search
                 size={18}
-                color={SAFE_PARK_TOKENS.colors.brand.primary}
+                color="#64748B"
                 style={{ marginRight: '10px', flexShrink: 0 }}
               />
             )}
 
-            {/* Input Text Box */}
+            {/* Input Text Box (Crisp Slate 900 Text with Slate 400 Placeholder) */}
             <input
               type="text"
               value={query}
@@ -148,9 +148,9 @@ export const SearchAndFilterHeader: React.FC = () => {
               style={{
                 background: 'transparent',
                 border: 'none',
-                color: '#FFFFFF',
+                color: '#0F172A',
                 fontSize: '0.925rem',
-                fontWeight: 500,
+                fontWeight: 600,
                 width: '100%',
                 outline: 'none',
                 fontFamily: 'inherit',
@@ -166,7 +166,7 @@ export const SearchAndFilterHeader: React.FC = () => {
                 style={{
                   background: 'none',
                   border: 'none',
-                  color: '#94A3B8',
+                  color: '#64748B',
                   cursor: 'pointer',
                   padding: '6px',
                   display: 'flex',
@@ -181,7 +181,7 @@ export const SearchAndFilterHeader: React.FC = () => {
             )}
           </div>
 
-          {/* Autocomplete Dropdown List */}
+          {/* Autocomplete Dropdown List (Daylight Surface) */}
           {isOpen && suggestions.length > 0 && (
             <div
               style={{
@@ -189,12 +189,12 @@ export const SearchAndFilterHeader: React.FC = () => {
                 top: 'calc(100% + 8px)',
                 left: 0,
                 right: 0,
-                backgroundColor: 'rgba(30, 41, 59, 0.98)',
-                backdropFilter: 'blur(20px)',
-                WebkitBackdropFilter: 'blur(20px)',
+                backgroundColor: 'rgba(255, 255, 255, 0.98)',
+                backdropFilter: 'blur(24px)',
+                WebkitBackdropFilter: 'blur(24px)',
                 borderRadius: '16px',
-                border: '1px solid #475569',
-                boxShadow: '0 12px 36px rgba(0, 0, 0, 0.75)',
+                border: '1px solid #CBD5E1',
+                boxShadow: '0 12px 36px rgba(15, 23, 42, 0.16)',
                 zIndex: 50,
                 maxHeight: '340px',
                 overflowY: 'auto',
@@ -204,9 +204,9 @@ export const SearchAndFilterHeader: React.FC = () => {
                 style={{
                   padding: '10px 16px 6px 16px',
                   fontSize: '0.7rem',
-                  color: '#94A3B8',
+                  color: '#64748B',
                   textTransform: 'uppercase',
-                  fontWeight: 700,
+                  fontWeight: 800,
                   letterSpacing: '0.04em',
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -214,7 +214,7 @@ export const SearchAndFilterHeader: React.FC = () => {
                 }}
               >
                 <span>San Francisco Locations</span>
-                <span style={{ fontSize: '0.65rem', color: '#64748B' }}>Bounded OSM</span>
+                <span style={{ fontSize: '0.65rem', color: '#94A3B8' }}>Bounded OSM</span>
               </div>
 
               {suggestions.map((loc) => {
@@ -228,18 +228,18 @@ export const SearchAndFilterHeader: React.FC = () => {
                       alignItems: 'center',
                       gap: '12px',
                       padding: '10px 16px',
-                      borderTop: '1px solid #334155',
+                      borderTop: '1px solid #F1F5F9',
                       cursor: 'pointer',
-                      backgroundColor: selectedDestination?.name === loc.name ? '#0F172A' : 'transparent',
+                      backgroundColor: selectedDestination?.name === loc.name ? '#EFF6FF' : 'transparent',
                       minHeight: '52px',
                       transition: 'background-color 0.15s ease',
                     }}
                     onMouseEnter={(e) => {
-                      (e.currentTarget as HTMLElement).style.backgroundColor = '#334155';
+                      (e.currentTarget as HTMLElement).style.backgroundColor = '#F8FAFC';
                     }}
                     onMouseLeave={(e) => {
                       (e.currentTarget as HTMLElement).style.backgroundColor =
-                        selectedDestination?.name === loc.name ? '#0F172A' : 'transparent';
+                        selectedDestination?.name === loc.name ? '#EFF6FF' : 'transparent';
                     }}
                   >
                     <div
@@ -248,6 +248,7 @@ export const SearchAndFilterHeader: React.FC = () => {
                         height: '34px',
                         borderRadius: '10px',
                         backgroundColor: badge.bg,
+                        border: `1px solid ${badge.border}`,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -262,7 +263,7 @@ export const SearchAndFilterHeader: React.FC = () => {
                         <span
                           style={{
                             fontSize: '0.9rem',
-                            color: '#FFFFFF',
+                            color: '#0F172A',
                             fontWeight: 700,
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
@@ -275,7 +276,7 @@ export const SearchAndFilterHeader: React.FC = () => {
                           <span
                             style={{
                               fontSize: '0.725rem',
-                              color: '#38BDF8',
+                              color: '#2563EB',
                               fontWeight: 600,
                               whiteSpace: 'nowrap',
                             }}
@@ -289,6 +290,7 @@ export const SearchAndFilterHeader: React.FC = () => {
                             fontWeight: 700,
                             color: badge.color,
                             backgroundColor: badge.bg,
+                            border: `1px solid ${badge.border}`,
                             padding: '1px 6px',
                             borderRadius: '4px',
                             marginLeft: 'auto',
@@ -301,7 +303,7 @@ export const SearchAndFilterHeader: React.FC = () => {
                       <div
                         style={{
                           fontSize: '0.75rem',
-                          color: '#94A3B8',
+                          color: '#64748B',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis',

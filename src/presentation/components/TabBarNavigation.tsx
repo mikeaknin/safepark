@@ -1,6 +1,5 @@
 import React from 'react';
 import { useApp, ActiveAppView } from '../context/AppContext';
-import { SAFE_PARK_TOKENS } from '../../theme/tokens';
 import {
   Compass,
   Building2,
@@ -32,10 +31,10 @@ export const TabBarNavigation: React.FC = () => {
         left: 0,
         right: 0,
         zIndex: 40,
-        backgroundColor: 'rgba(15, 23, 42, 0.96)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        borderTop: '1px solid rgba(51, 65, 85, 0.7)',
+        backgroundColor: 'rgba(255, 255, 255, 0.96)',
+        backdropFilter: 'blur(20px)',
+        WebkitBackdropFilter: 'blur(20px)',
+        borderTop: '1px solid #E2E8F0',
         display: 'flex',
         justifyContent: 'space-around',
         alignItems: 'center',
@@ -43,7 +42,7 @@ export const TabBarNavigation: React.FC = () => {
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 6px)',
         paddingLeft: '8px',
         paddingRight: '8px',
-        boxShadow: '0 -4px 20px rgba(0, 0, 0, 0.4)',
+        boxShadow: '0 -4px 20px rgba(15, 23, 42, 0.08)',
         height: '60px',
       }}
     >
@@ -64,7 +63,7 @@ export const TabBarNavigation: React.FC = () => {
               gap: '2px',
               backgroundColor: 'transparent',
               border: 'none',
-              color: isActive ? '#38BDF8' : '#94A3B8',
+              color: isActive ? '#2563EB' : '#64748B',
               cursor: 'pointer',
               flex: 1,
               minWidth: 0,
@@ -90,7 +89,7 @@ export const TabBarNavigation: React.FC = () => {
                 fontSize: '0.65rem',
                 fontWeight: isActive ? 700 : 500,
                 letterSpacing: '-0.01em',
-                color: isActive ? '#FFFFFF' : '#94A3B8',
+                color: isActive ? '#2563EB' : '#64748B',
                 whiteSpace: 'nowrap',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
@@ -104,5 +103,3 @@ export const TabBarNavigation: React.FC = () => {
     </nav>
   );
 };
-
-export { TabBarNavigation as BottomNavBar };

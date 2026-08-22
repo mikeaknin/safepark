@@ -16,8 +16,8 @@ export const Badge: React.FC<BadgeProps> = ({
 }) => {
   if (variant === 'status' && score !== undefined) {
     const status = getStatusStyle(score);
-    const padding = size === 'sm' ? '2px 8px' : size === 'lg' ? '6px 14px' : '4px 10px';
-    const fontSize = size === 'sm' ? '0.75rem' : size === 'lg' ? '0.95rem' : '0.825rem';
+    const padding = size === 'sm' ? '2px 8px' : size === 'lg' ? '6px 14px' : '3px 10px';
+    const fontSize = size === 'sm' ? '0.725rem' : size === 'lg' ? '0.95rem' : '0.8rem';
 
     return (
       <span
@@ -26,12 +26,12 @@ export const Badge: React.FC<BadgeProps> = ({
           alignItems: 'center',
           gap: '6px',
           backgroundColor: status.bg,
-          color: status.hex,
+          color: status.text,
           border: `1px solid ${status.border}`,
           borderRadius: SAFE_PARK_TOKENS.borderRadius.pill,
           padding,
           fontSize,
-          fontWeight: 700,
+          fontWeight: 800,
           letterSpacing: '0.02em',
           textTransform: 'uppercase',
         }}
@@ -41,12 +41,12 @@ export const Badge: React.FC<BadgeProps> = ({
             width: size === 'sm' ? '6px' : '8px',
             height: size === 'sm' ? '6px' : '8px',
             borderRadius: '50%',
-            backgroundColor: status.hex,
-            boxShadow: `0 0 6px ${status.hex}`,
+            backgroundColor: status.dot,
+            boxShadow: `0 0 6px ${status.dot}44`,
           }}
         />
         {label || status.label}
-        <span className="tabular-nums" style={{ marginLeft: '2px', color: '#FFFFFF' }}>
+        <span className="tabular-nums" style={{ marginLeft: '3px', fontWeight: 800 }}>
           CSI {score}
         </span>
       </span>
@@ -58,12 +58,13 @@ export const Badge: React.FC<BadgeProps> = ({
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        backgroundColor: variant === 'brand' ? SAFE_PARK_TOKENS.colors.brand.primaryLight : '#334155',
-        color: variant === 'brand' ? SAFE_PARK_TOKENS.colors.brand.primary : '#FFFFFF',
+        backgroundColor: variant === 'brand' ? SAFE_PARK_TOKENS.colors.brand.primaryLight : '#F1F5F9',
+        color: variant === 'brand' ? SAFE_PARK_TOKENS.colors.brand.primary : '#334155',
+        border: `1px solid ${variant === 'brand' ? '#BFDBFE' : '#E2E8F0'}`,
         borderRadius: SAFE_PARK_TOKENS.borderRadius.pill,
         padding: '3px 9px',
         fontSize: '0.775rem',
-        fontWeight: 600,
+        fontWeight: 700,
       }}
     >
       {label}

@@ -91,9 +91,10 @@ export const EnterpriseApiDashboard: React.FC = () => {
       {/* Enterprise Header */}
       <div
         style={{
-          backgroundColor: '#1E293B',
-          borderRadius: SAFE_PARK_TOKENS.borderRadius.lg,
-          border: '1px solid #334155',
+          backgroundColor: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
           padding: '24px',
           marginBottom: '20px',
           display: 'flex',
@@ -107,213 +108,246 @@ export const EnterpriseApiDashboard: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
             <span
               style={{
-                backgroundColor: 'rgba(56, 189, 248, 0.2)',
-                color: '#38BDF8',
-                padding: '2px 8px',
-                borderRadius: '4px',
+                backgroundColor: '#EFF6FF',
+                color: '#2563EB',
+                padding: '3px 10px',
+                borderRadius: '9999px',
                 fontSize: '0.75rem',
-                fontWeight: 700,
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                border: '1px solid #BFDBFE',
               }}
             >
-              ENTERPRISE DATA FEED
+              Enterprise B2B Telematics
             </span>
-            <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Automotive OEM & Insurer Gateway</span>
+            <span style={{ color: '#64748B', fontSize: '0.8rem' }}>REST & GraphQL API Endpoints</span>
           </div>
-          <h1 style={{ fontSize: '1.5rem', color: '#FFFFFF' }}>
-            SafePark Risk Telemetry API Suite
+          <h1 style={{ fontSize: '1.5rem', color: '#0F172A', fontWeight: 800 }}>
+            Geocoded Risk API & Data Feeds
           </h1>
-          <p style={{ fontSize: '0.85rem', color: '#CBD5E1', maxWidth: '640px', marginTop: '4px' }}>
-            Integrate real-time block-level property risk scores (CSI), municipal lighting density, and break-in hazard feeds directly into in-car headunits, dispatch systems, and actuarial underwriting engines.
+          <p style={{ fontSize: '0.875rem', color: '#64748B', marginTop: '4px' }}>
+            Direct data pipelines feeding real-time CSI scores and break-in hazard telemetry into connected vehicle in-dash infotainment and insurance underwriting models.
           </p>
         </div>
 
-        {/* Telemetry Stats */}
         <div style={{ display: 'flex', gap: '12px' }}>
-          <div style={{ backgroundColor: '#0F172A', border: '1px solid #334155', padding: '10px 16px', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: '#94A3B8' }}>UPTIME</div>
-            <div className="tabular-nums" style={{ fontSize: '1.2rem', color: '#22C55E', fontWeight: 700 }}>99.98%</div>
-          </div>
-          <div style={{ backgroundColor: '#0F172A', border: '1px solid #334155', padding: '10px 16px', borderRadius: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: '0.7rem', color: '#94A3B8' }}>P99 LATENCY</div>
-            <div className="tabular-nums" style={{ fontSize: '1.2rem', color: '#38BDF8', fontWeight: 700 }}>18ms</div>
+          <div
+            style={{
+              backgroundColor: '#F8FAFC',
+              border: '1px solid #E2E8F0',
+              padding: '10px 16px',
+              borderRadius: '12px',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>
+              Active Monthly OEM Calls
+            </div>
+            <div className="tabular-nums" style={{ fontSize: '1.25rem', fontWeight: 800, color: '#2563EB' }}>
+              276,930
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Main 2-Column Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-        {/* Left: API Key Provisioning & Usage Analytics */}
+      {/* Grid: Left Column Key Management / Right Column Live JSON Feed */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: '20px' }}>
+        {/* Left Column: API Key Management & Ingestion Docs */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          {/* Key Generation */}
+          {/* API Key Generator Card */}
           <div
             style={{
-              backgroundColor: '#1E293B',
-              borderRadius: SAFE_PARK_TOKENS.borderRadius.lg,
-              border: '1px solid #334155',
-              padding: '20px',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #E2E8F0',
+              boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
+              padding: '24px',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-              <Key size={18} color={SAFE_PARK_TOKENS.colors.brand.primary} />
-              <h2 style={{ fontSize: '1.1rem', color: '#FFFFFF' }}>API Key Management</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
+              <Key size={20} color="#2563EB" />
+              <h2 style={{ fontSize: '1.15rem', color: '#0F172A', fontWeight: 800 }}>
+                Enterprise API Authentication Keys
+              </h2>
             </div>
 
-            <form onSubmit={handleGenerateKey} style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+            <form onSubmit={handleGenerateKey} style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
               <input
                 type="text"
                 value={newKeyName}
                 onChange={(e) => setNewKeyName(e.target.value)}
-                placeholder="Key application name (e.g. In-Car HUD Prod)..."
+                placeholder="Key Name (e.g. Ford In-Dash Sync)"
                 style={{
                   flex: 1,
-                  backgroundColor: '#0F172A',
-                  border: '1px solid #475569',
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
                   borderRadius: '8px',
-                  padding: '9px 12px',
-                  color: '#FFFFFF',
+                  padding: '10px 12px',
+                  color: '#0F172A',
                   fontSize: '0.85rem',
+                  fontWeight: 600,
                 }}
               />
               <button
                 type="submit"
                 style={{
-                  backgroundColor: SAFE_PARK_TOKENS.colors.brand.primary,
+                  backgroundColor: '#2563EB',
                   color: '#FFFFFF',
                   border: 'none',
                   borderRadius: '8px',
-                  padding: '9px 14px',
+                  padding: '10px 18px',
                   fontSize: '0.85rem',
-                  fontWeight: 600,
+                  fontWeight: 800,
                   cursor: 'pointer',
-                  whiteSpace: 'nowrap',
+                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
                 }}
               >
-                Provision Key
+                Issue Key
               </button>
             </form>
 
-            {/* Key List */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
               {apiKeys.map((k) => (
                 <div
                   key={k.id}
                   style={{
-                    backgroundColor: '#0F172A',
-                    borderRadius: '8px',
-                    border: '1px solid #334155',
-                    padding: '12px',
+                    backgroundColor: '#F8FAFC',
+                    border: '1px solid #E2E8F0',
+                    borderRadius: '12px',
+                    padding: '14px',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
                   }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontWeight: 600, fontSize: '0.9rem', color: '#FFFFFF' }}>{k.name}</span>
-                    <span style={{ fontSize: '0.7rem', backgroundColor: '#334155', color: '#38BDF8', padding: '2px 6px', borderRadius: '4px' }}>
-                      {k.tier}
-                    </span>
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: '0.875rem', color: '#0F172A' }}>{k.name}</div>
+                    <div style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: '#2563EB', marginTop: '2px' }}>
+                      {k.keyMasked}
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '4px' }}>
+                      Rate: {k.rateLimitPerMin.toLocaleString()} req/min • {k.requestsTotal.toLocaleString()} requests
+                    </div>
                   </div>
-                  <div className="tabular-nums" style={{ fontSize: '0.775rem', color: '#94A3B8', marginTop: '4px' }}>
-                    {k.keyMasked}
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.725rem', color: '#64748B', marginTop: '8px' }}>
-                    <span>Rate Limit: {k.rateLimitPerMin}/min</span>
-                    <span>Total Invocations: {k.requestsTotal.toLocaleString()}</span>
-                  </div>
+
+                  <span
+                    style={{
+                      backgroundColor: '#ECFDF5',
+                      color: '#15803D',
+                      border: '1px solid #A7F3D0',
+                      padding: '2px 8px',
+                      borderRadius: '4px',
+                      fontSize: '0.7rem',
+                      fontWeight: 800,
+                    }}
+                  >
+                    ACTIVE
+                  </span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Integration Snippets */}
+          {/* Underwriting Integration Specs */}
           <div
             style={{
-              backgroundColor: '#1E293B',
-              borderRadius: SAFE_PARK_TOKENS.borderRadius.lg,
-              border: '1px solid #334155',
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #E2E8F0',
+              boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
               padding: '20px',
             }}
           >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Terminal size={18} color="#22C55E" />
-                <h3 style={{ fontSize: '1rem', color: '#FFFFFF' }}>cURL Quickstart</h3>
-              </div>
-              <button
-                onClick={() => {
-                  navigator.clipboard?.writeText(curlSnippet);
-                  showToast('📋 Copied cURL command to clipboard');
-                }}
-                style={{
-                  background: '#334155',
-                  border: 'none',
-                  color: '#CBD5E1',
-                  borderRadius: '6px',
-                  padding: '4px 8px',
-                  fontSize: '0.75rem',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '4px',
-                }}
-              >
-                <Copy size={12} /> Copy
-              </button>
+            <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>
+              Insurer & Mobility Use Cases
             </div>
-
-            <pre
-              style={{
-                backgroundColor: '#0F172A',
-                border: '1px solid #334155',
-                borderRadius: '8px',
-                padding: '12px',
-                color: '#38BDF8',
-                fontSize: '0.75rem',
-                fontFamily: 'monospace',
-                overflowX: 'auto',
-                lineHeight: 1.4,
-              }}
-            >
-              {curlSnippet}
-            </pre>
+            <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.8rem', color: '#475569' }}>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckCircle2 size={14} color="#15803D" />
+                <span><strong>Dynamic Deductible Underwriting:</strong> Adjust comprehensive rates for overnight street parking in low-CSI zones.</span>
+              </li>
+              <li style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckCircle2 size={14} color="#15803D" />
+                <span><strong>Autonomous Fleet Depot Staging:</strong> Autonomous robo-taxis route to verified high-lux covered depots during dwell times.</span>
+              </li>
+            </ul>
           </div>
         </div>
 
-        {/* Right: Real-time Live JSON Stream Preview */}
+        {/* Right Column: Live Data Feed Inspector */}
         <div
           style={{
-            backgroundColor: '#1E293B',
-            borderRadius: SAFE_PARK_TOKENS.borderRadius.lg,
-            border: '1px solid #334155',
-            padding: '20px',
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
+            padding: '24px',
             display: 'flex',
             flexDirection: 'column',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Activity size={18} color="#22C55E" />
-              <h2 style={{ fontSize: '1.1rem', color: '#FFFFFF' }}>Live Risk Stream (JSON)</h2>
+              <Terminal size={20} color="#2563EB" />
+              <h2 style={{ fontSize: '1.15rem', color: '#0F172A', fontWeight: 800 }}>
+                Live Geocoded Block Risk Stream
+              </h2>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.725rem', color: '#22C55E' }}>
-              <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E' }} />
-              <span>Streaming 4 Blocks Telemetry</span>
+
+            <div style={{ display: 'flex', gap: '6px' }}>
+              {(['json', 'curl'] as const).map((fmt) => (
+                <button
+                  key={fmt}
+                  onClick={() => setSelectedFormat(fmt)}
+                  style={{
+                    backgroundColor: selectedFormat === fmt ? '#2563EB' : '#F1F5F9',
+                    color: selectedFormat === fmt ? '#FFFFFF' : '#475569',
+                    border: `1px solid ${selectedFormat === fmt ? '#2563EB' : '#CBD5E1'}`,
+                    borderRadius: '6px',
+                    padding: '4px 10px',
+                    fontSize: '0.725rem',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    textTransform: 'uppercase',
+                  }}
+                >
+                  {fmt}
+                </button>
+              ))}
             </div>
           </div>
 
+          {/* Code Readout Box (Dark Syntax Box for High Contrast) */}
           <div
             style={{
-              flex: 1,
               backgroundColor: '#0F172A',
+              borderRadius: '12px',
               border: '1px solid #334155',
-              borderRadius: '8px',
-              padding: '14px',
-              color: '#A7F3D0',
-              fontSize: '0.75rem',
+              padding: '16px',
+              flex: 1,
+              overflowX: 'auto',
               fontFamily: 'monospace',
+              fontSize: '0.775rem',
+              lineHeight: 1.5,
+              color: '#38BDF8',
+              maxHeight: '440px',
               overflowY: 'auto',
-              maxHeight: '520px',
             }}
           >
-            <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>
-              {JSON.stringify(livePayloads, null, 2)}
+            <pre style={{ margin: 0 }}>
+              {selectedFormat === 'curl'
+                ? curlSnippet
+                : JSON.stringify(
+                    {
+                      status: 'ok',
+                      timestamp: new Date().toISOString(),
+                      jurisdiction: 'San Francisco, CA',
+                      blocksEvaluated: livePayloads.length,
+                      data: livePayloads,
+                    },
+                    null,
+                    2
+                  )}
             </pre>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { ParkingLocation } from '../../domain/models/ParkingLocation';
 import { ParkingFacilityCard } from './ParkingFacilityCard';
@@ -8,13 +8,7 @@ import {
   ChevronDown,
   Car,
   Footprints,
-  Navigation,
-  ShieldCheck,
-  Info,
   Sparkles,
-  MapPin,
-  Clock,
-  Layers
 } from 'lucide-react';
 
 export type SheetSnapPoint = 'peek' | 'mid' | 'expanded';
@@ -76,7 +70,6 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
     // Prevent collision with scroll container when expanded
     if (snapPoint === 'expanded' && scrollContainerRef.current) {
       const scrollTop = scrollContainerRef.current.scrollTop;
-      // If user is scrolled down into list and swipes down, allow native scroll instead of dragging
       if (scrollTop > 0 && deltaY > 0) {
         return;
       }
@@ -102,14 +95,12 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
 
     // Determine target snap based on velocity & displacement
     if (velocity < -0.5 || deltaY < -150) {
-      // Swiping UP fast or dragged significantly up
       if (snapPoint === 'peek') {
         setSnapPoint('mid');
       } else if (snapPoint === 'mid') {
         setSnapPoint('expanded');
       }
     } else if (velocity > 0.5 || deltaY > 150) {
-      // Swiping DOWN fast or dragged significantly down
       if (snapPoint === 'expanded') {
         setSnapPoint('mid');
       } else if (snapPoint === 'mid') {
@@ -141,17 +132,19 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
       aria-label="Apple Maps Safe Parking Drawer"
       style={{
         position: 'fixed',
-        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 64px)',
+        bottom: 'calc(env(safe-area-inset-bottom, 0px) + 60px)',
         left: 0,
         right: 0,
         height: `${currentHeight}px`,
         transform: isDragging ? `translateY(${Math.max(-100, Math.min(200, dragOffset))}px)` : 'translateY(0px)',
         transition: isDragging ? 'none' : 'height 300ms cubic-bezier(0.25, 1, 0.5, 1), transform 300ms cubic-bezier(0.25, 1, 0.5, 1)',
-        backgroundColor: '#1E293B',
-        borderTop: '1px solid rgba(51, 65, 85, 0.8)',
+        backgroundColor: 'rgba(255, 255, 255, 0.98)',
+        backdropFilter: 'blur(24px)',
+        WebkitBackdropFilter: 'blur(24px)',
+        borderTop: '1px solid #CBD5E1',
         borderTopLeftRadius: '22px',
         borderTopRightRadius: '22px',
-        boxShadow: '0 -10px 36px rgba(0, 0, 0, 0.65)',
+        boxShadow: '0 -4px 30px rgba(15, 23, 42, 0.12)',
         zIndex: 35,
         display: 'flex',
         flexDirection: 'column',
@@ -175,17 +168,17 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
           cursor: 'grab',
           userSelect: 'none',
           touchAction: 'none',
-          backgroundColor: '#1E293B',
+          backgroundColor: 'transparent',
           flexShrink: 0,
         }}
       >
-        {/* iOS Standard 32x4px Centered Drag Pill */}
+        {/* iOS Standard Centered Drag Pill (Slate 300) */}
         <div
           style={{
             width: '36px',
             height: '4px',
             borderRadius: '2px',
-            backgroundColor: '#64748B',
+            backgroundColor: '#CBD5E1',
             marginBottom: '6px',
           }}
         />
@@ -200,7 +193,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
-            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               {snapPoint === 'peek'
                 ? 'Recommended Spot'
                 : snapPoint === 'mid'
@@ -208,7 +201,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 : 'Facility Inspection & Route'}
             </span>
             {selectedDestination && (
-              <span style={{ fontSize: '0.7rem', color: '#38BDF8', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{ fontSize: '0.7rem', color: '#2563EB', fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 • near {selectedDestination.name.split(' ')[0]}
               </span>
             )}
@@ -219,7 +212,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
             style={{
               backgroundColor: 'transparent',
               border: 'none',
-              color: '#38BDF8',
+              color: '#2563EB',
               display: 'flex',
               alignItems: 'center',
               gap: '4px',
@@ -236,6 +229,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
           </button>
         </div>
       </div>
+
       {/* Peek Mode (120px fixed height): Clean Unclipped Spot Overview Card */}
       {snapPoint === 'peek' && topRankedSpot && activeSpotStatus && (
         <div
@@ -252,12 +246,12 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
               <span
                 style={{
-                  backgroundColor: `${activeSpotStatus.hex}22`,
-                  color: activeSpotStatus.hex,
-                  border: `1px solid ${activeSpotStatus.hex}`,
-                  padding: '2px 6px',
-                  borderRadius: '4px',
-                  fontSize: '0.7rem',
+                  backgroundColor: activeSpotStatus.bg,
+                  color: activeSpotStatus.text,
+                  border: `1px solid ${activeSpotStatus.border}`,
+                  padding: '2px 7px',
+                  borderRadius: '6px',
+                  fontSize: '0.725rem',
                   fontWeight: 800,
                   flexShrink: 0,
                 }}
@@ -266,9 +260,9 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
               </span>
               <span
                 style={{
-                  fontSize: '0.875rem',
-                  fontWeight: 700,
-                  color: '#FFFFFF',
+                  fontSize: '0.9rem',
+                  fontWeight: 800,
+                  color: '#0F172A',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
@@ -278,14 +272,14 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 {topRankedSpot.name}
               </span>
             </div>
-            <div style={{ fontSize: '0.75rem', color: '#94A3B8', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'nowrap' }}>
-              <span style={{ fontWeight: 800, color: '#38BDF8' }}>${topRankedSpot.hourlyRate}/hr</span>
+            <div style={{ fontSize: '0.75rem', color: '#64748B', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'nowrap' }}>
+              <span style={{ fontWeight: 800, color: '#2563EB' }}>${topRankedSpot.hourlyRate}/hr</span>
               <span>•</span>
               <span>{topRankedSpot.availableSpaces} open</span>
               {currentLitRoute && (
                 <>
                   <span>•</span>
-                  <span style={{ color: '#22C55E', fontWeight: 600 }}>{currentLitRoute.estimatedWalkingMinutes} min walk</span>
+                  <span style={{ color: '#15803D', fontWeight: 700 }}>{currentLitRoute.estimatedWalkingMinutes} min walk</span>
                 </>
               )}
             </div>
@@ -299,10 +293,10 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
               }}
               aria-label={`View illuminated return walk for ${topRankedSpot.name}`}
               style={{
-                backgroundColor: 'rgba(34, 197, 94, 0.12)',
-                color: '#22C55E',
-                border: '1px solid rgba(34, 197, 94, 0.4)',
-                borderRadius: '8px',
+                backgroundColor: '#F1F5F9',
+                color: '#1E293B',
+                border: '1px solid #CBD5E1',
+                borderRadius: '10px',
                 padding: '6px 10px',
                 cursor: 'pointer',
                 display: 'flex',
@@ -311,9 +305,10 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 minHeight: '40px',
                 fontSize: '0.75rem',
                 fontWeight: 700,
+                transition: 'background-color 0.15s ease',
               }}
             >
-              <Footprints size={14} />
+              <Footprints size={14} color="#15803D" />
               <span>Route</span>
             </button>
 
@@ -324,10 +319,10 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
               }}
               disabled={parkedLocation?.id === topRankedSpot.id}
               style={{
-                backgroundColor: parkedLocation?.id === topRankedSpot.id ? '#22C55E' : SAFE_PARK_TOKENS.colors.brand.primary,
-                color: parkedLocation?.id === topRankedSpot.id ? '#0F172A' : '#FFFFFF',
+                backgroundColor: parkedLocation?.id === topRankedSpot.id ? '#15803D' : '#2563EB',
+                color: '#FFFFFF',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: '10px',
                 padding: '6px 14px',
                 fontSize: '0.775rem',
                 fontWeight: 800,
@@ -336,7 +331,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 alignItems: 'center',
                 gap: '5px',
                 minHeight: '40px',
-                boxShadow: parkedLocation?.id === topRankedSpot.id ? SAFE_PARK_TOKENS.shadows.glowGreen : SAFE_PARK_TOKENS.shadows.glowBlue,
+                boxShadow: parkedLocation?.id === topRankedSpot.id ? '0 4px 12px rgba(21, 128, 61, 0.3)' : '0 4px 12px rgba(37, 99, 235, 0.3)',
               }}
             >
               <Car size={14} />
@@ -346,16 +341,16 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
         </div>
       )}
 
-      {/* Mid & Full-Sheet Mode: Scrollable Facility Ranking & Inspection List */}
+      {/* Mid & Full Modes: Scrollable List of Ranked Facilities */}
       {snapPoint !== 'peek' && (
         <div
           ref={scrollContainerRef}
           style={{
             flex: 1,
             overflowY: 'auto',
-            padding: '8px 14px 20px 14px',
-            WebkitOverflowScrolling: 'touch',
+            padding: '10px 14px 20px 14px',
             overscrollBehavior: 'contain',
+            WebkitOverflowScrolling: 'touch',
           }}
         >
           {/* Active Facility Inspection Card (if selected) */}
@@ -363,8 +358,8 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
             <div style={{ marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Sparkles size={14} color="#38BDF8" />
-                  <span style={{ fontSize: '0.725rem', fontWeight: 800, color: '#38BDF8', textTransform: 'uppercase' }}>
+                  <Sparkles size={14} color="#2563EB" />
+                  <span style={{ fontSize: '0.725rem', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase' }}>
                     Selected Target Facility
                   </span>
                 </div>
@@ -373,8 +368,9 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                   style={{
                     background: 'none',
                     border: 'none',
-                    color: '#94A3B8',
+                    color: '#64748B',
                     fontSize: '0.7rem',
+                    fontWeight: 600,
                     cursor: 'pointer',
                     minHeight: '36px',
                     padding: '0 4px',
@@ -401,10 +397,10 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
           {/* List of Nearby Ranked Parking Facilities */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px' }}>
-              <span style={{ fontSize: '0.725rem', fontWeight: 800, color: '#94A3B8', textTransform: 'uppercase' }}>
+              <span style={{ fontSize: '0.725rem', fontWeight: 800, color: '#64748B', textTransform: 'uppercase' }}>
                 All Facilities Ranked by CSI
               </span>
-              <span style={{ fontSize: '0.7rem', color: '#64748B' }}>
+              <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>
                 Sorted: Highest Safety First
               </span>
             </div>

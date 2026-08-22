@@ -44,13 +44,13 @@ export const App: React.FC = () => {
         position: 'relative',
         width: '100vw',
         height: '100dvh',
-        backgroundColor: '#0F172A',
+        backgroundColor: '#F8FAFC',
         overflow: 'hidden',
         display: 'flex',
         flexDirection: 'column',
       }}
     >
-      {/* Dynamic Toast Feedback Overlay */}
+      {/* Dynamic Toast Feedback Overlay (Daylight White Surface) */}
       {toastMessage && (
         <aside
           role="status"
@@ -61,10 +61,10 @@ export const App: React.FC = () => {
             left: '50%',
             transform: 'translateX(-50%)',
             zIndex: 100,
-            backgroundColor: '#0F172A',
-            color: '#FFFFFF',
-            border: '1.5px solid #22C55E',
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.6)',
+            backgroundColor: '#FFFFFF',
+            color: '#0F172A',
+            border: '1.5px solid #15803D',
+            boxShadow: '0 8px 24px rgba(15, 23, 42, 0.15)',
             borderRadius: '24px',
             padding: '8px 18px',
             fontSize: '0.825rem',
@@ -109,13 +109,14 @@ export const App: React.FC = () => {
             flexDirection: 'column',
             paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 70px)',
             overflowY: 'auto',
+            backgroundColor: '#F8FAFC',
           }}
         >
           {/* Top Bar for Secondary Views */}
           <header
             style={{
-              backgroundColor: '#1E293B',
-              borderBottom: '1px solid #334155',
+              backgroundColor: '#FFFFFF',
+              borderBottom: '1px solid #E2E8F0',
               paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
               paddingBottom: '12px',
               paddingLeft: '16px',
@@ -126,6 +127,7 @@ export const App: React.FC = () => {
               position: 'sticky',
               top: 0,
               zIndex: 30,
+              boxShadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
             }}
           >
             <SafeParkLogo size={32} showText={true} />
@@ -178,7 +180,8 @@ export const App: React.FC = () => {
           alert={activeExitAlert}
           onClose={() => setActiveExitAlert(null)}
           onConfirmCabinClear={() => {
-            showToast('🔒 Cabin check confirmed. Safe walk route available.');
+            setActiveExitAlert(null);
+            showToast('✓ Vehicle cabin verified clear.');
           }}
         />
       )}

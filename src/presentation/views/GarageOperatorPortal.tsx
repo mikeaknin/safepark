@@ -31,9 +31,9 @@ export const GarageOperatorPortal: React.FC = () => {
     facilityName: targetSpot?.name || 'SOMA 5th St Gated Deck',
     operatorName: 'Pacific Parking Management Group LLC',
     has247MannedGuards: true,
-    cctvCoveragePercentage: 92,
+    cctvCoveragePercentage: 100,
     hasPhysicalBarrierGates: true,
-    averageLumenOutputLux: 62,
+    averageLumenOutputLux: 75,
     hasLicencePlateRecognition: true,
     hasEmergencyHelpCallBoxes: true,
     hasUndergroundEnclosure: true,
@@ -80,9 +80,10 @@ export const GarageOperatorPortal: React.FC = () => {
       {/* Portal Header */}
       <div
         style={{
-          backgroundColor: '#1E293B',
-          borderRadius: SAFE_PARK_TOKENS.borderRadius.lg,
-          border: '1px solid #334155',
+          backgroundColor: '#FFFFFF',
+          borderRadius: '16px',
+          border: '1px solid #E2E8F0',
+          boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
           padding: '24px',
           marginBottom: '20px',
           display: 'flex',
@@ -96,84 +97,99 @@ export const GarageOperatorPortal: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
             <span
               style={{
-                backgroundColor: 'rgba(44, 115, 210, 0.2)',
-                color: '#38BDF8',
-                padding: '2px 8px',
-                borderRadius: '4px',
+                backgroundColor: '#EFF6FF',
+                color: '#2563EB',
+                padding: '3px 10px',
+                borderRadius: '9999px',
                 fontSize: '0.75rem',
-                fontWeight: 700,
+                fontWeight: 800,
+                textTransform: 'uppercase',
+                letterSpacing: '0.04em',
+                border: '1px solid #BFDBFE',
               }}
             >
-              B2B OPERATOR SUITE
+              B2B Enterprise SaaS
             </span>
-            <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>Facility Self-Service Audit & SaaS Billing</span>
+            <span style={{ color: '#64748B', fontSize: '0.8rem' }}>ISO/IEC 27001 Security Standard</span>
           </div>
-          <h1 style={{ fontSize: '1.5rem', color: '#FFFFFF' }}>
+          <h1 style={{ fontSize: '1.5rem', color: '#0F172A', fontWeight: 800 }}>
             SafePark Certified™ Facility Portal
           </h1>
-          <p style={{ fontSize: '0.85rem', color: '#CBD5E1', maxWidth: '600px', marginTop: '4px' }}>
-            Verify your garage's physical security, surveillance infrastructure, and lighting standards to earn verified trust badges and increase driver conversion.
+          <p style={{ fontSize: '0.875rem', color: '#64748B', marginTop: '4px' }}>
+            Submit verified infrastructure telemetry to elevate your facility's CSI score and earn official SafePark Certified Trust Badges.
           </p>
         </div>
 
-        <div
-          style={{
-            backgroundColor: '#0F172A',
-            border: '1px solid #334155',
-            padding: '12px 18px',
-            borderRadius: '10px',
-            textAlign: 'center',
-          }}
-        >
-          <div style={{ fontSize: '0.7rem', color: '#94A3B8', textTransform: 'uppercase' }}>B2B Certification Impact</div>
-          <div className="tabular-nums" style={{ fontSize: '1.4rem', color: '#22C55E', fontWeight: 700 }}>
-            +38% Conversion
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div
+            style={{
+              backgroundColor: '#ECFDF5',
+              border: '1px solid #A7F3D0',
+              padding: '10px 16px',
+              borderRadius: '12px',
+              textAlign: 'center',
+            }}
+          >
+            <div style={{ fontSize: '0.7rem', color: '#065F46', fontWeight: 700, textTransform: 'uppercase' }}>
+              Average Yield Boost
+            </div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#15803D' }}>
+              +38% Driver Bookings
+            </div>
           </div>
-          <div style={{ fontSize: '0.7rem', color: '#CBD5E1' }}>For Certified Low-Risk Garages</div>
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '20px' }}>
-        {/* Left Column: Security Verification Form */}
+      {/* Main Form & Live Preview Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '20px' }}>
+        {/* Left Column: Security Audit Entry Form */}
         <div
           style={{
-            backgroundColor: '#1E293B',
-            borderRadius: SAFE_PARK_TOKENS.borderRadius.lg,
-            border: '1px solid #334155',
+            backgroundColor: '#FFFFFF',
+            borderRadius: '16px',
+            border: '1px solid #E2E8F0',
+            boxShadow: '0 2px 10px rgba(15, 23, 42, 0.05)',
             padding: '24px',
           }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px' }}>
-            <Building2 size={20} color={SAFE_PARK_TOKENS.colors.brand.primary} />
-            <h2 style={{ fontSize: '1.15rem', color: '#FFFFFF' }}>Facility Security Audit Form</h2>
+            <Building2 size={20} color="#2563EB" />
+            <h2 style={{ fontSize: '1.15rem', color: '#0F172A', fontWeight: 800 }}>
+              Physical Infrastructure Audit Form
+            </h2>
           </div>
 
           <form onSubmit={handleRunAudit}>
-            {/* Target Facility Selector */}
+            {/* Select Target Facility */}
             <div style={{ marginBottom: '16px' }}>
-              <label style={{ display: 'block', fontSize: '0.825rem', color: '#CBD5E1', marginBottom: '6px', fontWeight: 600 }}>
-                Select Managed Facility to Certify
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#334155', fontWeight: 700, marginBottom: '6px' }}>
+                Select SF Garage Facility
               </label>
               <select
                 value={selectedSpotId}
                 onChange={(e) => {
                   setSelectedSpotId(e.target.value);
-                  const s = locations.find(l => l.id === e.target.value);
-                  if (s) {
-                    setAuditData(prev => ({ ...prev, facilityId: s.id, facilityName: s.name }));
+                  const loc = locations.find(l => l.id === e.target.value);
+                  if (loc) {
+                    setAuditData(prev => ({
+                      ...prev,
+                      facilityId: loc.id,
+                      facilityName: loc.name,
+                    }));
                   }
                 }}
                 style={{
                   width: '100%',
-                  backgroundColor: '#0F172A',
-                  border: '1px solid #475569',
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
                   borderRadius: '8px',
                   padding: '10px 12px',
-                  color: '#FFFFFF',
+                  color: '#0F172A',
                   fontSize: '0.85rem',
+                  fontWeight: 600,
                 }}
               >
-                {locations.map((loc) => (
+                {locations.map(loc => (
                   <option key={loc.id} value={loc.id}>
                     {loc.name} (Current CSI: {loc.csi.totalScore})
                   </option>
@@ -181,92 +197,118 @@ export const GarageOperatorPortal: React.FC = () => {
               </select>
             </div>
 
-            {/* Guard Presence */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#0F172A', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #334155' }}>
-              <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>24/7 Dedicated Uniformed Security Patrol</div>
-                <div style={{ fontSize: '0.725rem', color: '#94A3B8' }}>Active physical personnel patrolling parking apron</div>
-              </div>
+            {/* Operator Company Name */}
+            <div style={{ marginBottom: '16px' }}>
+              <label style={{ display: 'block', fontSize: '0.8rem', color: '#334155', fontWeight: 700, marginBottom: '6px' }}>
+                Commercial Operator Entity
+              </label>
               <input
-                type="checkbox"
-                checked={auditData.has247MannedGuards}
-                onChange={(e) => setAuditData(prev => ({ ...prev, has247MannedGuards: e.target.checked }))}
-                style={{ width: '20px', height: '20px', accentColor: SAFE_PARK_TOKENS.colors.brand.primary, cursor: 'pointer' }}
+                type="text"
+                value={auditData.operatorName}
+                onChange={(e) => setAuditData({ ...auditData, operatorName: e.target.value })}
+                style={{
+                  width: '100%',
+                  backgroundColor: '#FFFFFF',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '8px',
+                  padding: '10px 12px',
+                  color: '#0F172A',
+                  fontSize: '0.85rem',
+                  fontWeight: 600,
+                }}
               />
             </div>
 
-            {/* HD CCTV Coverage % Slider */}
-            <div style={{ backgroundColor: '#0F172A', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #334155' }}>
+            {/* CCTV Coverage Percentage */}
+            <div style={{ marginBottom: '16px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>High-Definition CCTV Coverage</span>
-                <span className="tabular-nums" style={{ color: '#22C55E', fontWeight: 700 }}>
-                  {auditData.cctvCoveragePercentage}% Stalls Covered
+                <label style={{ fontSize: '0.8rem', color: '#334155', fontWeight: 700 }}>
+                  High-Definition CCTV Stall Coverage (%)
+                </label>
+                <span className="tabular-nums" style={{ color: '#2563EB', fontWeight: 800 }}>
+                  {auditData.cctvCoveragePercentage}%
                 </span>
               </div>
               <input
                 type="range"
-                min="20"
+                min="0"
                 max="100"
-                step="5"
                 value={auditData.cctvCoveragePercentage}
-                onChange={(e) => setAuditData(prev => ({ ...prev, cctvCoveragePercentage: Number(e.target.value) }))}
-                style={{ width: '100%', accentColor: SAFE_PARK_TOKENS.colors.brand.primary, cursor: 'pointer' }}
+                onChange={(e) => setAuditData({ ...auditData, cctvCoveragePercentage: Number(e.target.value) })}
+                style={{ width: '100%', cursor: 'pointer' }}
               />
             </div>
 
-            {/* Lighting Output Slider */}
-            <div style={{ backgroundColor: '#0F172A', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #334155' }}>
+            {/* Average Lux Output */}
+            <div style={{ marginBottom: '20px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Average Stalls Illumination Level</span>
-                <span className="tabular-nums" style={{ color: '#38BDF8', fontWeight: 700 }}>
+                <label style={{ fontSize: '0.8rem', color: '#334155', fontWeight: 700 }}>
+                  Internal High-Bay LED Lumens (Avg Lux)
+                </label>
+                <span className="tabular-nums" style={{ color: '#B45309', fontWeight: 800 }}>
                   {auditData.averageLumenOutputLux} Lux
                 </span>
               </div>
               <input
                 type="range"
-                min="10"
-                max="90"
-                step="5"
+                min="5"
+                max="120"
                 value={auditData.averageLumenOutputLux}
-                onChange={(e) => setAuditData(prev => ({ ...prev, averageLumenOutputLux: Number(e.target.value) }))}
-                style={{ width: '100%', accentColor: SAFE_PARK_TOKENS.colors.brand.primary, cursor: 'pointer' }}
+                onChange={(e) => setAuditData({ ...auditData, averageLumenOutputLux: Number(e.target.value) })}
+                style={{ width: '100%', cursor: 'pointer' }}
               />
             </div>
 
-            {/* Barrier Gate */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#0F172A', padding: '12px', borderRadius: '8px', marginBottom: '12px', border: '1px solid #334155' }}>
-              <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>Physical Barrier Credential Gates</div>
-                <div style={{ fontSize: '0.725rem', color: '#94A3B8' }}>Automated RFID, Ticketed, or App Barrier Entry/Exit</div>
-              </div>
-              <input
-                type="checkbox"
-                checked={auditData.hasPhysicalBarrierGates}
-                onChange={(e) => setAuditData(prev => ({ ...prev, hasPhysicalBarrierGates: e.target.checked }))}
-                style={{ width: '20px', height: '20px', accentColor: SAFE_PARK_TOKENS.colors.brand.primary, cursor: 'pointer' }}
-              />
-            </div>
+            {/* Checkbox Security Hardware Features */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '24px' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.825rem', color: '#334155', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={auditData.has247MannedGuards}
+                  onChange={(e) => setAuditData({ ...auditData, has247MannedGuards: e.target.checked })}
+                  style={{ width: '18px', height: '18px' }}
+                />
+                <span>24/7 Uniformed On-Site Security Staff</span>
+              </label>
 
-            {/* Additional Safeguards */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '16px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.775rem', backgroundColor: '#0F172A', padding: '8px', borderRadius: '6px', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.825rem', color: '#334155', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={auditData.hasPhysicalBarrierGates}
+                  onChange={(e) => setAuditData({ ...auditData, hasPhysicalBarrierGates: e.target.checked })}
+                  style={{ width: '18px', height: '18px' }}
+                />
+                <span>Automated Rapid-Drop Roll-up Security Gates</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.825rem', color: '#334155', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
                   checked={auditData.hasLicencePlateRecognition}
-                  onChange={(e) => setAuditData(prev => ({ ...prev, hasLicencePlateRecognition: e.target.checked }))}
-                  style={{ accentColor: SAFE_PARK_TOKENS.colors.brand.primary }}
+                  onChange={(e) => setAuditData({ ...auditData, hasLicencePlateRecognition: e.target.checked })}
+                  style={{ width: '18px', height: '18px' }}
                 />
-                <span>LPR Plate Camera</span>
+                <span>Automated License Plate Recognition (ALPR) Cameras</span>
               </label>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.775rem', backgroundColor: '#0F172A', padding: '8px', borderRadius: '6px', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.825rem', color: '#334155', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
-                  checked={auditData.hasEmergencyHelpCallBoxes}
-                  onChange={(e) => setAuditData(prev => ({ ...prev, hasEmergencyHelpCallBoxes: e.target.checked }))}
-                  style={{ accentColor: SAFE_PARK_TOKENS.colors.brand.primary }}
+                  checked={auditData.hasUndergroundEnclosure}
+                  onChange={(e) => setAuditData({ ...auditData, hasUndergroundEnclosure: e.target.checked })}
+                  style={{ width: '18px', height: '18px' }}
                 />
-                <span>Help Call Boxes</span>
+                <span>Fully Enclosed Subterranean Concrete Vault Structure</span>
+              </label>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.825rem', color: '#334155', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={auditData.insuranceBondingVerified}
+                  onChange={(e) => setAuditData({ ...auditData, insuranceBondingVerified: e.target.checked })}
+                  style={{ width: '18px', height: '18px' }}
+                />
+                <span>$2M Commercial Theft & Property Damage Bonding Active</span>
               </label>
             </div>
 
@@ -274,177 +316,178 @@ export const GarageOperatorPortal: React.FC = () => {
               type="submit"
               style={{
                 width: '100%',
-                backgroundColor: SAFE_PARK_TOKENS.colors.brand.primary,
+                backgroundColor: '#2563EB',
                 color: '#FFFFFF',
                 border: 'none',
+                borderRadius: '10px',
                 padding: '12px',
-                borderRadius: '8px',
                 fontSize: '0.9rem',
-                fontWeight: 700,
+                fontWeight: 800,
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                boxShadow: SAFE_PARK_TOKENS.shadows.glowBlue,
+                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.25)',
               }}
             >
-              <Award size={18} /> Calculate SafePark Certification Tier
+              <FileCheck size={18} />
+              <span>Calculate SafePark Certification Tier</span>
             </button>
           </form>
         </div>
 
-        {/* Right Column: Certification Rating & Stripe B2B SaaS Subscription */}
-        <div>
-          <div
-            style={{
-              backgroundColor: '#1E293B',
-              borderRadius: SAFE_PARK_TOKENS.borderRadius.lg,
-              border: '1px solid #334155',
-              padding: '24px',
-              height: '100%',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'space-between',
-            }}
-          >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
-                <ShieldCheck size={20} color="#22C55E" />
-                <h2 style={{ fontSize: '1.15rem', color: '#FFFFFF' }}>Audit & Rating Results</h2>
-              </div>
-
-              {certificationResult ? (
+        {/* Right Column: Audit Evaluation Results & SaaS Stripe Activation */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          {certificationResult ? (
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '16px',
+                border: `2px solid ${certificationResult.tier === 'platinum' ? '#15803D' : '#2563EB'}`,
+                boxShadow: '0 4px 16px rgba(15, 23, 42, 0.08)',
+                padding: '24px',
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                 <div>
-                  {/* Verified Badge Card */}
-                  <div
-                    style={{
-                      backgroundColor: '#0F172A',
-                      borderRadius: '12px',
-                      border: `2px solid ${certificationResult.tier === 'platinum' ? '#38BDF8' : certificationResult.tier === 'gold' ? '#F59E0B' : '#22C55E'}`,
-                      padding: '20px',
-                      textAlign: 'center',
-                      marginBottom: '16px',
-                      boxShadow: SAFE_PARK_TOKENS.shadows.glowGreen,
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: '48px',
-                        height: '48px',
-                        borderRadius: '50%',
-                        backgroundColor: 'rgba(34, 197, 94, 0.2)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginBottom: '8px',
-                      }}
-                    >
-                      <Award size={28} color="#22C55E" />
-                    </div>
-                    <h3 style={{ fontSize: '1.2rem', color: '#FFFFFF' }}>
-                      {certificationResult.certifiedBadgeLabel}
-                    </h3>
-                    <div style={{ display: 'flex', justifyContent: 'center', gap: '16px', marginTop: '8px' }}>
-                      <div>
-                        <div style={{ fontSize: '0.7rem', color: '#94A3B8' }}>Security Audit Score</div>
-                        <div className="tabular-nums" style={{ fontSize: '1.1rem', color: '#FFFFFF', fontWeight: 700 }}>
-                          {certificationResult.auditScore}/100
-                        </div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '0.7rem', color: '#94A3B8' }}>CSI Score Boost</div>
-                        <div className="tabular-nums" style={{ fontSize: '1.1rem', color: '#22C55E', fontWeight: 700 }}>
-                          +{certificationResult.csiBaselineBoost} Pts
-                        </div>
-                      </div>
-                    </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#15803D', fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase' }}>
+                    <Award size={16} /> Audit & Rating Results
                   </div>
-
-                  {/* Compliance Notes List */}
-                  <div style={{ backgroundColor: '#0F172A', padding: '14px', borderRadius: '8px', border: '1px solid #334155', marginBottom: '20px' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#CBD5E1', textTransform: 'uppercase', marginBottom: '8px' }}>
-                      Verified Infrastructure Safeguards:
-                    </div>
-                    {certificationResult.complianceNotes.map((note, i) => (
-                      <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.775rem', color: '#94A3B8', marginBottom: '4px' }}>
-                        <CheckCircle2 size={13} color="#22C55E" />
-                        <span>{note}</span>
-                      </div>
-                    ))}
-                  </div>
+                  <h3 style={{ fontSize: '1.3rem', color: '#0F172A', fontWeight: 800, marginTop: '2px' }}>
+                    {certificationResult.certifiedBadgeLabel}
+                  </h3>
                 </div>
-              ) : (
                 <div
                   style={{
-                    backgroundColor: '#0F172A',
+                    backgroundColor: '#ECFDF5',
+                    color: '#065F46',
+                    border: '1px solid #A7F3D0',
                     borderRadius: '8px',
-                    padding: '32px 16px',
-                    textAlign: 'center',
-                    color: '#94A3B8',
-                    marginBottom: '20px',
-                  }}
-                >
-                  <FileCheck size={36} color="#64748B" style={{ marginBottom: '8px' }} />
-                  <p style={{ fontSize: '0.85rem' }}>
-                    Complete the security audit checklist and click "Calculate SafePark Certification Tier" to generate your verified rating.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* B2B Stripe SaaS Activation & Live Map Sync CTAs */}
-            {certificationResult && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <button
-                  onClick={handleStripeB2BEnroll}
-                  disabled={isEnrollingSaaS}
-                  style={{
-                    backgroundColor: '#2C73D2',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    fontSize: '0.9rem',
-                    fontWeight: 700,
-                    cursor: isEnrollingSaaS ? 'wait' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    boxShadow: SAFE_PARK_TOKENS.shadows.glowBlue,
-                  }}
-                >
-                  <CreditCard size={18} />
-                  <span>
-                    {isEnrollingSaaS
-                      ? 'Processing Stripe B2B SaaS Enrollment...'
-                      : `Subscribe to SaaS Certification ($${B2B_CERTIFICATION_PLANS[certificationResult.tier]?.priceMonthly || 349}/mo)`}
-                  </span>
-                </button>
-
-                <button
-                  onClick={handleApplyToLiveMap}
-                  style={{
-                    backgroundColor: '#22C55E',
-                    color: '#0F172A',
-                    border: 'none',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    fontSize: '0.9rem',
+                    padding: '4px 12px',
+                    fontSize: '0.8rem',
                     fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    boxShadow: '0 4px 15px rgba(34, 197, 94, 0.3)',
                   }}
                 >
-                  <Sparkles size={18} /> Apply Verified Certification to Live Driver Map
-                </button>
+                  +{certificationResult.csiBaselineBoost} CSI Pts
+                </div>
               </div>
-            )}
+
+              <div style={{ backgroundColor: '#F8FAFC', padding: '14px', borderRadius: '12px', marginBottom: '16px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '0.75rem', color: '#64748B', marginBottom: '6px', fontWeight: 700 }}>
+                  Projected Consumer Impact
+                </div>
+                <div style={{ fontSize: '1.1rem', color: '#0F172A', fontWeight: 800 }}>
+                  CSI Score: {targetSpot?.csi.totalScore || 70} ➔ {Math.min(100, (targetSpot?.csi.totalScore || 70) + certificationResult.csiBaselineBoost)}/100
+                </div>
+                <p style={{ fontSize: '0.8rem', color: '#475569', marginTop: '4px' }}>
+                  Tier: {certificationResult.tier.toUpperCase()} • Baseline Score: {certificationResult.auditScore}/100
+                </p>
+              </div>
+
+              {/* Verified Safeguards Checklist */}
+              <div style={{ marginBottom: '20px' }}>
+                <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 800, textTransform: 'uppercase', marginBottom: '8px' }}>
+                  Compliance & Verified Safeguards
+                </div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {certificationResult.complianceNotes.map((note, i) => (
+                    <li key={i} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.8rem', color: '#334155', fontWeight: 600 }}>
+                      <CheckCircle2 size={14} color="#15803D" />
+                      <span>{note}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Stripe B2B Subscription Section */}
+              <div style={{ borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '12px' }}>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>Enterprise Certification SaaS</span>
+                  <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#2563EB' }}>$199/mo</span>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <button
+                    onClick={handleStripeB2BEnroll}
+                    disabled={isEnrollingSaaS}
+                    style={{
+                      width: '100%',
+                      backgroundColor: '#2563EB',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      borderRadius: '10px',
+                      padding: '12px',
+                      fontSize: '0.85rem',
+                      fontWeight: 800,
+                      cursor: isEnrollingSaaS ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      boxShadow: '0 4px 14px rgba(37, 99, 235, 0.25)',
+                    }}
+                  >
+                    <CreditCard size={16} />
+                    <span>{isEnrollingSaaS ? 'Activating...' : 'Subscribe to SaaS Certification'}</span>
+                  </button>
+
+                  <button
+                    onClick={handleApplyToLiveMap}
+                    style={{
+                      width: '100%',
+                      backgroundColor: '#F1F5F9',
+                      color: '#0F172A',
+                      border: '1px solid #CBD5E1',
+                      borderRadius: '10px',
+                      padding: '10px',
+                      fontSize: '0.8rem',
+                      fontWeight: 700,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Apply Verified Certification to Live Driver Map
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px dashed #CBD5E1',
+                padding: '40px 24px',
+                textAlign: 'center',
+                color: '#64748B',
+              }}
+            >
+              <Award size={48} color="#94A3B8" style={{ margin: '0 auto 12px auto' }} />
+              <h3 style={{ fontSize: '1.1rem', color: '#0F172A', fontWeight: 800, marginBottom: '6px' }}>
+                No Active Audit Evaluation
+              </h3>
+              <p style={{ fontSize: '0.85rem', maxWidth: '360px', margin: '0 auto' }}>
+                Fill out the physical infrastructure parameters on the left and click "Calculate SafePark Certification Tier" to calculate your badge tier.
+              </p>
+            </div>
+          )}
+
+          {/* Value Proposition Cards */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', padding: '16px', borderRadius: '12px' }}>
+              <TrendingUp size={20} color="#15803D" style={{ marginBottom: '8px' }} />
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>Top Map Placement</div>
+              <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '2px' }}>
+                Certified facilities receive priority pin ranking in consumer searches.
+              </div>
+            </div>
+            <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', padding: '16px', borderRadius: '12px' }}>
+              <ShieldCheck size={20} color="#2563EB" style={{ marginBottom: '8px' }} />
+              <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>Verified Safety Seal</div>
+              <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '2px' }}>
+                Showcases real-time manned security and barrier gate telemetry.
+              </div>
+            </div>
           </div>
         </div>
       </div>

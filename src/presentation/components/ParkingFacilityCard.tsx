@@ -6,15 +6,10 @@ import {
   ShieldCheck,
   Video,
   Footprints,
-  AlertTriangle,
   Info,
   Car,
-  Lock,
   CheckCircle2,
-  Navigation,
-  Sparkles,
-  Sun,
-  Eye
+  AlertTriangle,
 } from 'lucide-react';
 
 export interface ParkingFacilityCardProps {
@@ -48,18 +43,18 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
       aria-label={`${location.name}, Composite Safety Index ${location.csi.totalScore}`}
       onClick={() => onSelect(location)}
       style={{
-        backgroundColor: '#1E293B',
-        borderRadius: SAFE_PARK_TOKENS.borderRadius.lg,
+        backgroundColor: '#FFFFFF',
+        borderRadius: '16px',
         border: isParkedHere
-          ? '2px solid #22C55E'
+          ? '2px solid #15803D'
           : isSelected
-          ? `2px solid ${SAFE_PARK_TOKENS.colors.brand.primary}`
-          : `1px solid rgba(51, 65, 85, 0.7)`,
+          ? '2px solid #2563EB'
+          : '1px solid #E2E8F0',
         boxShadow: isParkedHere
-          ? SAFE_PARK_TOKENS.shadows.glowGreen
+          ? '0 4px 16px rgba(21, 128, 61, 0.15)'
           : isSelected
-          ? SAFE_PARK_TOKENS.shadows.glowBlue
-          : SAFE_PARK_TOKENS.shadows.card,
+          ? '0 4px 16px rgba(37, 99, 235, 0.15)'
+          : '0 2px 10px rgba(15, 23, 42, 0.05)',
         padding: '16px',
         marginBottom: '12px',
         cursor: 'pointer',
@@ -74,15 +69,15 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
             position: 'absolute',
             top: '-10px',
             right: '16px',
-            backgroundColor: '#22C55E',
-            color: '#0F172A',
+            backgroundColor: '#15803D',
+            color: '#FFFFFF',
             padding: '2px 10px',
             borderRadius: SAFE_PARK_TOKENS.borderRadius.pill,
             fontSize: '0.7rem',
             fontWeight: 800,
             textTransform: 'uppercase',
             letterSpacing: '0.04em',
-            boxShadow: '0 2px 6px rgba(0,0,0,0.4)',
+            boxShadow: '0 2px 8px rgba(21, 128, 61, 0.3)',
             display: 'flex',
             alignItems: 'center',
             gap: '4px',
@@ -95,146 +90,99 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
 
       {/* Header Row: Title & CSI Badge */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-        <div>
+        <div style={{ flex: 1, minWidth: 0, paddingRight: '8px' }}>
           <h3
             style={{
               fontSize: '1rem',
-              fontWeight: 700,
-              color: '#FFFFFF',
+              fontWeight: 800,
+              color: '#0F172A',
               marginBottom: '2px',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
             }}
           >
-            <span>{location.name}</span>
+            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{location.name}</span>
             {location.csi.totalScore >= 75 && (
-              <span title="SafePark Low Risk Certified" style={{ display: 'inline-flex' }}>
-                <ShieldCheck size={16} color="#38BDF8" />
+              <span title="SafePark Low Risk Certified" style={{ display: 'inline-flex', flexShrink: 0 }}>
+                <ShieldCheck size={16} color="#15803D" />
               </span>
             )}
           </h3>
-          <p style={{ fontSize: '0.8rem', color: '#94A3B8' }}>{location.address}</p>
+          <p style={{ fontSize: '0.8rem', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{location.address}</p>
         </div>
 
         <Badge score={location.csi.totalScore} size="md" />
       </div>
 
-      {/* Quick Specs: Distance, Rate, Structure */}
+      {/* Quick Specs: Rate, Open Spots, Structure */}
       <div
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
+          gap: '10px',
           fontSize: '0.775rem',
-          color: '#CBD5E1',
+          color: '#475569',
           marginBottom: '12px',
           flexWrap: 'wrap',
         }}
       >
-        <span style={{ fontWeight: 700, color: '#38BDF8' }}>${location.hourlyRate}/hr</span>
+        <span style={{ fontWeight: 800, color: '#2563EB' }}>${location.hourlyRate}/hr</span>
         <span>•</span>
-        <span>{location.availableSpaces} spots open</span>
+        <span style={{ fontWeight: 600 }}>{location.availableSpaces} spots open</span>
         <span>•</span>
-        <span style={{ textTransform: 'capitalize' }}>
+        <span style={{ textTransform: 'capitalize', color: '#64748B' }}>
           {location.infrastructure.structureType.replace(/_/g, ' ')}
         </span>
-        {litRoute && (
-          <>
-            <span>•</span>
-            <span style={{ color: '#22C55E', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-              <Footprints size={12} />
-              {litRoute.estimatedWalkingMinutes} min safe walk ({litRoute.totalDistanceMeters}m)
-            </span>
-          </>
-        )}
-      </div>
-
-      {/* Feature Badges */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '14px' }}>
-        {location.infrastructure.hasControlledAccessBarrier && (
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              backgroundColor: '#334155',
-              color: '#E2E8F0',
-              padding: '2px 8px',
-              borderRadius: '4px',
-              fontSize: '0.7rem',
-              fontWeight: 500,
-            }}
-          >
-            <Lock size={12} color="#38BDF8" /> Gated Perimeter
-          </span>
-        )}
-        {location.infrastructure.hasActiveAttendantOrPatrol && (
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              backgroundColor: '#334155',
-              color: '#E2E8F0',
-              padding: '2px 8px',
-              borderRadius: '4px',
-              fontSize: '0.7rem',
-              fontWeight: 500,
-            }}
-          >
-            <ShieldCheck size={12} color="#22C55E" /> 24/7 Attendant
-          </span>
-        )}
         {location.infrastructure.surveillance === 'monitored_cctv_24_7' && (
           <span
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '4px',
-              backgroundColor: '#334155',
-              color: '#E2E8F0',
-              padding: '2px 8px',
+              gap: '3px',
+              color: '#1D4ED8',
+              backgroundColor: '#EFF6FF',
+              padding: '1px 6px',
               borderRadius: '4px',
               fontSize: '0.7rem',
-              fontWeight: 500,
+              fontWeight: 700,
             }}
           >
-            <Video size={12} color="#38BDF8" /> CCTV Monitored
+            <Video size={12} color="#2563EB" /> CCTV Monitored
           </span>
         )}
       </div>
 
-      {/* Granular Sub-Score Gauges (in Full/Expanded view or when showFullDetails is true) */}
+      {/* Granular Sub-Score Gauges (in Full/Expanded view or when selected) */}
       {(showFullDetails || isSelected) && location.csi.components && (
         <div
           style={{
-            backgroundColor: '#0F172A',
-            borderRadius: '8px',
+            backgroundColor: '#F8FAFC',
+            borderRadius: '12px',
             padding: '10px 12px',
             marginBottom: '14px',
-            border: '1px solid #334155',
+            border: '1px solid #E2E8F0',
           }}
         >
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#94A3B8', marginBottom: '8px', textTransform: 'uppercase' }}>
+          <div style={{ fontSize: '0.725rem', fontWeight: 800, color: '#64748B', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
             CSI Sub-Score Breakdown
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', textAlign: 'center' }}>
             <div>
-              <div style={{ fontSize: '0.7rem', color: '#94A3B8' }}>Crime Index</div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 800, color: location.csi.components.crimeScore?.rawScore >= 75 ? '#22C55E' : '#F59E0B' }}>
+              <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 600 }}>Crime Index</div>
+              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: location.csi.components.crimeScore?.rawScore >= 75 ? '#15803D' : '#B45309' }}>
                 {Math.round(location.csi.components.crimeScore?.rawScore || 0)}/100
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '0.7rem', color: '#94A3B8' }}>Lighting Grid</div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 800, color: location.csi.components.lightingScore?.rawScore >= 75 ? '#22C55E' : '#F59E0B' }}>
+              <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 600 }}>Lighting Grid</div>
+              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: location.csi.components.lightingScore?.rawScore >= 75 ? '#15803D' : '#B45309' }}>
                 {Math.round(location.csi.components.lightingScore?.rawScore || 0)}/100
               </div>
             </div>
             <div>
-              <div style={{ fontSize: '0.7rem', color: '#94A3B8' }}>Infrastructure</div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 800, color: location.csi.components.infrastructureScore?.rawScore >= 75 ? '#22C55E' : '#F59E0B' }}>
+              <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 600 }}>Infrastructure</div>
+              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: location.csi.components.infrastructureScore?.rawScore >= 75 ? '#15803D' : '#B45309' }}>
                 {Math.round(location.csi.components.infrastructureScore?.rawScore || 0)}/100
               </div>
             </div>
@@ -251,29 +199,32 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
               e.stopPropagation();
               onSafeWalk(location);
             }}
-            aria-label={`View on foot refined walk return route for ${location.name}`}
+            aria-label={`View on foot return walk route for ${location.name}`}
             style={{
               flex: '1 1 120px',
-              backgroundColor: '#0F172A',
-              color: '#38BDF8',
-              border: '1px solid #22C55E',
+              backgroundColor: '#F1F5F9',
+              color: '#1E293B',
+              border: '1px solid #CBD5E1',
               borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-              padding: '6px 12px',
+              padding: '8px 12px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
               minHeight: '44px',
-              textAlign: 'left',
+              fontSize: '0.775rem',
+              fontWeight: 700,
               transition: 'background-color 0.15s ease',
             }}
           >
-            <Footprints size={15} color="#22C55E" style={{ flexShrink: 0 }} />
-            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15 }}>
-              <span style={{ fontSize: '0.775rem', fontWeight: 700, color: '#FFFFFF' }}>On Foot</span>
-              <span style={{ fontSize: '0.6rem', color: '#94A3B8', fontWeight: 500 }}>Refined Walk Return</span>
-            </div>
+            <Footprints size={15} color="#15803D" />
+            <span>Walk Route</span>
+            {litRoute && (
+              <span style={{ fontSize: '0.7rem', color: '#15803D', fontWeight: 700 }}>
+                ({litRoute.estimatedWalkingMinutes}m)
+              </span>
+            )}
           </button>
         )}
 
@@ -286,13 +237,13 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
             }}
             aria-label={`Inspect CSI Score Breakdown for ${location.name}`}
             style={{
-              backgroundColor: '#334155',
-              color: '#CBD5E1',
-              border: 'none',
+              backgroundColor: '#F1F5F9',
+              color: '#475569',
+              border: '1px solid #CBD5E1',
               borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
               padding: '8px 12px',
               fontSize: '0.775rem',
-              fontWeight: 600,
+              fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
@@ -301,12 +252,12 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
               minHeight: '44px',
             }}
           >
-            <Info size={15} />
+            <Info size={15} color="#2563EB" />
             <span>Details</span>
           </button>
         )}
 
-        {/* Park Here */}
+        {/* Park Here Primary CTA */}
         {onParkHere && (
           <button
             onClick={(e) => {
@@ -316,19 +267,20 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
             disabled={isParkedHere}
             style={{
               flex: '1 1 100px',
-              backgroundColor: isParkedHere ? '#22C55E' : SAFE_PARK_TOKENS.colors.brand.primary,
-              color: isParkedHere ? '#0F172A' : '#FFFFFF',
+              backgroundColor: isParkedHere ? '#15803D' : '#2563EB',
+              color: '#FFFFFF',
               border: 'none',
               borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
               padding: '8px 14px',
-              fontSize: '0.775rem',
-              fontWeight: 700,
+              fontSize: '0.8rem',
+              fontWeight: 800,
               cursor: isParkedHere ? 'default' : 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '6px',
               minHeight: '44px',
+              boxShadow: isParkedHere ? '0 4px 12px rgba(21, 128, 61, 0.25)' : '0 4px 12px rgba(37, 99, 235, 0.25)',
               transition: 'background-color 0.15s ease',
             }}
           >
@@ -346,9 +298,9 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
             }}
             aria-label={`Report street hazard near ${location.name}`}
             style={{
-              backgroundColor: 'transparent',
-              color: '#94A3B8',
-              border: '1px solid #334155',
+              backgroundColor: '#FFFFFF',
+              color: '#64748B',
+              border: '1px solid #CBD5E1',
               borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
               padding: '8px',
               cursor: 'pointer',
@@ -360,7 +312,7 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
             }}
             title="Report Physical Hazard"
           >
-            <AlertTriangle size={15} color="#F59E0B" />
+            <AlertTriangle size={15} color="#D97706" />
           </button>
         )}
       </div>

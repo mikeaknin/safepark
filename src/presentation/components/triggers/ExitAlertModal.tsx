@@ -21,8 +21,9 @@ export const ExitAlertModal: React.FC<ExitAlertModalProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        backgroundColor: 'rgba(15, 23, 42, 0.90)',
+        backgroundColor: 'rgba(15, 23, 42, 0.65)',
         backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
         zIndex: 2000,
         display: 'flex',
         alignItems: 'center',
@@ -33,14 +34,14 @@ export const ExitAlertModal: React.FC<ExitAlertModalProps> = ({
     >
       <div
         style={{
-          backgroundColor: '#1E293B',
-          borderRadius: SAFE_PARK_TOKENS.borderRadius.lg,
-          border: isHighUrgency ? '2px solid #EF4444' : '1px solid #2C73D2',
-          boxShadow: isHighUrgency ? SAFE_PARK_TOKENS.shadows.glowRed : SAFE_PARK_TOKENS.shadows.glowBlue,
+          backgroundColor: '#FFFFFF',
+          borderRadius: '20px',
+          border: isHighUrgency ? '2px solid #BE123C' : '2px solid #2563EB',
+          boxShadow: '0 20px 48px rgba(15, 23, 42, 0.2)',
           maxWidth: '520px',
           width: '100%',
           padding: '24px',
-          color: '#FFFFFF',
+          color: '#0F172A',
         }}
       >
         {/* Trigger Banner */}
@@ -51,40 +52,42 @@ export const ExitAlertModal: React.FC<ExitAlertModalProps> = ({
                 width: '36px',
                 height: '36px',
                 borderRadius: '50%',
-                backgroundColor: isHighUrgency ? 'rgba(239, 68, 68, 0.2)' : 'rgba(44, 115, 210, 0.2)',
+                backgroundColor: isHighUrgency ? '#FFF1F2' : '#EFF6FF',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              {isHighUrgency ? <AlertTriangle size={20} color="#EF4444" /> : <Bluetooth size={20} color="#2C73D2" />}
+              {isHighUrgency ? <AlertTriangle size={20} color="#BE123C" /> : <Bluetooth size={20} color="#2563EB" />}
             </div>
             <div>
               <span
                 style={{
                   fontSize: '0.7rem',
-                  fontWeight: 700,
+                  fontWeight: 800,
                   textTransform: 'uppercase',
-                  color: isHighUrgency ? '#EF4444' : '#2C73D2',
+                  letterSpacing: '0.04em',
+                  color: isHighUrgency ? '#BE123C' : '#2563EB',
                 }}
               >
                 Automatic Exit Trigger Activated
               </span>
-              <h2 style={{ fontSize: '1.2rem', color: '#FFFFFF' }}>{alert.title}</h2>
+              <h2 style={{ fontSize: '1.2rem', color: '#0F172A', fontWeight: 800 }}>{alert.title}</h2>
             </div>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close alert"
             style={{
-              background: '#334155',
-              border: 'none',
+              background: '#F1F5F9',
+              border: '1px solid #CBD5E1',
               borderRadius: '50%',
-              width: '30px',
-              height: '30px',
+              width: '32px',
+              height: '32px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#FFFFFF',
+              color: '#475569',
               cursor: 'pointer',
             }}
           >
@@ -93,64 +96,75 @@ export const ExitAlertModal: React.FC<ExitAlertModalProps> = ({
         </div>
 
         {/* Message */}
-        <p style={{ fontSize: '0.9rem', color: '#CBD5E1', lineHeight: 1.5, marginBottom: '20px' }}>
+        <p style={{ fontSize: '0.9rem', color: '#475569', lineHeight: 1.5, marginBottom: '20px' }}>
           {alert.message}
         </p>
 
         {/* Property Protection Checklist */}
         <div
           style={{
-            backgroundColor: '#0F172A',
-            padding: '14px',
-            borderRadius: '8px',
-            border: '1px solid #334155',
-            marginBottom: '20px',
+            backgroundColor: '#F8FAFC',
+            border: '1px solid #E2E8F0',
+            borderRadius: '12px',
+            padding: '16px',
+            marginBottom: '24px',
           }}
         >
-          <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase', marginBottom: '8px' }}>
-            Driver Physical Checklist:
+          <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#64748B', marginBottom: '10px', textTransform: 'uppercase' }}>
+            Instant Vehicle Lockdown Checklist
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.825rem', color: '#FFFFFF' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ShieldCheck size={16} color="#22C55E" />
-              <span>Charging cords, mounts & coins hidden away</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ShieldCheck size={16} color="#22C55E" />
-              <span>Bags, backpacks, and luggage placed in trunk</span>
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Lock size={16} color="#22C55E" />
-              <span>All windows rolled up and doors locked</span>
-            </div>
-          </div>
+          <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <li style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#334155', fontWeight: 600 }}>
+              <Lock size={15} color="#15803D" />
+              <span>All bags, charging cables, and sunglasses removed from plain view</span>
+            </li>
+            <li style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#334155', fontWeight: 600 }}>
+              <Lock size={15} color="#15803D" />
+              <span>Windows rolled up completely and doors double-locked</span>
+            </li>
+            <li style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.825rem', color: '#334155', fontWeight: 600 }}>
+              <Lock size={15} color="#15803D" />
+              <span>Trunk latched and keyless entry fob stored in signal-blocking pouch</span>
+            </li>
+          </ul>
         </div>
 
-        {/* Action Button */}
+        {/* Actions */}
         <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
           <button
-            onClick={() => {
-              onConfirmCabinClear();
-              onClose();
-            }}
+            onClick={onClose}
             style={{
-              backgroundColor: isHighUrgency ? '#EF4444' : SAFE_PARK_TOKENS.colors.brand.primary,
+              backgroundColor: '#F1F5F9',
+              color: '#475569',
+              border: '1px solid #CBD5E1',
+              borderRadius: '10px',
+              padding: '10px 18px',
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+            }}
+          >
+            Snooze 5m
+          </button>
+          <button
+            onClick={onConfirmCabinClear}
+            style={{
+              backgroundColor: '#15803D',
               color: '#FFFFFF',
               border: 'none',
-              padding: '12px 20px',
-              borderRadius: '8px',
-              fontSize: '0.9rem',
-              fontWeight: 700,
+              borderRadius: '10px',
+              padding: '10px 20px',
+              fontSize: '0.85rem',
+              fontWeight: 800,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
-              width: '100%',
-              justifyContent: 'center',
+              gap: '6px',
+              boxShadow: '0 4px 12px rgba(21, 128, 61, 0.25)',
             }}
           >
-            <Lock size={16} />
-            {alert.actionPrompt}
+            <ShieldCheck size={16} />
+            <span>Confirm Cabin Clear</span>
           </button>
         </div>
       </div>

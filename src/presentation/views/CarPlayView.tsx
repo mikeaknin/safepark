@@ -43,10 +43,10 @@ export const CarPlayView: React.FC = () => {
         maxWidth: '1000px',
         margin: '0 auto',
         padding: '16px',
-        backgroundColor: '#0B1120',
+        backgroundColor: '#FFFFFF',
         borderRadius: '24px',
-        border: '4px solid #334155',
-        boxShadow: '0 10px 40px rgba(0,0,0,0.8)',
+        border: '3px solid #CBD5E1',
+        boxShadow: '0 10px 40px rgba(15, 23, 42, 0.12)',
       }}
     >
       {/* CarPlay Chassis Top Bar */}
@@ -56,20 +56,20 @@ export const CarPlayView: React.FC = () => {
           justifyContent: 'space-between',
           alignItems: 'center',
           padding: '8px 16px',
-          borderBottom: '1px solid #1E293B',
+          borderBottom: '1px solid #E2E8F0',
           fontSize: '0.8rem',
-          color: '#94A3B8',
+          color: '#64748B',
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#22C55E' }} />
-          <span style={{ fontWeight: 700, color: '#FFFFFF' }}>Apple CarPlay / Automotive Display</span>
+          <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: '#15803D' }} />
+          <span style={{ fontWeight: 800, color: '#0F172A' }}>Apple CarPlay / Automotive Display</span>
           <span>•</span>
-          <span>In-Dash Driving Mode</span>
+          <span>In-Dash Daylight Mode</span>
         </div>
-        <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '16px', alignItems: 'center', fontWeight: 700 }}>
           <span className="tabular-nums">5G Ultra</span>
-          <span className="tabular-nums">7:48 PM</span>
+          <span className="tabular-nums">11:42 AM</span>
         </div>
       </div>
 
@@ -86,9 +86,9 @@ export const CarPlayView: React.FC = () => {
         {/* Left: Simplified High-Contrast Turn-by-Turn Card */}
         <div
           style={{
-            backgroundColor: '#1E293B',
+            backgroundColor: '#F8FAFC',
             borderRadius: '16px',
-            border: `2px solid ${status.hex}`,
+            border: `2px solid ${status.border}`,
             padding: '20px',
             display: 'flex',
             flexDirection: 'column',
@@ -98,233 +98,207 @@ export const CarPlayView: React.FC = () => {
           {/* Top Destination & Maneuver Banner */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div
-                  style={{
-                    backgroundColor: SAFE_PARK_TOKENS.colors.brand.primary,
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '12px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Navigation size={26} color="#FFFFFF" />
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, color: '#2563EB', textTransform: 'uppercase' }}>
+                  Next Parking Guidance
                 </div>
-                <div>
-                  <div style={{ fontSize: '0.85rem', color: '#94A3B8', textTransform: 'uppercase' }}>
-                    In 300 FT • Turn Right on 4th St
-                  </div>
-                  <h2 style={{ fontSize: '1.4rem', color: '#FFFFFF', fontWeight: 700, lineHeight: 1.2 }}>
-                    {activeSpot?.name}
-                  </h2>
-                </div>
+                <h2 style={{ fontSize: '1.4rem', color: '#0F172A', fontWeight: 800, marginTop: '2px' }}>
+                  {activeSpot?.name || 'Searching Safe Facilities...'}
+                </h2>
+                <p style={{ fontSize: '0.85rem', color: '#64748B', marginTop: '2px' }}>
+                  {activeSpot?.address || 'San Francisco, CA'}
+                </p>
               </div>
 
-              {/* Large High-Contrast Status Readout */}
               <div
                 style={{
                   backgroundColor: status.bg,
-                  border: `2px solid ${status.hex}`,
+                  color: status.text,
+                  border: `1.5px solid ${status.border}`,
+                  padding: '6px 14px',
                   borderRadius: '12px',
-                  padding: '8px 14px',
-                  textAlign: 'center',
+                  fontSize: '0.9rem',
+                  fontWeight: 800,
                 }}
               >
-                <div className="tabular-nums" style={{ fontSize: '1.6rem', color: status.hex, fontWeight: 800, lineHeight: 1 }}>
-                  {activeSpot?.csi.totalScore}
-                </div>
-                <div style={{ fontSize: '0.7rem', color: '#FFFFFF', fontWeight: 700, textTransform: 'uppercase' }}>
-                  {status.label}
-                </div>
+                CSI {activeSpot?.csi.totalScore || 85}
               </div>
             </div>
 
-            {/* In-Car Safety Telemetry Indicators */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginTop: '20px' }}>
-              <div style={{ backgroundColor: '#0F172A', padding: '12px', borderRadius: '10px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748B' }}>BREAK-INS (30D)</div>
-                <div className="tabular-nums" style={{ fontSize: '1.2rem', color: activeSpot?.crimeData.smashAndGrabCount === 0 ? '#22C55E' : '#EF4444', fontWeight: 700 }}>
-                  {activeSpot?.crimeData.smashAndGrabCount} Incidents
-                </div>
+            {/* Quick Turn Maneuver */}
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '12px',
+                padding: '14px',
+                marginTop: '16px',
+                border: '1px solid #E2E8F0',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+              }}
+            >
+              <div
+                style={{
+                  width: '40px',
+                  height: '40px',
+                  borderRadius: '10px',
+                  backgroundColor: '#2563EB',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: '#FFFFFF',
+                }}
+              >
+                <Navigation size={22} />
               </div>
-
-              <div style={{ backgroundColor: '#0F172A', padding: '12px', borderRadius: '10px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748B' }}>STREET LIGHTING</div>
-                <div className="tabular-nums" style={{ fontSize: '1.2rem', color: '#38BDF8', fontWeight: 700 }}>
-                  {activeSpot?.lighting.coverageIndexPercentage}% Lux
+              <div>
+                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A' }}>
+                  In 400 ft, Turn Right onto Mission St
                 </div>
-              </div>
-
-              <div style={{ backgroundColor: '#0F172A', padding: '12px', borderRadius: '10px', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.7rem', color: '#64748B' }}>RATE</div>
-                <div className="tabular-nums" style={{ fontSize: '1.2rem', color: '#FFFFFF', fontWeight: 700 }}>
-                  ${activeSpot?.hourlyRate}/hr
+                <div style={{ fontSize: '0.8rem', color: '#64748B' }}>
+                  Entering Covered Multi-Level Structure • 24/7 Monitored
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Voice Prompt Playback Banner */}
+          {/* Voice Prompt Playback Simulator */}
           {simulatedVoiceAlert && (
             <div
               style={{
-                backgroundColor: '#0F172A',
-                border: '1px solid #38BDF8',
-                borderRadius: '10px',
-                padding: '12px 14px',
-                marginTop: '12px',
+                backgroundColor: '#EFF6FF',
+                border: '1.5px solid #BFDBFE',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                margin: '12px 0',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '10px',
               }}
             >
-              <Volume2 size={22} color="#38BDF8" style={{ flexShrink: 0 }} />
-              <div style={{ fontSize: '0.85rem', color: '#E2E8F0', fontStyle: 'italic' }}>
+              <Volume2 size={20} color="#2563EB" style={{ flexShrink: 0 }} />
+              <div style={{ fontSize: '0.825rem', color: '#1E40AF', fontStyle: 'italic', fontWeight: 600 }}>
                 {simulatedVoiceAlert}
               </div>
             </div>
           )}
 
-          {/* Bottom Action Row */}
-          <div style={{ display: 'flex', gap: '10px', marginTop: '14px' }}>
+          {/* Bottom Live Action Controls */}
+          <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
             <button
               onClick={() => activeSpot && handleParkHere(activeSpot)}
+              disabled={parkedLocation?.id === activeSpot?.id}
               style={{
                 flex: 1,
-                backgroundColor: '#22C55E',
-                color: '#0F172A',
+                backgroundColor: parkedLocation?.id === activeSpot?.id ? '#15803D' : '#2563EB',
+                color: '#FFFFFF',
                 border: 'none',
-                padding: '14px',
                 borderRadius: '12px',
-                fontSize: '1.05rem',
+                padding: '14px',
+                fontSize: '1rem',
                 fontWeight: 800,
-                cursor: 'pointer',
+                cursor: parkedLocation?.id === activeSpot?.id ? 'default' : 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
+                boxShadow: '0 4px 14px rgba(37, 99, 235, 0.25)',
               }}
             >
-              <Lock size={20} />
-              {parkedLocation?.id === activeSpot?.id ? 'Vehicle Parked & Locked' : 'Park & Arm Safety Trigger'}
+              <CheckCircle2 size={18} />
+              <span>{parkedLocation?.id === activeSpot?.id ? 'Parked at Facility' : 'Confirm Spot & Park'}</span>
             </button>
           </div>
         </div>
 
-        {/* Right: One-Tap In-Car Driving Commands */}
+        {/* Right: Driver Action Tiles (Large Tap Targets for Vehicle Ergonomics) */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {/* Quick Command 1: Route to Safest Spot */}
+          {/* Quick Route to Safest Facility */}
           <button
             onClick={handleRouteToSafestSpot}
             style={{
-              backgroundColor: '#1E293B',
-              border: '2px solid #2C73D2',
+              flex: 1,
+              backgroundColor: '#ECFDF5',
+              border: '2px solid #A7F3D0',
               borderRadius: '16px',
               padding: '18px',
               textAlign: 'left',
               cursor: 'pointer',
               display: 'flex',
-              alignItems: 'center',
+              flexDirection: 'column',
               justifyContent: 'space-between',
+              transition: 'transform 0.15s ease',
             }}
           >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#38BDF8', fontSize: '0.8rem', fontWeight: 700 }}>
-                <Sparkles size={16} /> ONE-TAP SMART ROUTING
-              </div>
-              <div style={{ fontSize: '1.15rem', fontWeight: 700, color: '#FFFFFF', marginTop: '2px' }}>
-                Route to Safest Spot
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
-                Filters nearest 90+ CSI certified garage
-              </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Shield size={24} color="#15803D" />
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#15803D', textTransform: 'uppercase' }}>
+                One-Touch Reroute
+              </span>
             </div>
-            <div
-              style={{
-                backgroundColor: '#2C73D2',
-                color: '#FFFFFF',
-                borderRadius: '50%',
-                width: '36px',
-                height: '36px',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
-            >
-              <Navigation size={18} />
+            <div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>
+                Navigate to Safest Spot
+              </div>
+              <div style={{ fontSize: '0.8rem', color: '#065F46', marginTop: '2px' }}>
+                Top-rated facility (CSI {safestSpot?.csi.totalScore || 94}) within 3 mins
+              </div>
             </div>
           </button>
 
-          {/* Quick Command 2: Audio Voice Alert Test */}
+          {/* Test Audio Voice Alert Trigger */}
           <button
             onClick={handleTriggerAudioSmashAndGrabAlert}
             style={{
-              backgroundColor: '#1E293B',
-              border: '1px solid #475569',
+              flex: 1,
+              backgroundColor: '#FFFBEB',
+              border: '2px solid #FDE68A',
               borderRadius: '16px',
-              padding: '16px',
+              padding: '18px',
               textAlign: 'left',
               cursor: 'pointer',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Volume2 size={24} color="#B45309" />
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: '#B45309', textTransform: 'uppercase' }}>
+                Voice Assistant
+              </span>
+            </div>
+            <div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>
+                Test Audio Theft Alert
+              </div>
+              <div style={{ fontSize: '0.8rem', color: '#92400E', marginTop: '2px' }}>
+                Trigger high-incident corridor cabin safety prompt
+              </div>
+            </div>
+          </button>
+
+          {/* Safe Walk Return Preview */}
+          <div
+            style={{
+              backgroundColor: '#F8FAFC',
+              border: '1px solid #E2E8F0',
+              borderRadius: '16px',
+              padding: '14px 18px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
             }}
           >
-            <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#EF4444', fontSize: '0.8rem', fontWeight: 700 }}>
-                <AlertTriangle size={16} /> VOICE TELEMETRY
-              </div>
-              <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#FFFFFF', marginTop: '2px' }}>
-                Test Audio Risk Warning
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
-                Hands-free smash & grab advisory
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <Footprints size={20} color="#2563EB" />
+              <div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>Illuminated Return</div>
+                <div style={{ fontSize: '0.75rem', color: '#64748B' }}>54 Lux Municipal Path Active</div>
               </div>
             </div>
-            <Volume2 size={20} color="#EF4444" />
-          </button>
-
-          {/* Quick Command 3: Other Nearby Spots */}
-          <div
-            style={{
-              backgroundColor: '#1E293B',
-              borderRadius: '16px',
-              border: '1px solid #334155',
-              padding: '14px',
-              flex: 1,
-              overflowY: 'auto',
-            }}
-          >
-            <div style={{ fontSize: '0.75rem', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase', marginBottom: '8px' }}>
-              Other Options in 0.5 Mile Range:
-            </div>
-            {locations.map((loc) => (
-              <div
-                key={loc.id}
-                onClick={() => setSelectedLocation(loc)}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '8px 10px',
-                  borderRadius: '8px',
-                  backgroundColor: selectedLocation?.id === loc.id ? '#0F172A' : 'transparent',
-                  border: selectedLocation?.id === loc.id ? '1px solid #2C73D2' : 'none',
-                  cursor: 'pointer',
-                  marginBottom: '4px',
-                }}
-              >
-                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '180px' }}>
-                  <div style={{ fontSize: '0.85rem', color: '#FFFFFF', fontWeight: 600 }}>{loc.name}</div>
-                  <div style={{ fontSize: '0.7rem', color: '#94A3B8' }}>${loc.hourlyRate}/hr</div>
-                </div>
-                <div className="tabular-nums" style={{ fontSize: '0.85rem', color: getStatusStyle(loc.csi.totalScore).hex, fontWeight: 700 }}>
-                  CSI {loc.csi.totalScore}
-                </div>
-              </div>
-            ))}
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#15803D' }}>3 min walk</span>
           </div>
         </div>
       </div>

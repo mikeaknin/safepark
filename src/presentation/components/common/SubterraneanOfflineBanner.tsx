@@ -25,63 +25,49 @@ export const SubterraneanOfflineBanner: React.FC = () => {
       role="status"
       aria-live="polite"
       style={{
-        backgroundColor: '#0F172A',
-        border: '1px solid #F59E0B',
-        borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
+        backgroundColor: '#FFFBEB',
+        border: '1px solid #FDE68A',
+        borderRadius: '12px',
         padding: '10px 14px',
-        marginBottom: '14px',
+        margin: '10px 14px 0 14px',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
         flexWrap: 'wrap',
         gap: '10px',
-        boxShadow: SAFE_PARK_TOKENS.shadows.glowAmber,
+        boxShadow: '0 2px 8px rgba(180, 83, 9, 0.1)',
+        zIndex: 45,
+        position: 'relative',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
         <div
           style={{
-            backgroundColor: 'rgba(245, 158, 11, 0.2)',
+            backgroundColor: '#FEF3C7',
             width: '32px',
             height: '32px',
             borderRadius: '50%',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            color: '#F59E0B',
+            color: '#B45309',
           }}
         >
           <WifiOff size={16} />
         </div>
         <div>
-          <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#F59E0B' }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#92400E' }}>
             Subterranean Concrete Garage Mode (Offline Resiliency Active)
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#CBD5E1' }}>
-            Serving cached block safety indices, active session telemetry, and offline return walking paths.
+          <div style={{ fontSize: '0.75rem', color: '#78350F' }}>
+            Serving cached local CSI safety metrics, parking rules, and offline return routes.
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-        <span style={{ fontSize: '0.7rem', color: '#94A3B8', display: 'flex', alignItems: 'center', gap: '4px' }}>
-          <HardDrive size={12} /> Local Cache: {lastSync === 'Just now' ? 'Active' : new Date(lastSync).toLocaleTimeString()}
-        </span>
-        <button
-          onClick={() => OfflineCacheService.toggleSubterraneanSimulation(false)}
-          style={{
-            backgroundColor: '#334155',
-            color: '#FFFFFF',
-            border: 'none',
-            borderRadius: '6px',
-            padding: '4px 10px',
-            fontSize: '0.75rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          Restore Online
-        </button>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.725rem', color: '#92400E' }}>
+        <HardDrive size={14} color="#B45309" />
+        <span>IndexedDB Cache Synced: {new Date(lastSync).toLocaleTimeString()}</span>
       </div>
     </div>
   );
