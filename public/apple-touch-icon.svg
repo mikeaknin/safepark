@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E293B" />
+      <stop offset="100%" stop-color="#0F172A" />
+    </linearGradient>
+
+    <!-- Brand Cyan-to-Blue Gradient -->
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" />
+      <stop offset="100%" stop-color="#2C73D2" />
+    </linearGradient>
+
+    <!-- Shield Fill Gradient -->
+    <linearGradient id="shieldFill" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38BDF8" stop-opacity="0.18" />
+      <stop offset="100%" stop-color="#2C73D2" stop-opacity="0.04" />
+    </linearGradient>
+
+    <!-- Beacon Emerald Glow Filter -->
+    <filter id="emeraldGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="10" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+
+    <!-- Outer Ambient Glow -->
+    <filter id="ambientGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="16" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" opacity="0.35" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- iOS App Squircle Background -->
+  <rect width="512" height="512" rx="112" fill="url(#bgGrad)" stroke="rgba(56, 189, 248, 0.2)" stroke-width="4"/>
+
+  <!-- Protective Shield Contour -->
+  <path
+    d="M 256 70 
+       C 335 70, 395 90, 412 125 
+       C 412 250, 350 365, 256 442 
+       C 162 365, 100 250, 100 125 
+       C 117 90, 177 70, 256 70 Z"
+    fill="url(#shieldFill)"
+    stroke="url(#brandGrad)"
+    stroke-width="12"
+    stroke-linejoin="round"
+    filter="url(#ambientGlow)"
+  />
+
+  <!-- Inner Protective Accent Line -->
+  <path
+    d="M 256 94 
+       C 320 94, 370 110, 386 138 
+       C 386 242, 334 340, 256 408 
+       C 178 340, 126 242, 126 138 
+       C 142 110, 192 94, 256 94 Z"
+    fill="none"
+    stroke="rgba(56, 189, 248, 0.3)"
+    stroke-width="3"
+    stroke-linejoin="round"
+  />
+
+  <!-- Parking "P" Monogram -->
+  <!-- Vertical Stem -->
+  <rect x="180" y="150" width="34" height="210" rx="17" fill="url(#brandGrad)" />
+
+  <!-- P Upper Bowl Curve -->
+  <path
+    d="M 197 150 
+       H 275 
+       C 325 150, 355 178, 355 222 
+       C 355 266, 325 294, 275 294 
+       H 197"
+    fill="none"
+    stroke="url(#brandGrad)"
+    stroke-width="34"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- Center Illuminated Safety Beacon (Glowing Emerald) -->
+  <g filter="url(#emeraldGlow)">
+    <!-- Outer Glow Pulse Aura -->
+    <circle cx="275" cy="222" r="28" fill="#22C55E" opacity="0.4" />
+    <circle cx="275" cy="222" r="18" fill="#22C55E" />
+    <!-- White Core Center -->
+    <circle cx="275" cy="222" r="7" fill="#FFFFFF" />
+  </g>
+
+  <!-- Base CSI Grounding Dot Array -->
+  <circle cx="236" cy="385" r="4" fill="#38BDF8" opacity="0.6" />
+  <circle cx="256" cy="395" r="5" fill="#22C55E" opacity="0.9" />
+  <circle cx="276" cy="385" r="4" fill="#38BDF8" opacity="0.6" />
+</svg>

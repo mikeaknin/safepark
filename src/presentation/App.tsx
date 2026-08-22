@@ -19,6 +19,7 @@ import { CarPlayView } from './views/CarPlayView';
 import { EnterpriseApiDashboard } from './views/EnterpriseApiDashboard';
 import { UserProfileView } from './views/UserProfileView';
 import { AdminOpsDashboard } from './views/AdminOpsDashboard';
+import { SafeParkLogo } from './components/SafeParkLogo';
 import { CheckCircle2, Shield, FlaskConical } from 'lucide-react';
 
 export const App: React.FC = () => {
@@ -171,22 +172,7 @@ export const App: React.FC = () => {
               zIndex: 30,
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <div
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '8px',
-                  backgroundColor: SAFE_PARK_TOKENS.colors.brand.primary,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                <Shield size={18} color="#FFFFFF" />
-              </div>
-              <span style={{ fontSize: '1.1rem', fontWeight: 700, color: '#FFFFFF' }}>SafePark</span>
-            </div>
+            <SafeParkLogo size={32} showText={true} />
 
             <button
               onClick={() => setIsLabToolsOpen(true)}
