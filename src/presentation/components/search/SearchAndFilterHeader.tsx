@@ -6,22 +6,22 @@ import {
   SlidersHorizontal,
   MapPin,
   X,
-  Shield,
   ShieldCheck,
   Building,
   Video,
-  Lock,
-  Moon,
-  Sun,
-  Bluetooth,
-  Car,
-  Footprints,
   Sparkles,
-  Check,
-  RotateCcw
+  Lock,
+  RotateCcw,
+  FlaskConical
 } from 'lucide-react';
 
-export const SearchAndFilterHeader: React.FC = () => {
+interface SearchAndFilterHeaderProps {
+  onOpenLabTools?: () => void;
+}
+
+export const SearchAndFilterHeader: React.FC<SearchAndFilterHeaderProps> = ({
+  onOpenLabTools,
+}) => {
   const {
     searchQuery,
     setSearchQuery,
@@ -33,14 +33,6 @@ export const SearchAndFilterHeader: React.FC = () => {
     resetFilters,
     isFilterModalOpen,
     setIsFilterModalOpen,
-    isNightMode,
-    setIsNightMode,
-    motionState,
-    setMotionState,
-    parkedLocation,
-    handleLeaveParkedSpot,
-    bluetoothConnected,
-    toggleBluetooth,
     showLightingHeatmap,
     setShowLightingHeatmap,
     locations,
@@ -68,148 +60,174 @@ export const SearchAndFilterHeader: React.FC = () => {
     (filters.maxHourlyRate < 15 ? 1 : 0);
 
   return (
-    <div style={{ marginBottom: '16px' }}>
-      {/* Top Search & Controls Row */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(280px, 1fr) auto',
-          gap: '12px',
-          alignItems: 'center',
-        }}
-      >
-        {/* Search Box with Autocomplete */}
-        <div ref={searchContainerRef} style={{ position: 'relative' }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              backgroundColor: '#1E293B',
-              border: isDropdownOpen ? `2px solid ${SAFE_PARK_TOKENS.colors.brand.primary}` : '1px solid #334155',
-              borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-              padding: '8px 14px',
-              boxShadow: SAFE_PARK_TOKENS.shadows.card,
-              transition: 'all 0.2s ease',
-            }}
-          >
-            <Search size={18} color={SAFE_PARK_TOKENS.colors.brand.primary} style={{ marginRight: '10px', flexShrink: 0 }} />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => {
-                setSearchQuery(e.target.value);
-                setIsDropdownOpen(true);
-              }}
-              onFocus={() => setIsDropdownOpen(true)}
-              placeholder="Search destination (e.g. Moscone Center, Salesforce Tower)..."
+    <header
+      role="search"
+      aria-label="Destination Search and Risk Filters"
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 30,
+        backgroundColor: 'rgba(15, 23, 42, 0.88)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+        borderBottom: '1px solid rgba(51, 65, 85, 0.7)',
+        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)',
+        paddingBottom: '10px',
+        paddingLeft: '14px',
+        paddingRight: '14px',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)',
+      }}
+    >
+      <div style={{ maxWidth: '1240px', margin: '0 auto' }}>
+        {/* Top Search Input Row */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {/* Search Box with Autocomplete */}
+          <div ref={searchContainerRef} style={{ position: 'relative', flex: 1 }}>
+            <div
               style={{
-                background: 'transparent',
-                border: 'none',
-                color: '#FFFFFF',
-                fontSize: '0.9rem',
-                width: '100%',
-                outline: 'none',
-                fontFamily: 'inherit',
+                display: 'flex',
+                alignItems: 'center',
+                backgroundColor: '#1E293B',
+                border: isDropdownOpen ? `2px solid ${SAFE_PARK_TOKENS.colors.brand.primary}` : '1px solid #334155',
+                borderRadius: '12px',
+                padding: '8px 12px',
+                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.25)',
+                minHeight: '44px',
               }}
-            />
-            {searchQuery && (
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedDestination(null);
+            >
+              <Search
+                size={18}
+                color={SAFE_PARK_TOKENS.colors.brand.primary}
+                style={{ marginRight: '8px', flexShrink: 0 }}
+              />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setIsDropdownOpen(true);
                 }}
+                onFocus={() => setIsDropdownOpen(true)}
+                placeholder="Where are you parking? (e.g. Moscone, Oracle Park)..."
+                aria-label="Search destination for safe parking"
                 style={{
-                  background: 'none',
+                  background: 'transparent',
                   border: 'none',
-                  color: '#94A3B8',
-                  cursor: 'pointer',
-                  padding: '2px',
+                  color: '#FFFFFF',
+                  fontSize: '0.9rem',
+                  width: '100%',
+                  outline: 'none',
+                  fontFamily: 'inherit',
+                }}
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery('');
+                    setSelectedDestination(null);
+                  }}
+                  aria-label="Clear search input"
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#94A3B8',
+                    cursor: 'pointer',
+                    padding: '4px',
+                    minWidth: '32px',
+                    minHeight: '32px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+
+            {/* Autocomplete Dropdown */}
+            {isDropdownOpen && destinationResults.length > 0 && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: 'calc(100% + 6px)',
+                  left: 0,
+                  right: 0,
+                  backgroundColor: '#1E293B',
+                  borderRadius: '12px',
+                  border: '1px solid #475569',
+                  boxShadow: SAFE_PARK_TOKENS.shadows.sheet,
+                  zIndex: 50,
+                  maxHeight: '260px',
+                  overflowY: 'auto',
                 }}
               >
-                <X size={16} />
-              </button>
+                <div
+                  style={{
+                    padding: '8px 12px',
+                    fontSize: '0.7rem',
+                    color: '#94A3B8',
+                    textTransform: 'uppercase',
+                    fontWeight: 700,
+                  }}
+                >
+                  Popular Destinations
+                </div>
+                {destinationResults.map((dest) => (
+                  <div
+                    key={dest.id}
+                    onClick={() => {
+                      setSelectedDestination(dest);
+                      setSearchQuery(dest.name);
+                      setIsDropdownOpen(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '10px 12px',
+                      borderTop: '1px solid #334155',
+                      cursor: 'pointer',
+                      backgroundColor: selectedDestination?.id === dest.id ? '#0F172A' : 'transparent',
+                      minHeight: '44px',
+                    }}
+                  >
+                    <MapPin size={16} color={SAFE_PARK_TOKENS.colors.brand.primary} style={{ flexShrink: 0 }} />
+                    <div>
+                      <div style={{ fontSize: '0.85rem', color: '#FFFFFF', fontWeight: 600 }}>{dest.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>{dest.address}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 
-          {/* Autocomplete Dropdown */}
-          {isDropdownOpen && destinationResults.length > 0 && (
-            <div
-              style={{
-                position: 'absolute',
-                top: 'calc(100% + 6px)',
-                left: 0,
-                right: 0,
-                backgroundColor: '#1E293B',
-                borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-                border: '1px solid #475569',
-                boxShadow: SAFE_PARK_TOKENS.shadows.sheet,
-                zIndex: 50,
-                maxHeight: '260px',
-                overflowY: 'auto',
-              }}
-            >
-              <div style={{ padding: '8px 12px', fontSize: '0.7rem', color: '#94A3B8', textTransform: 'uppercase', fontWeight: 700 }}>
-                Suggested Destinations in San Francisco
-              </div>
-              {destinationResults.map((dest) => (
-                <div
-                  key={dest.id}
-                  onClick={() => {
-                    setSelectedDestination(dest);
-                    setSearchQuery(dest.name);
-                    setIsDropdownOpen(false);
-                  }}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    padding: '10px 14px',
-                    borderTop: '1px solid #334155',
-                    cursor: 'pointer',
-                    backgroundColor: selectedDestination?.id === dest.id ? '#0F172A' : 'transparent',
-                    transition: 'background-color 0.15s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    (e.currentTarget as HTMLElement).style.backgroundColor = '#334155';
-                  }}
-                  onMouseLeave={(e) => {
-                    (e.currentTarget as HTMLElement).style.backgroundColor =
-                      selectedDestination?.id === dest.id ? '#0F172A' : 'transparent';
-                  }}
-                >
-                  <MapPin size={16} color={SAFE_PARK_TOKENS.colors.brand.primary} style={{ flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: '0.85rem', color: '#FFFFFF', fontWeight: 600 }}>{dest.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: '#94A3B8' }}>{dest.address}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Filter Trigger Button */}
-        <div style={{ display: 'flex', gap: '8px' }}>
+          {/* Filter Modal Trigger */}
           <button
             onClick={() => setIsFilterModalOpen(true)}
+            aria-label="Open filter settings"
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '8px',
+              justifyContent: 'center',
+              gap: '6px',
               backgroundColor: activeFilterCount > 0 ? SAFE_PARK_TOKENS.colors.brand.primary : '#1E293B',
               color: '#FFFFFF',
               border: activeFilterCount > 0 ? `1px solid ${SAFE_PARK_TOKENS.colors.brand.primary}` : '1px solid #334155',
-              borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-              padding: '9px 14px',
-              fontSize: '0.85rem',
+              borderRadius: '12px',
+              padding: '8px 12px',
+              fontSize: '0.8rem',
               fontWeight: 600,
               cursor: 'pointer',
-              boxShadow: SAFE_PARK_TOKENS.shadows.card,
-              whiteSpace: 'nowrap',
+              minHeight: '44px',
+              minWidth: '44px',
             }}
           >
             <SlidersHorizontal size={16} />
-            <span>Filters</span>
+            <span className="hidden sm:inline">Filters</span>
             {activeFilterCount > 0 && (
               <span
                 style={{
@@ -229,103 +247,141 @@ export const SearchAndFilterHeader: React.FC = () => {
               </span>
             )}
           </button>
-        </div>
-      </div>
 
-      {/* Secondary Bar: Active Filters Pills, Motion State & Heatmap Layer Toggles */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          gap: '8px',
-          marginTop: '10px',
-        }}
-      >
-        {/* Quick Filter Pills */}
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', alignItems: 'center' }}>
+          {/* Lab Tools Floating Trigger */}
+          {onOpenLabTools && (
+            <button
+              onClick={onOpenLabTools}
+              aria-label="Open Simulation Lab Tools"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '4px',
+                backgroundColor: 'rgba(56, 189, 248, 0.15)',
+                color: '#38BDF8',
+                border: '1px solid rgba(56, 189, 248, 0.4)',
+                borderRadius: '12px',
+                padding: '8px 12px',
+                fontSize: '0.8rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                minHeight: '44px',
+                minWidth: '44px',
+              }}
+              title="Simulation & Diagnostic Tools"
+            >
+              <FlaskConical size={16} />
+              <span className="hidden sm:inline">Lab</span>
+            </button>
+          )}
+        </div>
+
+        {/* Quick Horizontal Scrollable Filter Row */}
+        <div
+          style={{
+            display: 'flex',
+            gap: '6px',
+            overflowX: 'auto',
+            paddingTop: '8px',
+            paddingBottom: '2px',
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+          }}
+        >
+          {/* Low Risk Only */}
           <button
-            onClick={() => setFilters(prev => ({ ...prev, minCsi: prev.minCsi === 75 ? 0 : 75 }))}
+            onClick={() => setFilters((prev) => ({ ...prev, minCsi: prev.minCsi === 75 ? 0 : 75 }))}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '5px',
+              gap: '4px',
               backgroundColor: filters.minCsi === 75 ? 'rgba(34, 197, 94, 0.2)' : '#1E293B',
               color: filters.minCsi === 75 ? '#22C55E' : '#94A3B8',
               border: filters.minCsi === 75 ? '1px solid #22C55E' : '1px solid #334155',
-              borderRadius: SAFE_PARK_TOKENS.borderRadius.pill,
-              padding: '4px 10px',
+              borderRadius: '20px',
+              padding: '6px 12px',
               fontSize: '0.75rem',
               fontWeight: 600,
               cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              minHeight: '36px',
             }}
           >
             <ShieldCheck size={13} />
-            <span>Low Risk (CSI ≥75)</span>
+            <span>Low Risk (≥75)</span>
           </button>
 
+          {/* Garages Only */}
           <button
-            onClick={() => setFilters(prev => ({ ...prev, coveredOrGarageOnly: !prev.coveredOrGarageOnly }))}
+            onClick={() => setFilters((prev) => ({ ...prev, coveredOrGarageOnly: !prev.coveredOrGarageOnly }))}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '5px',
+              gap: '4px',
               backgroundColor: filters.coveredOrGarageOnly ? 'rgba(44, 115, 210, 0.2)' : '#1E293B',
               color: filters.coveredOrGarageOnly ? '#38BDF8' : '#94A3B8',
               border: filters.coveredOrGarageOnly ? '1px solid #2C73D2' : '1px solid #334155',
-              borderRadius: SAFE_PARK_TOKENS.borderRadius.pill,
-              padding: '4px 10px',
+              borderRadius: '20px',
+              padding: '6px 12px',
               fontSize: '0.75rem',
               fontWeight: 600,
               cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              minHeight: '36px',
             }}
           >
             <Building size={13} />
             <span>Garages Only</span>
           </button>
 
+          {/* 24/7 CCTV */}
           <button
-            onClick={() => setFilters(prev => ({ ...prev, monitoredCctvOnly: !prev.monitoredCctvOnly }))}
+            onClick={() => setFilters((prev) => ({ ...prev, monitoredCctvOnly: !prev.monitoredCctvOnly }))}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '5px',
+              gap: '4px',
               backgroundColor: filters.monitoredCctvOnly ? 'rgba(44, 115, 210, 0.2)' : '#1E293B',
               color: filters.monitoredCctvOnly ? '#38BDF8' : '#94A3B8',
               border: filters.monitoredCctvOnly ? '1px solid #2C73D2' : '1px solid #334155',
-              borderRadius: SAFE_PARK_TOKENS.borderRadius.pill,
-              padding: '4px 10px',
+              borderRadius: '20px',
+              padding: '6px 12px',
               fontSize: '0.75rem',
               fontWeight: 600,
               cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              minHeight: '36px',
             }}
           >
             <Video size={13} />
             <span>24/7 CCTV</span>
           </button>
 
-          {/* Toggle Lighting Density Heatmap Layer */}
+          {/* Lighting Heatmap */}
           <button
             onClick={() => setShowLightingHeatmap(!showLightingHeatmap)}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '5px',
+              gap: '4px',
               backgroundColor: showLightingHeatmap ? 'rgba(34, 197, 94, 0.2)' : '#1E293B',
               color: showLightingHeatmap ? '#22C55E' : '#94A3B8',
               border: showLightingHeatmap ? '1px solid #22C55E' : '1px solid #334155',
-              borderRadius: SAFE_PARK_TOKENS.borderRadius.pill,
-              padding: '4px 10px',
+              borderRadius: '20px',
+              padding: '6px 12px',
               fontSize: '0.75rem',
               fontWeight: 600,
               cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              minHeight: '36px',
             }}
           >
             <Sparkles size={13} />
-            <span>{showLightingHeatmap ? 'Lighting Layer: ON' : 'Lighting Layer: OFF'}</span>
+            <span>{showLightingHeatmap ? 'Lighting Grid: ON' : 'Lighting: OFF'}</span>
           </button>
 
+          {/* Reset Filters if any active */}
           {activeFilterCount > 0 && (
             <button
               onClick={resetFilters}
@@ -338,79 +394,23 @@ export const SearchAndFilterHeader: React.FC = () => {
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: '4px',
-                padding: '4px 8px',
+                padding: '6px 10px',
+                whiteSpace: 'nowrap',
+                minHeight: '36px',
               }}
             >
-              <RotateCcw size={12} /> Clear Filters
+              <RotateCcw size={12} /> Clear
             </button>
           )}
-        </div>
-
-        {/* State Indicators: Motion State & Bluetooth Status */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          {/* Motion State Chip */}
-          <div
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: motionState === 'parked' ? 'rgba(245, 158, 11, 0.2)' : motionState === 'walking' ? 'rgba(34, 197, 94, 0.2)' : '#1E293B',
-              color: motionState === 'parked' ? '#F59E0B' : motionState === 'walking' ? '#22C55E' : '#38BDF8',
-              border: `1px solid ${motionState === 'parked' ? '#F59E0B' : motionState === 'walking' ? '#22C55E' : '#334155'}`,
-              borderRadius: SAFE_PARK_TOKENS.borderRadius.pill,
-              padding: '3px 10px',
-              fontSize: '0.75rem',
-              fontWeight: 700,
-              textTransform: 'uppercase',
-            }}
-          >
-            {motionState === 'driving' ? <Car size={13} /> : motionState === 'parked' ? <Lock size={13} /> : <Footprints size={13} />}
-            <span>State: {motionState}</span>
-            {motionState === 'parked' && (
-              <button
-                onClick={handleLeaveParkedSpot}
-                style={{
-                  backgroundColor: '#334155',
-                  border: 'none',
-                  borderRadius: '4px',
-                  color: '#FFFFFF',
-                  padding: '1px 6px',
-                  fontSize: '0.65rem',
-                  cursor: 'pointer',
-                  marginLeft: '4px',
-                }}
-              >
-                Depart Spot
-              </button>
-            )}
-          </div>
-
-          {/* Bluetooth Status */}
-          <button
-            onClick={toggleBluetooth}
-            title={bluetoothConnected ? 'Bluetooth CarPlay Active' : 'Bluetooth Disconnected'}
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              backgroundColor: bluetoothConnected ? 'rgba(44, 115, 210, 0.2)' : '#1E293B',
-              color: bluetoothConnected ? '#38BDF8' : '#94A3B8',
-              border: bluetoothConnected ? '1px solid #2C73D2' : '1px solid #475569',
-              borderRadius: SAFE_PARK_TOKENS.borderRadius.pill,
-              padding: '3px 8px',
-              fontSize: '0.75rem',
-              cursor: 'pointer',
-            }}
-          >
-            <Bluetooth size={13} />
-            <span>{bluetoothConnected ? 'Car Audio Linked' : 'Unlinked'}</span>
-          </button>
         </div>
       </div>
 
       {/* Filter Modal Popover */}
       {isFilterModalOpen && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="filter-modal-title"
           style={{
             position: 'fixed',
             inset: 0,
@@ -438,16 +438,19 @@ export const SearchAndFilterHeader: React.FC = () => {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <SlidersHorizontal size={18} color={SAFE_PARK_TOKENS.colors.brand.primary} />
-                <h3 style={{ fontSize: '1.15rem', color: '#FFFFFF' }}>Parking Safety Filters</h3>
+                <h3 id="filter-modal-title" style={{ fontSize: '1.15rem', color: '#FFFFFF' }}>
+                  Parking Safety Filters
+                </h3>
               </div>
               <button
                 onClick={() => setIsFilterModalOpen(false)}
+                aria-label="Close filters dialog"
                 style={{
                   background: '#334155',
                   border: 'none',
                   borderRadius: '50%',
-                  width: '30px',
-                  height: '30px',
+                  width: '32px',
+                  height: '32px',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
@@ -462,21 +465,28 @@ export const SearchAndFilterHeader: React.FC = () => {
             {/* CSI Threshold Slider */}
             <div style={{ marginBottom: '18px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#CBD5E1' }}>
+                <label htmlFor="csi-range-input" style={{ fontSize: '0.85rem', fontWeight: 600, color: '#CBD5E1' }}>
                   Minimum Composite Safety Index (CSI)
                 </label>
-                <span className="tabular-nums" style={{ color: filters.minCsi >= 75 ? '#22C55E' : filters.minCsi >= 50 ? '#F59E0B' : '#FFFFFF', fontWeight: 700 }}>
+                <span
+                  className="tabular-nums"
+                  style={{
+                    color: filters.minCsi >= 75 ? '#22C55E' : filters.minCsi >= 50 ? '#F59E0B' : '#FFFFFF',
+                    fontWeight: 700,
+                  }}
+                >
                   ≥ {filters.minCsi}
                 </span>
               </div>
               <input
+                id="csi-range-input"
                 type="range"
                 min="0"
                 max="85"
                 step="5"
                 value={filters.minCsi}
-                onChange={(e) => setFilters(prev => ({ ...prev, minCsi: Number(e.target.value) }))}
-                style={{ width: '100%', accentColor: SAFE_PARK_TOKENS.colors.brand.primary, cursor: 'pointer' }}
+                onChange={(e) => setFilters((prev) => ({ ...prev, minCsi: Number(e.target.value) }))}
+                style={{ width: '100%', accentColor: SAFE_PARK_TOKENS.colors.brand.primary, cursor: 'pointer', minHeight: '44px' }}
               />
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: '#64748B', marginTop: '4px' }}>
                 <span>All Spots (0)</span>
@@ -488,7 +498,7 @@ export const SearchAndFilterHeader: React.FC = () => {
             {/* Max Hourly Rate */}
             <div style={{ marginBottom: '18px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 600, color: '#CBD5E1' }}>
+                <label htmlFor="max-rate-input" style={{ fontSize: '0.85rem', fontWeight: 600, color: '#CBD5E1' }}>
                   Maximum Hourly Rate
                 </label>
                 <span className="tabular-nums" style={{ color: '#FFFFFF', fontWeight: 700 }}>
@@ -496,44 +506,45 @@ export const SearchAndFilterHeader: React.FC = () => {
                 </span>
               </div>
               <input
+                id="max-rate-input"
                 type="range"
                 min="2"
                 max="15"
                 step="0.5"
                 value={filters.maxHourlyRate}
-                onChange={(e) => setFilters(prev => ({ ...prev, maxHourlyRate: Number(e.target.value) }))}
-                style={{ width: '100%', accentColor: SAFE_PARK_TOKENS.colors.brand.primary, cursor: 'pointer' }}
+                onChange={(e) => setFilters((prev) => ({ ...prev, maxHourlyRate: Number(e.target.value) }))}
+                style={{ width: '100%', accentColor: SAFE_PARK_TOKENS.colors.brand.primary, cursor: 'pointer', minHeight: '44px' }}
               />
             </div>
 
             {/* Feature Checkboxes */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: '#CBD5E1', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: '#CBD5E1', cursor: 'pointer', minHeight: '36px' }}>
                 <input
                   type="checkbox"
                   checked={filters.coveredOrGarageOnly}
-                  onChange={(e) => setFilters(prev => ({ ...prev, coveredOrGarageOnly: e.target.checked }))}
-                  style={{ width: '18px', height: '18px', accentColor: SAFE_PARK_TOKENS.colors.brand.primary }}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, coveredOrGarageOnly: e.target.checked }))}
+                  style={{ width: '20px', height: '20px', accentColor: SAFE_PARK_TOKENS.colors.brand.primary }}
                 />
                 <span>Covered or Underground Garage Only</span>
               </label>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: '#CBD5E1', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: '#CBD5E1', cursor: 'pointer', minHeight: '36px' }}>
                 <input
                   type="checkbox"
                   checked={filters.gatedAccessOnly}
-                  onChange={(e) => setFilters(prev => ({ ...prev, gatedAccessOnly: e.target.checked }))}
-                  style={{ width: '18px', height: '18px', accentColor: SAFE_PARK_TOKENS.colors.brand.primary }}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, gatedAccessOnly: e.target.checked }))}
+                  style={{ width: '20px', height: '20px', accentColor: SAFE_PARK_TOKENS.colors.brand.primary }}
                 />
                 <span>Gated Perimeter Barrier Controls</span>
               </label>
 
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: '#CBD5E1', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '0.85rem', color: '#CBD5E1', cursor: 'pointer', minHeight: '36px' }}>
                 <input
                   type="checkbox"
                   checked={filters.monitoredCctvOnly}
-                  onChange={(e) => setFilters(prev => ({ ...prev, monitoredCctvOnly: e.target.checked }))}
-                  style={{ width: '18px', height: '18px', accentColor: SAFE_PARK_TOKENS.colors.brand.primary }}
+                  onChange={(e) => setFilters((prev) => ({ ...prev, monitoredCctvOnly: e.target.checked }))}
+                  style={{ width: '20px', height: '20px', accentColor: SAFE_PARK_TOKENS.colors.brand.primary }}
                 />
                 <span>24/7 Monitored Active CCTV</span>
               </label>
@@ -549,6 +560,7 @@ export const SearchAndFilterHeader: React.FC = () => {
                   color: '#94A3B8',
                   fontSize: '0.85rem',
                   cursor: 'pointer',
+                  minHeight: '44px',
                 }}
               >
                 Reset All
@@ -560,10 +572,11 @@ export const SearchAndFilterHeader: React.FC = () => {
                   color: '#FFFFFF',
                   border: 'none',
                   borderRadius: '8px',
-                  padding: '9px 18px',
+                  padding: '10px 18px',
                   fontSize: '0.85rem',
                   fontWeight: 600,
                   cursor: 'pointer',
+                  minHeight: '44px',
                 }}
               >
                 Apply Filters ({locations.length} Results)
@@ -572,6 +585,6 @@ export const SearchAndFilterHeader: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </header>
   );
 };

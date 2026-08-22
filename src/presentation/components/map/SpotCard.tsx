@@ -11,8 +11,6 @@ import {
   Car,
   Lock,
   CheckCircle2,
-  Clock,
-  Sparkles
 } from 'lucide-react';
 
 interface SpotCardProps {
@@ -37,10 +35,11 @@ export const SpotCard: React.FC<SpotCardProps> = ({
   onReportHazard,
 }) => {
   const status = getStatusStyle(location.csi.totalScore);
-  const litRoute = location.walkingRoutes?.find(r => r.isRecommendedLitPath);
+  const litRoute = location.walkingRoutes?.find((r) => r.isRecommendedLitPath);
 
   return (
-    <div
+    <article
+      aria-label={`${location.name}, Composite Safety Index ${location.csi.totalScore}`}
       onClick={() => onSelect(location)}
       style={{
         backgroundColor: '#1E293B',
@@ -56,7 +55,7 @@ export const SpotCard: React.FC<SpotCardProps> = ({
           ? SAFE_PARK_TOKENS.shadows.glowBlue
           : SAFE_PARK_TOKENS.shadows.card,
         padding: '16px',
-        marginBottom: '14px',
+        marginBottom: '12px',
         cursor: 'pointer',
         transition: 'all 0.2s ease',
         position: 'relative',
@@ -90,7 +89,16 @@ export const SpotCard: React.FC<SpotCardProps> = ({
       {/* Header Row */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
         <div>
-          <h3 style={{ fontSize: '1.05rem', color: '#FFFFFF', marginBottom: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <h3
+            style={{
+              fontSize: '1.05rem',
+              color: '#FFFFFF',
+              marginBottom: '2px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+            }}
+          >
             {location.name}
           </h3>
           <p style={{ fontSize: '0.8rem', color: '#94A3B8' }}>{location.address}</p>
@@ -107,14 +115,15 @@ export const SpotCard: React.FC<SpotCardProps> = ({
           backgroundColor: '#0F172A',
           borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
           padding: '8px 10px',
-          margin: '12px 0',
+          margin: '10px 0',
           textAlign: 'center',
         }}
       >
         <div>
           <div style={{ fontSize: '0.7rem', color: '#64748B', textTransform: 'uppercase' }}>Hourly Rate</div>
-          <div className="tabular-nums" style={{ fontSize: '0.95rem', color: '#FFFFFF' }}>
-            {location.currency}{location.hourlyRate.toFixed(2)}/hr
+          <div className="tabular-nums" style={{ fontSize: '0.95rem', color: '#FFFFFF', fontWeight: 700 }}>
+            {location.currency}
+            {location.hourlyRate.toFixed(2)}/hr
           </div>
         </div>
 
@@ -125,6 +134,7 @@ export const SpotCard: React.FC<SpotCardProps> = ({
             style={{
               fontSize: '0.95rem',
               color: location.availableSpaces > 5 ? '#22C55E' : '#EF4444',
+              fontWeight: 700,
             }}
           >
             {location.availableSpaces} / {location.totalSpaces}
@@ -133,7 +143,7 @@ export const SpotCard: React.FC<SpotCardProps> = ({
 
         <div>
           <div style={{ fontSize: '0.7rem', color: '#64748B', textTransform: 'uppercase' }}>Walk Return</div>
-          <div className="tabular-nums" style={{ fontSize: '0.95rem', color: '#38BDF8' }}>
+          <div className="tabular-nums" style={{ fontSize: '0.95rem', color: '#38BDF8', fontWeight: 700 }}>
             {litRoute ? `${litRoute.estimatedWalkingMinutes} min` : '4 min'}
           </div>
         </div>
@@ -175,24 +185,6 @@ export const SpotCard: React.FC<SpotCardProps> = ({
           </span>
         )}
 
-        {location.infrastructure.hasControlledAccessBarrier && (
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-              fontSize: '0.75rem',
-              color: '#CBD5E1',
-              backgroundColor: '#334155',
-              padding: '3px 8px',
-              borderRadius: '4px',
-            }}
-          >
-            <Lock size={12} color="#22C55E" />
-            Gated Access
-          </span>
-        )}
-
         {location.crimeData.smashAndGrabCount > 0 ? (
           <span
             style={{
@@ -223,13 +215,13 @@ export const SpotCard: React.FC<SpotCardProps> = ({
               borderRadius: '4px',
             }}
           >
-            <CheckCircle2 size={13} /> 0 Recent Break-ins
+            <CheckCircle2 size={13} /> 0 Break-ins
           </span>
         )}
       </div>
 
-      {/* Action Buttons Workflow */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr auto', gap: '6px' }}>
+      {/* Action Buttons with 44x44px Touch Targets */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr auto', gap: '6px' }}>
         {/* Park Here Primary Action */}
         <button
           onClick={(e) => {
@@ -237,24 +229,25 @@ export const SpotCard: React.FC<SpotCardProps> = ({
             onParkHere(location);
           }}
           disabled={isParkedHere}
+          aria-label={isParkedHere ? `Currently parked at ${location.name}` : `Park here at ${location.name}`}
           style={{
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            gap: '6px',
+            gap: '4px',
             backgroundColor: isParkedHere ? '#22C55E' : SAFE_PARK_TOKENS.colors.brand.primary,
             color: isParkedHere ? '#0F172A' : '#FFFFFF',
             border: 'none',
-            borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-            padding: '8px 12px',
+            borderRadius: '8px',
+            padding: '8px 10px',
             fontSize: '0.8rem',
             fontWeight: 700,
             cursor: isParkedHere ? 'default' : 'pointer',
-            boxShadow: isParkedHere ? 'none' : SAFE_PARK_TOKENS.shadows.glowBlue,
+            minHeight: '44px',
           }}
         >
           <Car size={14} />
-          {isParkedHere ? 'Parked' : 'Park Here'}
+          <span>{isParkedHere ? 'Parked' : 'Park'}</span>
         </button>
 
         {/* Inspect Safety Breakdown */}
@@ -263,6 +256,7 @@ export const SpotCard: React.FC<SpotCardProps> = ({
             e.stopPropagation();
             onInspectCsi(location);
           }}
+          aria-label={`View safety factor details for ${location.name}`}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -271,15 +265,16 @@ export const SpotCard: React.FC<SpotCardProps> = ({
             backgroundColor: '#334155',
             color: '#FFFFFF',
             border: 'none',
-            borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-            padding: '8px 8px',
-            fontSize: '0.775rem',
+            borderRadius: '8px',
+            padding: '8px 6px',
+            fontSize: '0.75rem',
             fontWeight: 600,
             cursor: 'pointer',
+            minHeight: '44px',
           }}
         >
           <Info size={13} />
-          <span>CSI Factors</span>
+          <span>CSI</span>
         </button>
 
         {/* Safe Walk Back Preview */}
@@ -288,6 +283,7 @@ export const SpotCard: React.FC<SpotCardProps> = ({
             e.stopPropagation();
             onSafeWalk(location);
           }}
+          aria-label={`View illuminated walking return route for ${location.name}`}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -296,15 +292,16 @@ export const SpotCard: React.FC<SpotCardProps> = ({
             backgroundColor: '#0F172A',
             color: '#38BDF8',
             border: '1px solid #334155',
-            borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-            padding: '8px 8px',
-            fontSize: '0.775rem',
+            borderRadius: '8px',
+            padding: '8px 6px',
+            fontSize: '0.75rem',
             fontWeight: 600,
             cursor: 'pointer',
+            minHeight: '44px',
           }}
         >
           <Footprints size={13} color="#22C55E" />
-          <span>Safe Walk</span>
+          <span>Walk</span>
         </button>
 
         {/* Report Physical Hazard */}
@@ -314,6 +311,7 @@ export const SpotCard: React.FC<SpotCardProps> = ({
             onReportHazard(location);
           }}
           title="Submit Verifiable Physical Hazard"
+          aria-label={`Report street hazard near ${location.name}`}
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -321,14 +319,16 @@ export const SpotCard: React.FC<SpotCardProps> = ({
             backgroundColor: '#0F172A',
             color: '#F59E0B',
             border: '1px solid #475569',
-            borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
+            borderRadius: '8px',
             padding: '8px 10px',
             cursor: 'pointer',
+            minHeight: '44px',
+            minWidth: '44px',
           }}
         >
-          <AlertTriangle size={14} />
+          <AlertTriangle size={15} />
         </button>
       </div>
-    </div>
+    </article>
   );
 };

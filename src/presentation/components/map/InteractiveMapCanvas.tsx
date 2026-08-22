@@ -1,21 +1,20 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { getStatusStyle, SAFE_PARK_TOKENS } from '../../../theme/tokens';
-import { APP_CONFIG } from '../../../config/env';
 import {
-  Navigation,
   Footprints,
   Car,
   MapPin,
-  Sparkles,
-  Shield,
-  Video,
-  AlertTriangle,
   LocateFixed,
-  Layers
 } from 'lucide-react';
 
-export const InteractiveMapCanvas: React.FC = () => {
+interface InteractiveMapCanvasProps {
+  isFullscreen?: boolean;
+}
+
+export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
+  isFullscreen = false,
+}) => {
   const {
     locations,
     selectedLocation,
@@ -58,20 +57,25 @@ export const InteractiveMapCanvas: React.FC = () => {
   return (
     <div
       ref={mapContainerRef}
+      role="region"
+      aria-label="Interactive City Risk and Parking Safety Map"
       style={{
-        position: 'relative',
+        position: isFullscreen ? 'fixed' : 'relative',
+        inset: isFullscreen ? 0 : undefined,
         width: '100%',
-        height: '420px',
+        height: isFullscreen ? '100dvh' : '440px',
         backgroundColor: isNightMode ? '#0B1120' : '#1E293B',
-        borderRadius: SAFE_PARK_TOKENS.borderRadius.lg,
-        border: '1px solid #334155',
+        borderRadius: isFullscreen ? 0 : SAFE_PARK_TOKENS.borderRadius.lg,
+        border: isFullscreen ? 'none' : '1px solid #334155',
         overflow: 'hidden',
-        boxShadow: SAFE_PARK_TOKENS.shadows.card,
+        boxShadow: isFullscreen ? 'none' : SAFE_PARK_TOKENS.shadows.card,
         transition: 'background-color 0.4s ease',
+        touchAction: 'pan-x pan-y pinch-zoom',
+        zIndex: isFullscreen ? 0 : 1,
       }}
     >
-      {/* High-Performance SVG / WebGL Vector Street Grid & Heatmap Render Engine */}
-      <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0 }}>
+      {/* High-Performance Vector Street Grid & Lighting Heatmap Render Engine */}
+      <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
         <defs>
           <pattern id="streetGrid" width="48" height="48" patternUnits="userSpaceOnUse">
             <path d="M 48 0 L 0 0 0 48" fill="none" stroke={isNightMode ? '#17255433' : '#33415555'} strokeWidth="1" />
@@ -100,32 +104,29 @@ export const InteractiveMapCanvas: React.FC = () => {
         <rect width="100%" height="100%" fill="url(#streetGrid)" />
 
         {/* Mapbox Vector Street Geometry */}
-        <path d="M 0 110 Q 240 90 800 130" stroke="#334155" strokeWidth="22" fill="none" />
-        <path d="M 0 270 L 800 250" stroke="#334155" strokeWidth="18" fill="none" />
-        <path d="M 220 0 L 260 420" stroke="#334155" strokeWidth="18" fill="none" />
-        <path d="M 520 0 L 500 420" stroke="#334155" strokeWidth="18" fill="none" />
+        <path d="M 0 160 Q 300 130 1200 180" stroke="#334155" strokeWidth="26" fill="none" />
+        <path d="M 0 380 L 1200 350" stroke="#334155" strokeWidth="22" fill="none" />
+        <path d="M 0 580 L 1200 560" stroke="#334155" strokeWidth="22" fill="none" />
+        <path d="M 280 0 L 320 800" stroke="#334155" strokeWidth="22" fill="none" />
+        <path d="M 680 0 L 650 800" stroke="#334155" strokeWidth="22" fill="none" />
 
         {/* Street Centerlines */}
-        <path d="M 0 110 Q 240 90 800 130" stroke="#475569" strokeWidth="2" strokeDasharray="6 6" fill="none" />
-        <path d="M 0 270 L 800 250" stroke="#475569" strokeWidth="2" strokeDasharray="6 6" fill="none" />
-        <path d="M 220 0 L 260 420" stroke="#475569" strokeWidth="2" strokeDasharray="6 6" fill="none" />
-        <path d="M 520 0 L 500 420" stroke="#475569" strokeWidth="2" strokeDasharray="6 6" fill="none" />
+        <path d="M 0 160 Q 300 130 1200 180" stroke="#475569" strokeWidth="2" strokeDasharray="6 6" fill="none" />
+        <path d="M 0 380 L 1200 350" stroke="#475569" strokeWidth="2" strokeDasharray="6 6" fill="none" />
+        <path d="M 0 580 L 1200 560" stroke="#475569" strokeWidth="2" strokeDasharray="6 6" fill="none" />
+        <path d="M 280 0 L 320 800" stroke="#475569" strokeWidth="2" strokeDasharray="6 6" fill="none" />
+        <path d="M 680 0 L 650 800" stroke="#475569" strokeWidth="2" strokeDasharray="6 6" fill="none" />
 
         {/* LIGHTING DENSITY HEATMAP LAYER */}
         {showLightingHeatmap && (
           <g id="lightingHeatmapLayer">
-            {/* Mission Bay high lux corridor (68 lux) */}
-            <circle cx="22%" cy="40%" r="90" fill="url(#highLuxZone)" />
-            {/* Yerba Buena high lux zone (62 lux) */}
-            <circle cx="82%" cy="38%" r="85" fill="url(#highLuxZone)" />
-            {/* SOMA 5th moderate lux zone (32 lux) */}
-            <circle cx="42%" cy="60%" r="70" fill="url(#moderateLuxZone)" />
-            {/* Minna Alley Dark Blindspot (6 lux) */}
-            <circle cx="62%" cy="30%" r="65" fill="url(#darkAlleyZone)" />
+            <circle cx="28%" cy="35%" r="120" fill="url(#highLuxZone)" />
+            <circle cx="75%" cy="32%" r="110" fill="url(#highLuxZone)" />
+            <circle cx="48%" cy="58%" r="95" fill="url(#moderateLuxZone)" />
+            <circle cx="68%" cy="22%" r="85" fill="url(#darkAlleyZone)" />
 
-            {/* Smart Lighted Street Axis Highlight */}
             <path
-              d="M 0 110 Q 240 90 800 130"
+              d="M 0 160 Q 300 130 1200 180"
               stroke="#22C55E"
               strokeWidth="4"
               strokeDasharray="8 6"
@@ -138,9 +139,8 @@ export const InteractiveMapCanvas: React.FC = () => {
         {/* Live Turn-by-Turn Safe Walk Back Return Path */}
         {selectedLocation && (
           <g id="safeWalkRouting">
-            {/* Recommended illuminated path line */}
             <path
-              d="M 240 180 L 240 110 L 510 115"
+              d="M 300 240 L 300 160 L 660 165"
               stroke="#22C55E"
               strokeWidth="5"
               strokeLinecap="round"
@@ -148,9 +148,8 @@ export const InteractiveMapCanvas: React.FC = () => {
               fill="none"
               style={{ animation: 'dash 1.2s linear infinite' }}
             />
-            {/* Unlit direct alleyway comparison line */}
             <path
-              d="M 240 180 L 400 240 L 510 115"
+              d="M 300 240 L 500 320 L 660 165"
               stroke="#EF4444"
               strokeWidth="2"
               strokeDasharray="3 4"
@@ -161,69 +160,30 @@ export const InteractiveMapCanvas: React.FC = () => {
         )}
       </svg>
 
-      {/* Map Header Status Controls */}
+      {/* Live GPS Telemetry Floating Badge */}
       <div
         style={{
           position: 'absolute',
-          top: '12px',
-          left: '12px',
-          right: '12px',
+          top: isFullscreen ? 'calc(env(safe-area-inset-top, 0px) + 110px)' : '14px',
+          right: '14px',
+          backgroundColor: 'rgba(15, 23, 42, 0.88)',
+          backdropFilter: 'blur(8px)',
+          WebkitBackdropFilter: 'blur(8px)',
+          padding: '6px 12px',
+          borderRadius: '20px',
+          border: '1px solid #334155',
+          fontSize: '0.725rem',
+          color: gpsActive ? '#22C55E' : '#38BDF8',
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
-          pointerEvents: 'none',
+          gap: '6px',
+          pointerEvents: 'auto',
           zIndex: 10,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.3)',
         }}
       >
-        {/* Semantic Risk Legend */}
-        <div
-          style={{
-            backgroundColor: 'rgba(15, 23, 42, 0.90)',
-            backdropFilter: 'blur(6px)',
-            padding: '5px 10px',
-            borderRadius: '8px',
-            border: '1px solid #334155',
-            fontSize: '0.725rem',
-            color: '#CBD5E1',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '10px',
-            pointerEvents: 'auto',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#22C55E' }} />
-            <span>Low (≥75)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#F59E0B' }} />
-            <span>Mod (50-74)</span>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <span style={{ width: '8px', height: '8px', borderRadius: '50%', backgroundColor: '#EF4444' }} />
-            <span>High (&lt;50)</span>
-          </div>
-        </div>
-
-        {/* GPS Live Telemetry Chip */}
-        <div
-          style={{
-            backgroundColor: 'rgba(15, 23, 42, 0.90)',
-            backdropFilter: 'blur(6px)',
-            padding: '5px 10px',
-            borderRadius: '8px',
-            border: '1px solid #334155',
-            fontSize: '0.725rem',
-            color: gpsActive ? '#22C55E' : '#38BDF8',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            pointerEvents: 'auto',
-          }}
-        >
-          <LocateFixed size={13} />
-          <span>{gpsActive ? 'Live GPS Active' : 'Vector Mapbox GL'}</span>
-        </div>
+        <LocateFixed size={13} />
+        <span>{gpsActive ? 'Live GPS Active' : 'SF SOMA Grid'}</span>
       </div>
 
       {/* Target Destination Marker */}
@@ -231,7 +191,7 @@ export const InteractiveMapCanvas: React.FC = () => {
         <div
           style={{
             position: 'absolute',
-            top: '28%',
+            top: '32%',
             left: '68%',
             transform: 'translate(-50%, -100%)',
             zIndex: 25,
@@ -257,7 +217,7 @@ export const InteractiveMapCanvas: React.FC = () => {
             }}
           >
             <MapPin size={12} />
-            <span>Destination: {selectedDestination.name.split(' ')[0]}</span>
+            <span>Target: {selectedDestination.name.split(' ')[0]}</span>
           </div>
           <div
             style={{
@@ -276,14 +236,15 @@ export const InteractiveMapCanvas: React.FC = () => {
         const isSelected = selectedLocation?.id === loc.id;
         const isParkedHere = parkedLocation?.id === loc.id;
         const status = getStatusStyle(loc.csi.totalScore);
-        
-        const xPos = 20 + (index % 3) * 30 + (index > 2 ? 15 : 0);
-        const yPos = index === 0 ? 42 : index === 1 ? 64 : index === 2 ? 32 : 55;
+
+        const xPos = 24 + (index % 3) * 28 + (index > 2 ? 10 : 0);
+        const yPos = index === 0 ? 38 : index === 1 ? 58 : index === 2 ? 28 : 48;
 
         return (
-          <div
+          <button
             key={loc.id}
             onClick={() => setSelectedLocation(loc)}
+            aria-label={`${loc.name}, CSI score ${loc.csi.totalScore}, rate $${loc.hourlyRate} per hour`}
             style={{
               position: 'absolute',
               top: `${yPos}%`,
@@ -292,6 +253,15 @@ export const InteractiveMapCanvas: React.FC = () => {
               cursor: 'pointer',
               zIndex: isSelected || isParkedHere ? 30 : 15,
               transition: 'transform 0.2s ease',
+              background: 'transparent',
+              border: 'none',
+              padding: 0,
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              minWidth: '44px',
+              minHeight: '44px',
+              justifyContent: 'center',
             }}
           >
             {/* Active Selection Glow Ring */}
@@ -299,10 +269,10 @@ export const InteractiveMapCanvas: React.FC = () => {
               <div
                 style={{
                   position: 'absolute',
-                  inset: '-8px',
+                  inset: '-6px',
                   borderRadius: '50%',
                   backgroundColor: status.hex,
-                  opacity: 0.35,
+                  opacity: 0.4,
                   animation: 'pulse 1.6s infinite',
                 }}
               />
@@ -339,7 +309,16 @@ export const InteractiveMapCanvas: React.FC = () => {
                 • ${loc.hourlyRate}
               </span>
               {isParkedHere && (
-                <span style={{ backgroundColor: '#22C55E', color: '#0F172A', fontSize: '0.65rem', padding: '1px 4px', borderRadius: '3px', fontWeight: 800 }}>
+                <span
+                  style={{
+                    backgroundColor: '#22C55E',
+                    color: '#0F172A',
+                    fontSize: '0.65rem',
+                    padding: '1px 4px',
+                    borderRadius: '3px',
+                    fontWeight: 800,
+                  }}
+                >
                   PARKED
                 </span>
               )}
@@ -361,7 +340,7 @@ export const InteractiveMapCanvas: React.FC = () => {
             >
               {loc.name}
             </div>
-          </div>
+          </button>
         );
       })}
 
@@ -369,20 +348,21 @@ export const InteractiveMapCanvas: React.FC = () => {
       <div
         style={{
           position: 'absolute',
-          top: motionState === 'walking' ? '45%' : '76%',
-          left: motionState === 'walking' ? '48%' : '32%',
+          top: motionState === 'walking' ? '42%' : '72%',
+          left: motionState === 'walking' ? '46%' : '30%',
           transform: 'translate(-50%, -50%)',
           zIndex: 22,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           transition: 'all 0.6s ease',
+          pointerEvents: 'none',
         }}
       >
         <div
           style={{
-            width: '24px',
-            height: '24px',
+            width: '26px',
+            height: '26px',
             borderRadius: '50%',
             backgroundColor: motionState === 'walking' ? '#22C55E' : SAFE_PARK_TOKENS.colors.brand.primary,
             border: '3px solid #FFFFFF',
@@ -393,12 +373,20 @@ export const InteractiveMapCanvas: React.FC = () => {
           }}
         >
           {motionState === 'walking' ? (
-            <Footprints size={12} color="#000000" />
+            <Footprints size={13} color="#000000" />
           ) : (
-            <Car size={12} color="#FFFFFF" />
+            <Car size={13} color="#FFFFFF" />
           )}
         </div>
-        <span style={{ fontSize: '0.65rem', color: '#FFFFFF', fontWeight: 700, marginTop: '2px', textShadow: '0 1px 3px #000' }}>
+        <span
+          style={{
+            fontSize: '0.65rem',
+            color: '#FFFFFF',
+            fontWeight: 700,
+            marginTop: '2px',
+            textShadow: '0 1px 3px #000',
+          }}
+        >
           {motionState === 'walking' ? 'Walking Return' : motionState === 'parked' ? 'Vehicle Stowed' : 'Your Location'}
         </span>
       </div>

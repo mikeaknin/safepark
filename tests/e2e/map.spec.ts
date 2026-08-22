@@ -6,9 +6,9 @@ test.describe('Interactive Search, Map Loading, Anti-Bias Safeguards & Offline M
   });
 
   test('should render vector map canvas with dynamic CSI pins', async ({ page }) => {
-    // Verify header and map canvas
-    await expect(page.locator('header')).toContainText('SafePark');
-    await expect(page.locator('text=City Risk & Lighting Grid Map')).toBeVisible();
+    // Verify search header is present
+    const searchInput = page.locator('input[type="text"]').first();
+    await expect(searchInput).toBeVisible();
 
     // Verify presence of spot pins
     const pins = page.locator('text=/CSI \\d+/');
@@ -16,7 +16,7 @@ test.describe('Interactive Search, Map Loading, Anti-Bias Safeguards & Offline M
   });
 
   test('should perform destination autocomplete search', async ({ page }) => {
-    const searchInput = page.locator('input[placeholder*="Search destination"]');
+    const searchInput = page.locator('input[type="text"]').first();
     await searchInput.fill('Salesforce');
 
     // Verify autocomplete suggestions appear
@@ -24,14 +24,13 @@ test.describe('Interactive Search, Map Loading, Anti-Bias Safeguards & Offline M
 
     // Select suggestion
     await page.click('text=Salesforce Tower Plaza');
-    await expect(page.locator('text=Destination: Salesforce')).toBeVisible();
+    await expect(page.locator('text=Target: Salesforce')).toBeVisible();
   });
 
   test('should enforce anti-bias rejection on subjective hazard reports', async ({ page }) => {
-    // Wait for parking spot cards to render
-    const hazardButton = page.locator('button[title="Submit Verifiable Physical Hazard"]').first();
-    await expect(hazardButton).toBeVisible();
-    await hazardButton.click();
+    // Open Lab Tools to launch hazard reporter
+    await page.click('button:has-text("Lab")');
+    await page.click('button:has-text("Report Physical Street Hazard")');
 
     // Verify modal is open
     await expect(page.locator('h2:has-text("Report Verifiable Hazard")')).toBeVisible();
@@ -48,13 +47,15 @@ test.describe('Interactive Search, Map Loading, Anti-Bias Safeguards & Offline M
   });
 
   test('should toggle subterranean offline mode and serve cached scores', async ({ page }) => {
-    // Click Signal Loss toggle
-    await page.click('button:has-text("Signal Loss")');
+    // Open Lab Tools to toggle Subterranean Signal Loss
+    await page.click('button:has-text("Lab")');
+    await page.click('button:has-text("Subterranean Garage Signal Loss")');
 
     // Verify Subterranean Banner is displayed
     await expect(page.locator('text=Subterranean Concrete Garage Mode')).toBeVisible();
 
-    // Verify spot cards remain populated from local storage cache
-    await expect(page.getByRole('heading', { name: 'Mission Bay Secure Underground Garage' })).toBeVisible();
+    // Verify spot pins remain active from cached local storage
+    const pins = page.locator('text=/CSI \\d+/');
+    await expect(pins.first()).toBeVisible();
   });
 });
