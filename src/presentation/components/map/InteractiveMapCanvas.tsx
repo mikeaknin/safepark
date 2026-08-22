@@ -75,7 +75,17 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
       }}
     >
       {/* High-Performance Vector Street Grid & Lighting Heatmap Render Engine */}
-      <svg width="100%" height="100%" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+      <svg
+        width="100%"
+        height="100%"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          pointerEvents: 'none',
+        }}
+      >
         <defs>
           <pattern id="streetGrid" width="48" height="48" patternUnits="userSpaceOnUse">
             <path d="M 48 0 L 0 0 0 48" fill="none" stroke={isNightMode ? '#17255433' : '#33415555'} strokeWidth="1" />
