@@ -149,10 +149,15 @@ In the event of an edge routing or deployment failure:
 
 ## 7. Mobile Device Testing & Live PWA Installation Guide
 
-### A. Testing on iPhone (iOS Safari Standalone PWA)
+### A. Live Production Deployment URLs
+- **Live HTTPS Production App (iPhone / Web PWA)**: [https://safepark-pearl.vercel.app](https://safepark-pearl.vercel.app)
+- **GitHub Repository**: [https://github.com/mikeaknin/safepark](https://github.com/mikeaknin/safepark)
+- **Vercel Project**: `mikeaknins-projects/safepark`
+
+### B. Testing on iPhone (iOS Safari Standalone PWA)
 1. Open the Live Production HTTPS URL in **Mobile Safari**:
    ```text
-   https://safepark.app (or your Vercel deployment URL)
+   https://safepark-pearl.vercel.app
    ```
 2. Tap the Safari **Share Button** (square with an up arrow) at the bottom toolbar.
 3. Scroll down and tap **"Add to Home Screen"**.

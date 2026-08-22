@@ -37,3 +37,4 @@ ios/fastlane/report.xml
 ios/fastlane/Preview.html
 ios/fastlane/screenshots/
 ios/build/
+.vercel
