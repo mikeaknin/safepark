@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { SAFE_PARK_TOKENS, getStatusStyle } from '../../theme/tokens';
 import { ParkingLocation } from '../../domain/models/ParkingLocation';
+import { DirectionsActionSheet } from '../components/navigation/DirectionsActionSheet';
 import {
   ShieldCheck,
   Building2,
@@ -13,7 +14,8 @@ import {
   Footprints,
   Sparkles,
   MapPin,
-  Car
+  Car,
+  Compass,
 } from 'lucide-react';
 
 export const SafeGaragesView: React.FC = () => {
@@ -24,7 +26,10 @@ export const SafeGaragesView: React.FC = () => {
     setSafeWalkLocation,
     handleParkHere,
     parkedLocation,
+    showToast,
   } = useApp();
+
+  const [directionsTarget, setDirectionsTarget] = useState<ParkingLocation | null>(null);
 
   // Filter for high-safety rated, covered or gated garages
   const safeGarages = locations
@@ -211,11 +216,11 @@ export const SafeGaragesView: React.FC = () => {
               </div>
 
               {/* Primary Action Buttons */}
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                 <button
                   onClick={() => handleSelectAndNavigate(facility)}
                   style={{
-                    flex: 1,
+                    flex: '1 1 120px',
                     backgroundColor: '#2563EB',
                     color: '#FFFFFF',
                     border: 'none',
@@ -235,6 +240,26 @@ export const SafeGaragesView: React.FC = () => {
                   <span>Navigate on Map</span>
                 </button>
 
+                <button
+                  onClick={() => setDirectionsTarget(facility)}
+                  style={{
+                    backgroundColor: '#EFF6FF',
+                    color: '#2563EB',
+                    border: '1px solid #BFDBFE',
+                    borderRadius: '12px',
+                    padding: '10px 12px',
+                    fontSize: '0.825rem',
+                    fontWeight: 800,
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '5px',
+                  }}
+                >
+                  <Compass size={15} />
+                  <span>In-Car Nav</span>
+                </button>
+
                 {litRoute && (
                   <button
                     onClick={() => setSafeWalkLocation(facility)}
@@ -243,13 +268,13 @@ export const SafeGaragesView: React.FC = () => {
                       color: '#1E293B',
                       border: '1px solid #CBD5E1',
                       borderRadius: '12px',
-                      padding: '10px 14px',
+                      padding: '10px 12px',
                       fontSize: '0.825rem',
                       fontWeight: 700,
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '6px',
+                      gap: '5px',
                     }}
                   >
                     <Footprints size={15} color="#15803D" />
@@ -261,6 +286,16 @@ export const SafeGaragesView: React.FC = () => {
           );
         })}
       </div>
+
+      {/* In-Car Navigation Deep Links Modal */}
+      {directionsTarget && (
+        <DirectionsActionSheet
+          location={directionsTarget}
+          isOpen={!!directionsTarget}
+          onClose={() => setDirectionsTarget(null)}
+          onCopyAddress={() => showToast('📋 Facility address copied')}
+        />
+      )}
     </div>
   );
 };

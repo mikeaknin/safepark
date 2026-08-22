@@ -23,6 +23,7 @@ export interface ParkingFacilityCardProps {
   onSafeWalk?: (loc: ParkingLocation) => void;
   onParkHere?: (loc: ParkingLocation) => void;
   onReportHazard?: (loc: ParkingLocation) => void;
+  onOpenDirections?: (loc: ParkingLocation) => void;
 }
 
 export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
@@ -35,6 +36,7 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
   onSafeWalk,
   onParkHere,
   onReportHazard,
+  onOpenDirections,
 }) => {
   const status = getStatusStyle(location.csi.totalScore);
   const litRoute = location.walkingRoutes?.find((r) => r.isRecommendedLitPath);
@@ -156,7 +158,7 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
         )}
       </div>
 
-      {/* Granular Sub-Score Gauges (in Full/Expanded view or when selected) */}
+      {/* Granular Sub-Score Gauges */}
       {(showFullDetails || isSelected) && location.csi.components && (
         <div
           style={{
@@ -195,6 +197,36 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
 
       {/* Action Buttons Row */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
+        {/* Turn-by-Turn Driving Directions */}
+        {onOpenDirections && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenDirections(location);
+            }}
+            aria-label={`Open turn-by-turn driving directions for ${location.name}`}
+            style={{
+              backgroundColor: '#EFF6FF',
+              color: '#2563EB',
+              border: '1px solid #BFDBFE',
+              borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
+              padding: '8px 12px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '6px',
+              minHeight: '40px',
+              fontSize: '0.775rem',
+              fontWeight: 800,
+              transition: 'background-color 0.15s ease',
+            }}
+          >
+            <Navigation size={14} />
+            <span>Directions</span>
+          </button>
+        )}
+
         {/* On Foot / Safe Walk */}
         {onSafeWalk && (
           <button

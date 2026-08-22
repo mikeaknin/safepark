@@ -4,12 +4,13 @@ import 'leaflet/dist/leaflet.css';
 import { useApp } from '../../context/AppContext';
 import { ParkingLocation } from '../../../domain/models/ParkingLocation';
 import { getStatusStyle, SAFE_PARK_TOKENS } from '../../../theme/tokens';
+import { PedestrianRoutingAdapter } from '../../../data/adapters/PedestrianRoutingAdapter';
 import {
   LocateFixed,
   Sun,
-  Moon,
-  Layers,
-  Sparkles,
+  Footprints,
+  Compass,
+  Navigation,
 } from 'lucide-react';
 
 interface InteractiveMapCanvasProps {
@@ -24,9 +25,11 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     selectedLocation,
     setSelectedLocation,
     selectedDestination,
+    setSelectedDestination,
     showLightingHeatmap,
     setShowLightingHeatmap,
     parkedLocation,
+    showToast,
   } = useApp();
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -34,11 +37,11 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
   const markersGroupRef = useRef<L.LayerGroup | null>(null);
   const routeGroupRef = useRef<L.LayerGroup | null>(null);
   const lightingGroupRef = useRef<L.LayerGroup | null>(null);
+  const userLocationGroupRef = useRef<L.LayerGroup | null>(null);
 
-  const [deviceCoordinates, setDeviceCoordinates] = useState<{ lat: number; lng: number }>({
-    lat: 37.7812,
-    lng: -122.4001,
-  });
+  const [deviceCoordinates, setDeviceCoordinates] = useState<{ lat: number; lng: number } | null>(null);
+  const [deviceAccuracy, setDeviceAccuracy] = useState<number>(30);
+  const [isLocating, setIsLocating] = useState<boolean>(false);
 
   // 1. Initialize Real Slippy Leaflet Tile Map
   useEffect(() => {
@@ -61,14 +64,15 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
     }).addTo(map);
 
-    // Initialize Layer Groups for markers, safe walk route, and lighting
+    // Initialize Layer Groups
     lightingGroupRef.current = L.layerGroup().addTo(map);
     routeGroupRef.current = L.layerGroup().addTo(map);
     markersGroupRef.current = L.layerGroup().addTo(map);
+    userLocationGroupRef.current = L.layerGroup().addTo(map);
 
     mapInstanceRef.current = map;
 
-    // Trigger size invalidation to ensure full tile coverage
+    // Invalidate size to ensure crisp rendering
     const timer = setTimeout(() => {
       map.invalidateSize();
     }, 100);
@@ -97,33 +101,72 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     }
   }, [selectedDestination]);
 
-  // 3. Live Geolocation Device Tracker
+  // 3. High-Accuracy Real-Time GPS Tracking
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'geolocation' in navigator) {
-      const watchId = navigator.geolocation.watchPosition(
-        (pos) => {
-          setDeviceCoordinates({
-            lat: pos.coords.latitude,
-            lng: pos.coords.longitude,
-          });
-        },
-        (err) => {
-          console.warn('Geolocation fallback:', err.message);
-        },
-        { enableHighAccuracy: true, timeout: 6000 }
-      );
-
-      return () => navigator.geolocation.clearWatch(watchId);
+    if (typeof window === 'undefined' || !('geolocation' in navigator)) {
+      return;
     }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (pos) => {
+        setDeviceCoordinates({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+        });
+        setDeviceAccuracy(pos.coords.accuracy || 30);
+      },
+      (err) => {
+        console.warn('Geolocation notice:', err.message);
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 3000 }
+    );
+
+    return () => navigator.geolocation.clearWatch(watchId);
   }, []);
 
-  // 4. Render Markers (Destination Pin + Parking Facilities)
+  // 4. Render Pulsating Blue User GPS Beacon on Canvas
+  useEffect(() => {
+    if (!mapInstanceRef.current || !userLocationGroupRef.current) return;
+
+    userLocationGroupRef.current.clearLayers();
+
+    if (!deviceCoordinates) return;
+
+    const { lat, lng } = deviceCoordinates;
+
+    // Accuracy Halo Circle
+    L.circle([lat, lng], {
+      radius: Math.min(60, Math.max(15, deviceAccuracy)),
+      color: '#3B82F6',
+      fillColor: '#60A5FA',
+      fillOpacity: 0.15,
+      weight: 1,
+      interactive: false,
+    }).addTo(userLocationGroupRef.current);
+
+    // Pulsating Blue Core Beacon
+    const userBeaconIcon = L.divIcon({
+      className: 'safepark-user-beacon',
+      html: `
+        <div style="position: relative; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; transform: translate(-50%, -50%); pointer-events: none;">
+          <div style="position: absolute; width: 22px; height: 22px; border-radius: 50%; background-color: rgba(37, 99, 235, 0.4); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+          <div style="width: 14px; height: 14px; border-radius: 50%; background-color: #2563EB; border: 2.5px solid #FFFFFF; box-shadow: 0 0 8px rgba(37,99,235,0.8); z-index: 2;"></div>
+        </div>
+      `,
+      iconSize: [0, 0],
+      iconAnchor: [0, 0],
+    });
+
+    L.marker([lat, lng], { icon: userBeaconIcon, zIndexOffset: 2000 }).addTo(userLocationGroupRef.current);
+  }, [deviceCoordinates, deviceAccuracy]);
+
+  // 5. Render Markers (Destination Pin + Parking Facilities)
   useEffect(() => {
     if (!mapInstanceRef.current || !markersGroupRef.current) return;
 
     markersGroupRef.current.clearLayers();
 
-    // A. Render Destination Pin (if selected)
+    // A. Render Destination Pin
     if (selectedDestination?.coordinates) {
       const { lat, lng } = selectedDestination.coordinates;
 
@@ -210,49 +253,50 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     });
   }, [locations, selectedLocation, selectedDestination, parkedLocation, setSelectedLocation]);
 
-  // 5. Render Safe Walk Illuminated Polyline
+  // 6. True Pedestrian Street-Snapped Walking Routing (OSRM Foot Engine)
   useEffect(() => {
     if (!mapInstanceRef.current || !routeGroupRef.current) return;
 
+    let isCancelled = false;
     routeGroupRef.current.clearLayers();
 
     const activeSpot = selectedLocation || locations[0];
     if (!activeSpot || !selectedDestination?.coordinates) return;
 
-    const startLat = activeSpot.coordinates.lat;
-    const startLng = activeSpot.coordinates.lng;
-    const endLat = selectedDestination.coordinates.lat;
-    const endLng = selectedDestination.coordinates.lng;
+    const spotCoords = activeSpot.coordinates;
+    const destCoords = selectedDestination.coordinates;
 
-    // Build realistic street grid corridor path
-    const cornerWaypoint: [number, number] = [startLat + (endLat - startLat) * 0.65, startLng];
-    const waypoints: [number, number][] = [
-      [startLat, startLng],
-      cornerWaypoint,
-      [endLat, endLng],
-    ];
+    PedestrianRoutingAdapter.getPedestrianRoute(spotCoords, destCoords).then((result) => {
+      if (isCancelled || !routeGroupRef.current) return;
 
-    // Outer Illuminated Corridor Glow
-    L.polyline(waypoints, {
-      color: '#86EFAC',
-      weight: 9,
-      opacity: 0.5,
-      lineCap: 'round',
-      lineJoin: 'round',
-    }).addTo(routeGroupRef.current);
+      routeGroupRef.current.clearLayers();
 
-    // Core Safe Walk Pulsing Dashed Polyline
-    L.polyline(waypoints, {
-      color: '#16A34A',
-      weight: 5,
-      opacity: 0.95,
-      dashArray: '8, 8',
-      lineCap: 'round',
-      lineJoin: 'round',
-    }).addTo(routeGroupRef.current);
+      // Outer Illuminated Corridor Glow
+      L.polyline(result.coordinates, {
+        color: '#86EFAC',
+        weight: 9,
+        opacity: 0.5,
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(routeGroupRef.current);
+
+      // Core Safe Walk Pulsing Dashed Polyline
+      L.polyline(result.coordinates, {
+        color: '#16A34A',
+        weight: 5,
+        opacity: 0.95,
+        dashArray: '8, 8',
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(routeGroupRef.current);
+    });
+
+    return () => {
+      isCancelled = true;
+    };
   }, [selectedLocation, selectedDestination, locations]);
 
-  // 6. Render Municipal Lighting Heatmaps
+  // 7. Render Municipal Lighting Heatmaps
   useEffect(() => {
     if (!mapInstanceRef.current || !lightingGroupRef.current) return;
 
@@ -272,15 +316,50 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     });
   }, [showLightingHeatmap, locations]);
 
-  // Center / Re-Focus on Destination or User
-  const handleRecenter = useCallback(() => {
-    if (!mapInstanceRef.current) return;
-    const target = selectedDestination?.coordinates || deviceCoordinates;
-    mapInstanceRef.current.flyTo([target.lat, target.lng], 16, {
-      animate: true,
-      duration: 1.0,
-    });
-  }, [selectedDestination, deviceCoordinates]);
+  // 8. "Locate Me" Handler: GPS Search & Re-center
+  const handleLocateMe = useCallback(() => {
+    setIsLocating(true);
+
+    if (!navigator.geolocation) {
+      showToast('⚠️ Geolocation is not supported by your browser.');
+      setIsLocating(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setDeviceCoordinates(coords);
+        setDeviceAccuracy(pos.coords.accuracy || 20);
+        setIsLocating(false);
+
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.flyTo([coords.lat, coords.lng], 16, {
+            animate: true,
+            duration: 1.2,
+          });
+        }
+
+        // Auto-load nearby spots around current location
+        setSelectedDestination({
+          id: 'gps-current-location',
+          name: 'Current Location',
+          address: 'San Francisco, CA',
+          coordinates: coords,
+        });
+
+        showToast('📍 Centered on your current GPS location.');
+      },
+      (err) => {
+        setIsLocating(false);
+        showToast('⚠️ GPS location access was denied. Showing downtown SF.');
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.flyTo([37.7842, -122.4015], 16, { animate: true, duration: 1.0 });
+        }
+      },
+      { enableHighAccuracy: true, timeout: 8000 }
+    );
+  }, [setSelectedDestination, showToast]);
 
   return (
     <div
@@ -306,7 +385,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         }}
       />
 
-      {/* Floating Map Controls (Right Side) */}
+      {/* Floating Glassmorphic Map Controls (Right Side) */}
       <aside
         aria-label="Map Visual Controls"
         style={{
@@ -320,42 +399,44 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
           pointerEvents: 'auto',
         }}
       >
-        {/* Re-center / GPS Trigger */}
+        {/* Locate Me / GPS Button */}
         <button
-          onClick={handleRecenter}
-          aria-label="Re-center map on destination"
+          onClick={handleLocateMe}
+          aria-label="Locate Me (Current GPS Position)"
+          title="Locate Me & Find Nearby Parking"
           style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
-            backgroundColor: 'rgba(255, 255, 255, 0.95)',
+            width: '44px',
+            height: '44px',
+            borderRadius: '14px',
+            backgroundColor: isLocating ? '#EFF6FF' : 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',
-            border: '1px solid #CBD5E1',
+            border: `1.5px solid ${isLocating ? '#2563EB' : '#CBD5E1'}`,
             boxShadow: '0 2px 10px rgba(15, 23, 42, 0.12)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             color: '#2563EB',
             cursor: 'pointer',
-            transition: 'transform 0.15s ease',
+            transition: 'all 0.15s ease',
           }}
         >
-          <LocateFixed size={20} />
+          <LocateFixed size={21} style={{ animation: isLocating ? 'spin 1s linear infinite' : 'none' }} />
         </button>
 
         {/* Lighting Grid Heatmap Toggle */}
         <button
           onClick={() => setShowLightingHeatmap((prev) => !prev)}
           aria-label={showLightingHeatmap ? 'Hide lighting heatmap' : 'Show lighting heatmap'}
+          title="Toggle Municipal Lighting Grid"
           style={{
-            width: '42px',
-            height: '42px',
-            borderRadius: '12px',
+            width: '44px',
+            height: '44px',
+            borderRadius: '14px',
             backgroundColor: showLightingHeatmap ? '#FEF3C7' : 'rgba(255, 255, 255, 0.95)',
             backdropFilter: 'blur(16px)',
             WebkitBackdropFilter: 'blur(16px)',
-            border: `1px solid ${showLightingHeatmap ? '#F59E0B' : '#CBD5E1'}`,
+            border: `1.5px solid ${showLightingHeatmap ? '#F59E0B' : '#CBD5E1'}`,
             boxShadow: '0 2px 10px rgba(15, 23, 42, 0.12)',
             display: 'flex',
             alignItems: 'center',
@@ -365,7 +446,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
             transition: 'all 0.15s ease',
           }}
         >
-          <Sun size={20} />
+          <Sun size={21} />
         </button>
       </aside>
     </div>

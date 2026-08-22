@@ -21,12 +21,14 @@ interface AppleMapsBottomSheetProps {
   onInspectCsi: (loc: ParkingLocation) => void;
   onSafeWalk: (loc: ParkingLocation) => void;
   onReportHazard: (loc: ParkingLocation) => void;
+  onOpenDirections?: (loc: ParkingLocation) => void;
 }
 
 export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
   onInspectCsi,
   onSafeWalk,
   onReportHazard,
+  onOpenDirections,
 }) => {
   const {
     locations,
@@ -282,7 +284,36 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
+            {onOpenDirections && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenDirections(topRankedSpot);
+                }}
+                aria-label={`Open turn-by-turn driving directions to ${topRankedSpot.name}`}
+                title="In-Car Directions"
+                style={{
+                  backgroundColor: '#EFF6FF',
+                  color: '#2563EB',
+                  border: '1px solid #BFDBFE',
+                  borderRadius: '10px',
+                  padding: '8px 10px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px',
+                  minHeight: '40px',
+                  fontSize: '0.75rem',
+                  fontWeight: 800,
+                  transition: 'background-color 0.15s ease',
+                }}
+              >
+                <Navigation size={14} />
+                <span>Nav</span>
+              </button>
+            )}
+
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -294,11 +325,11 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 color: '#1E293B',
                 border: '1px solid #CBD5E1',
                 borderRadius: '10px',
-                padding: '8px 12px',
+                padding: '8px 10px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                gap: '5px',
+                gap: '4px',
                 minHeight: '40px',
                 fontSize: '0.75rem',
                 fontWeight: 700,
@@ -320,7 +351,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 color: '#FFFFFF',
                 border: 'none',
                 borderRadius: '10px',
-                padding: '8px 14px',
+                padding: '8px 12px',
                 fontSize: '0.775rem',
                 fontWeight: 800,
                 cursor: parkedLocation?.id === topRankedSpot.id ? 'default' : 'pointer',
@@ -366,6 +397,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
               onSafeWalk={onSafeWalk}
               onParkHere={handleParkHere}
               onReportHazard={onReportHazard}
+              onOpenDirections={onOpenDirections}
             />
           ))}
         </div>

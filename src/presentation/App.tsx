@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from './context/AppContext';
 import { BottomNavBar } from './components/common/BottomNavBar';
 import { SubterraneanOfflineBanner } from './components/common/SubterraneanOfflineBanner';
@@ -8,12 +8,14 @@ import { AppleMapsBottomSheet } from './components/AppleMapsBottomSheet';
 import { CsiBreakdownModal } from './components/scoring/CsiBreakdownModal';
 import { HazardSubmissionModal } from './components/reporting/HazardSubmissionModal';
 import { SafeWalkModal } from './components/navigation/SafeWalkModal';
+import { DirectionsActionSheet } from './components/navigation/DirectionsActionSheet';
 import { ExitAlertModal } from './components/triggers/ExitAlertModal';
 import { OnboardingModal } from './components/onboarding/OnboardingModal';
 import { StripeCheckoutModal } from './components/monetization/StripeCheckoutModal';
 import { SafeGaragesView } from './views/SafeGaragesView';
 import { UserProfileView } from './views/UserProfileView';
 import { SafeParkLogo } from './components/SafeParkLogo';
+import { ParkingLocation } from '../domain/models/ParkingLocation';
 
 export const App: React.FC = () => {
   const {
@@ -34,6 +36,8 @@ export const App: React.FC = () => {
     toastMessage,
     showToast,
   } = useApp();
+
+  const [directionsLocation, setDirectionsLocation] = useState<ParkingLocation | null>(null);
 
   return (
     <div
@@ -90,6 +94,7 @@ export const App: React.FC = () => {
             onInspectCsi={(loc) => setInspectingCsiLocation(loc)}
             onSafeWalk={(loc) => setSafeWalkLocation(loc)}
             onReportHazard={(loc) => setReportingHazardLocation(loc)}
+            onOpenDirections={(loc) => setDirectionsLocation(loc)}
           />
         </div>
       )}
@@ -143,6 +148,15 @@ export const App: React.FC = () => {
         <StripeCheckoutModal
           isOpen={isStripeCheckoutOpen}
           onClose={() => setIsStripeCheckoutOpen(false)}
+        />
+      )}
+
+      {directionsLocation && (
+        <DirectionsActionSheet
+          location={directionsLocation}
+          isOpen={!!directionsLocation}
+          onClose={() => setDirectionsLocation(null)}
+          onCopyAddress={() => showToast('📋 Facility address copied')}
         />
       )}
 
