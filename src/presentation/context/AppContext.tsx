@@ -140,16 +140,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [selectedDestination, setSelectedDestination] = useState<SearchDestination | null>(POPULAR_DESTINATIONS[0]);
   const [destinationResults, setDestinationResults] = useState<SearchDestination[]>(POPULAR_DESTINATIONS);
 
-  // Live Geocoding Query Hook
+  // Live Geocoding Query Hook with AbortController cancellation
   useEffect(() => {
+    const controller = new AbortController();
     let active = true;
-    GeocodingAdapter.searchDestinations(searchQuery).then((results) => {
-      if (active) {
+
+    GeocodingAdapter.searchDestinations(searchQuery, controller.signal).then((results) => {
+      if (active && results.length > 0) {
         setDestinationResults(results);
       }
+    }).catch(() => {
+      // Handled via fallback in adapter
     });
+
     return () => {
       active = false;
+      controller.abort();
     };
   }, [searchQuery]);
 
