@@ -91,39 +91,38 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
         </div>
       )}
 
-      {/* Header Row: Title & CSI Badge */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', gap: '10px', minWidth: 0 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
+      {/* Header Row: Dedicated Full-Width Title & CSI Badge */}
+      <div style={{ width: '100%', marginBottom: '8px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '10px', width: '100%', marginBottom: '2px' }}>
           <h3
             style={{
-              fontSize: '0.95rem',
-              fontWeight: 700,
+              fontSize: '1rem',
+              fontWeight: 800,
               color: '#0F172A',
-              marginBottom: '2px',
+              margin: 0,
+              lineHeight: 1.3,
+              flex: 1,
+              wordBreak: 'break-word',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              minWidth: 0,
             }}
           >
-            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {location.name}
-            </span>
+            <span>{location.name}</span>
             {location.csi.totalScore >= 75 && (
               <span title="SafePark Low Risk Certified" style={{ display: 'inline-flex', flexShrink: 0 }}>
                 <ShieldCheck size={16} color="#15803D" />
               </span>
             )}
           </h3>
-          <p style={{ fontSize: '0.775rem', color: '#64748B', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {location.address}
-          </p>
+          <Badge score={location.csi.totalScore} size="md" />
         </div>
-
-        <Badge score={location.csi.totalScore} size="md" />
+        <p style={{ fontSize: '0.775rem', color: '#64748B', margin: 0 }}>
+          {location.address}
+        </p>
       </div>
 
-      {/* Quick Specs: Rate, Open Spots, Structure */}
+      {/* Quick Specs: Rate, Open Spots, Structure & Curbside Rules */}
       <div
         style={{
           display: 'flex',
@@ -131,12 +130,12 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
           gap: '8px',
           fontSize: '0.775rem',
           color: '#475569',
-          marginBottom: '12px',
+          marginBottom: '10px',
           flexWrap: 'wrap',
         }}
       >
         <span style={{ fontWeight: 800, color: location.hourlyRate === 0 ? '#15803D' : '#2563EB', fontSize: '0.85rem' }}>
-          {location.hourlyRate === 0 ? 'Free' : `$${location.hourlyRate.toFixed(2)}/hr`}
+          {location.hourlyRate === 0 ? 'Free ($0.00)' : `$${location.hourlyRate.toFixed(2)}/hr`}
         </span>
         <span>•</span>
         <span style={{ fontWeight: 600 }}>{location.availableSpaces} spots open</span>
@@ -162,6 +161,33 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
           </span>
         )}
       </div>
+
+      {/* Curbside Municipal Rules & Sweeping Banner (For Street/Curbside Spots) */}
+      {(location.hourlyRate === 0 || location.infrastructure.structureType.includes('curbside')) && (
+        <div
+          style={{
+            backgroundColor: location.hourlyRate === 0 ? '#ECFDF5' : '#EFF6FF',
+            border: `1px solid ${location.hourlyRate === 0 ? '#A7F3D0' : '#BFDBFE'}`,
+            borderRadius: '8px',
+            padding: '6px 10px',
+            fontSize: '0.725rem',
+            color: location.hourlyRate === 0 ? '#065F46' : '#1E40AF',
+            marginBottom: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <span style={{ fontWeight: 700 }}>
+            {location.hourlyRate === 0 ? '⏱️ 2-Hour Limit (8 AM – 6 PM)' : '🅿️ Metered Curbside (4-Hr Max)'}
+          </span>
+          <span style={{ fontSize: '0.675rem', opacity: 0.9 }}>
+            🧹 Sweeping: 1st & 3rd Tue 9–11 AM
+          </span>
+        </div>
+      )}
 
       {/* Granular Sub-Score Gauges */}
       {(showFullDetails || isSelected) && location.csi.components && (

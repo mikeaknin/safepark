@@ -272,17 +272,26 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
             lineCap: 'round',
           }
         );
+        curbPolyline.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          setSelectedLocation(loc);
+        });
         curbPolyline.addTo(curbSegmentsGroupRef.current!);
       } else {
         // Draw garage secure boundary outline
-        L.circle([loc.coordinates.lat, loc.coordinates.lng], {
+        const garageCircle = L.circle([loc.coordinates.lat, loc.coordinates.lng], {
           radius: 28,
           color: '#8B5CF6',
           fillColor: '#C4B5FD',
           fillOpacity: isSelected ? 0.25 : 0.12,
           weight: isSelected ? 2.5 : 1.5,
-          interactive: false,
-        }).addTo(curbSegmentsGroupRef.current!);
+          interactive: true,
+        });
+        garageCircle.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          setSelectedLocation(loc);
+        });
+        garageCircle.addTo(curbSegmentsGroupRef.current!);
       }
 
       // 2. Build High-Clarity Multi-Attribute Map Pin
@@ -301,7 +310,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
       const parkingIcon = L.divIcon({
         className: `safepark-pin-${loc.id}`,
         html: `
-          <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); cursor: pointer; transition: transform 0.15s ease;">
+          <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%) ${isSelected ? 'scale(1.08)' : 'scale(1)'}; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: auto;">
             ${
               isParked
                 ? `<div style="background-color: #15803D; color: #FFFFFF; font-size: 0.6rem; font-weight: 800; padding: 1px 6px; border-radius: 9999px; margin-bottom: 2px; box-shadow: 0 2px 6px rgba(21,128,61,0.4); text-transform: uppercase;">Active Spot</div>`
@@ -311,9 +320,9 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
           isSelected ? '2.5px solid #2563EB' : `1.5px solid ${pinBorder}`
         }; border-radius: 12px; padding: 4px 8px; box-shadow: ${
           isSelected
-            ? '0 0 0 3px rgba(37,99,235,0.3), 0 8px 20px rgba(15,23,42,0.25)'
+            ? '0 0 0 4px rgba(37,99,235,0.35), 0 10px 24px rgba(15,23,42,0.3)'
             : '0 3px 12px rgba(15,23,42,0.15)'
-        }; display: flex; flex-direction: column; gap: 2px; min-width: 90px;">
+        }; display: flex; flex-direction: column; gap: 2px; min-width: 92px;">
               <!-- Top Row: Spot Type Tag & Rate -->
               <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: 800;">
                 <span style="color: ${typeColor}; background-color: ${typeBg}; padding: 1px 4px; border-radius: 4px;">${typeTag}</span>
@@ -336,10 +345,12 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
 
       const marker = L.marker([loc.coordinates.lat, loc.coordinates.lng], {
         icon: parkingIcon,
-        zIndexOffset: isSelected ? 500 : isParked ? 600 : 100,
+        zIndexOffset: isSelected ? 2500 : isParked ? 1500 : 500,
+        interactive: true,
       });
 
-      marker.on('click', () => {
+      marker.on('click', (e) => {
+        L.DomEvent.stopPropagation(e);
         setSelectedLocation(loc);
       });
 

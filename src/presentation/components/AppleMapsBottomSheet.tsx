@@ -229,7 +229,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
         </div>
       </div>
 
-      {/* Peek Mode (120px fixed height): 2-Row Unclipped Mobile Layout */}
+      {/* Peek Mode (120px fixed height): Dedicated Full-Width Title Row & Unclipped Action Bar */}
       {snapPoint === 'peek' && topRankedSpot && activeSpotStatus && (() => {
         const isMeter = topRankedSpot.infrastructure.structureType === 'curbside_street_metered';
         const is2Hr = topRankedSpot.hourlyRate === 0 || topRankedSpot.infrastructure.structureType === 'curbside_residential';
@@ -246,11 +246,31 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
               flexDirection: 'column',
               justifyContent: 'space-between',
               flex: 1,
-              gap: '6px',
+              gap: '4px',
               minWidth: 0,
             }}
           >
-            {/* Row 1 (Top): Full Spot Name on Left (100% Width Priority), Category & CSI Badge on Right */}
+            {/* Dedicated Full-Width Title Container - Zero Horizontal Competition */}
+            <div style={{ width: '100%', minWidth: 0 }}>
+              <h3
+                style={{
+                  fontSize: '0.95rem',
+                  fontWeight: 800,
+                  color: '#0F172A',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  width: '100%',
+                  margin: 0,
+                  lineHeight: 1.25,
+                }}
+                title={topRankedSpot.name}
+              >
+                {topRankedSpot.name}
+              </h3>
+            </div>
+
+            {/* Badges, Curbside Telemetry & Quick Action Bar */}
             <div
               style={{
                 display: 'flex',
@@ -261,32 +281,27 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 width: '100%',
               }}
             >
-              <h3
+              {/* Left Badges & Pricing */}
+              <div
                 style={{
-                  fontSize: '0.975rem',
-                  fontWeight: 800,
-                  color: '#0F172A',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                   flex: 1,
                   minWidth: 0,
-                  margin: 0,
                 }}
-                title={topRankedSpot.name}
               >
-                {topRankedSpot.name}
-              </h3>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
                 <span
                   style={{
                     backgroundColor: tagBg,
                     color: tagColor,
                     border: `1px solid ${tagBorder}`,
-                    padding: '2px 7px',
-                    borderRadius: '6px',
-                    fontSize: '0.7rem',
+                    padding: '1px 6px',
+                    borderRadius: '5px',
+                    fontSize: '0.675rem',
                     fontWeight: 800,
                     whiteSpace: 'nowrap',
                   }}
@@ -299,59 +314,29 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                     backgroundColor: activeSpotStatus.bg,
                     color: activeSpotStatus.text,
                     border: `1px solid ${activeSpotStatus.border}`,
-                    padding: '2px 7px',
-                    borderRadius: '6px',
-                    fontSize: '0.725rem',
+                    padding: '1px 6px',
+                    borderRadius: '5px',
+                    fontSize: '0.675rem',
                     fontWeight: 800,
                     whiteSpace: 'nowrap',
                   }}
                 >
                   🛡️ CSI {topRankedSpot.csi.totalScore}
                 </span>
-              </div>
-            </div>
 
-            {/* Row 2 (Bottom): Rates & Walking Time on Left, Compact Nav & Park Buttons on Right */}
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '8px',
-                minWidth: 0,
-                width: '100%',
-              }}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '0.775rem',
-                  color: '#64748B',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  flex: 1,
-                  minWidth: 0,
-                }}
-              >
-                <span style={{ fontWeight: 800, color: topRankedSpot.hourlyRate === 0 ? '#15803D' : '#2563EB' }}>
+                <span style={{ fontWeight: 800, color: topRankedSpot.hourlyRate === 0 ? '#15803D' : '#2563EB', fontSize: '0.75rem' }}>
                   {topRankedSpot.hourlyRate === 0 ? 'Free' : `$${topRankedSpot.hourlyRate.toFixed(2)}/hr`}
                 </span>
-                <span>•</span>
-                <span>{topRankedSpot.availableSpaces} open</span>
+
                 {currentLitRoute && (
-                  <>
-                    <span>•</span>
-                    <span style={{ color: '#15803D', fontWeight: 700 }}>
-                      {currentLitRoute.estimatedWalkingMinutes} min walk
-                    </span>
-                  </>
+                  <span style={{ color: '#15803D', fontWeight: 700, fontSize: '0.725rem' }}>
+                    • {currentLitRoute.estimatedWalkingMinutes}m walk
+                  </span>
                 )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+              {/* Right Action Buttons */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
                 {onOpenDirections && (
                   <button
                     onClick={(e) => {
@@ -364,19 +349,19 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                       backgroundColor: '#EFF6FF',
                       color: '#2563EB',
                       border: '1px solid #BFDBFE',
-                      borderRadius: '10px',
-                      padding: '6px 10px',
+                      borderRadius: '8px',
+                      padding: '5px 9px',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
-                      gap: '4px',
-                      minHeight: '34px',
-                      fontSize: '0.75rem',
+                      gap: '3px',
+                      minHeight: '32px',
+                      fontSize: '0.725rem',
                       fontWeight: 800,
                       transition: 'background-color 0.15s ease',
                     }}
                   >
-                    <Navigation size={13} />
+                    <Navigation size={12} />
                     <span>Nav</span>
                   </button>
                 )}
@@ -391,19 +376,19 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                     backgroundColor: parkedLocation?.id === topRankedSpot.id ? '#15803D' : '#2563EB',
                     color: '#FFFFFF',
                     border: 'none',
-                    borderRadius: '10px',
-                    padding: '6px 12px',
-                    fontSize: '0.75rem',
+                    borderRadius: '8px',
+                    padding: '5px 11px',
+                    fontSize: '0.725rem',
                     fontWeight: 800,
                     cursor: parkedLocation?.id === topRankedSpot.id ? 'default' : 'pointer',
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    minHeight: '34px',
+                    gap: '3px',
+                    minHeight: '32px',
                     boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
                   }}
                 >
-                  <Car size={13} />
+                  <Car size={12} />
                   <span>{parkedLocation?.id === topRankedSpot.id ? 'Parked' : 'Park Here'}</span>
                 </button>
               </div>
