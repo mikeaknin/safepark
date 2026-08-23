@@ -241,34 +241,49 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     OfflineCacheService.cacheParkingLocations(scoredSpots);
 
     // Apply active user filters
-    const filtered = scoredSpots.filter(spot => {
-      if (spot.csi.totalScore < filters.minCsi) return false;
-      if (spot.hourlyRate > filters.maxHourlyRate) return false;
-      if (filters.parkingTypeFilter === 'garages_only' || filters.coveredOrGarageOnly) {
-        const isGarage = spot.infrastructure.structureType === 'covered_underground_garage' ||
-          spot.infrastructure.structureType === 'multi_level_deck' ||
-          spot.infrastructure.structureType === 'gated_surface_lot';
-        if (!isGarage) return false;
-      }
-      if (filters.parkingTypeFilter === 'street_only') {
-        const isStreet = spot.infrastructure.structureType === 'curbside_street_metered' ||
-          spot.infrastructure.structureType === 'curbside_residential';
-        if (!isStreet) return false;
-      }
-      if (filters.gatedAccessOnly && !spot.infrastructure.hasControlledAccessBarrier) return false;
-      if (filters.monitoredCctvOnly && spot.infrastructure.surveillance !== 'monitored_cctv_24_7') return false;
-      return true;
-    });
+    const applyFiltersAndSet = (spotsToFilter: ParkingLocation[]) => {
+      const filtered = spotsToFilter.filter(spot => {
+        if (spot.csi.totalScore < filters.minCsi) return false;
+        if (spot.hourlyRate > filters.maxHourlyRate) return false;
+        if (filters.parkingTypeFilter === 'garages_only' || filters.coveredOrGarageOnly) {
+          const isGarage = spot.infrastructure.structureType === 'covered_underground_garage' ||
+            spot.infrastructure.structureType === 'multi_level_deck' ||
+            spot.infrastructure.structureType === 'gated_surface_lot';
+          if (!isGarage) return false;
+        }
+        if (filters.parkingTypeFilter === 'street_only') {
+          const isStreet = spot.infrastructure.structureType === 'curbside_street_metered' ||
+            spot.infrastructure.structureType === 'curbside_residential';
+          if (!isStreet) return false;
+        }
+        if (filters.gatedAccessOnly && !spot.infrastructure.hasControlledAccessBarrier) return false;
+        if (filters.monitoredCctvOnly && spot.infrastructure.surveillance !== 'monitored_cctv_24_7') return false;
+        return true;
+      });
 
-    // Sort by CSI score descending (safest spots first)
-    filtered.sort((a, b) => b.csi.totalScore - a.csi.totalScore);
-    setLocations(filtered);
+      filtered.sort((a, b) => b.csi.totalScore - a.csi.totalScore);
+      setLocations(filtered);
+      if (filtered.length > 0) {
+        setSelectedLocation(filtered[0]);
+      } else {
+        setSelectedLocation(null);
+      }
+    };
 
-    // Set first/top-ranked spot as selected
-    if (filtered.length > 0) {
-      setSelectedLocation(filtered[0]);
-    } else {
-      setSelectedLocation(null);
+    applyFiltersAndSet(scoredSpots);
+
+    // Asynchronously enrich with live SFPD crime and SF 311 telemetry
+    if (selectedDestination?.coordinates) {
+      DynamicParkingGenerator.generateSpotsAroundCoordinatesAsync(
+        selectedDestination.coordinates,
+        selectedDestination.name,
+        !isNightMode,
+        selectedDestination.id
+      ).then((liveSpots) => {
+        if (liveSpots.length > 0) {
+          applyFiltersAndSet(liveSpots);
+        }
+      }).catch(() => {});
     }
   };
 
@@ -295,31 +310,45 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     OfflineCacheService.cacheParkingLocations(scoredSpots);
 
-    const filtered = scoredSpots.filter(spot => {
-      if (spot.csi.totalScore < filters.minCsi) return false;
-      if (spot.hourlyRate > filters.maxHourlyRate) return false;
-      if (filters.parkingTypeFilter === 'garages_only' || filters.coveredOrGarageOnly) {
-        const isGarage = spot.infrastructure.structureType === 'covered_underground_garage' ||
-          spot.infrastructure.structureType === 'multi_level_deck' ||
-          spot.infrastructure.structureType === 'gated_surface_lot';
-        if (!isGarage) return false;
-      }
-      if (filters.parkingTypeFilter === 'street_only') {
-        const isStreet = spot.infrastructure.structureType === 'curbside_street_metered' ||
-          spot.infrastructure.structureType === 'curbside_residential';
-        if (!isStreet) return false;
-      }
-      if (filters.gatedAccessOnly && !spot.infrastructure.hasControlledAccessBarrier) return false;
-      if (filters.monitoredCctvOnly && spot.infrastructure.surveillance !== 'monitored_cctv_24_7') return false;
-      return true;
-    });
+    const applyFiltersAndSet = (spotsToFilter: ParkingLocation[]) => {
+      const filtered = spotsToFilter.filter(spot => {
+        if (spot.csi.totalScore < filters.minCsi) return false;
+        if (spot.hourlyRate > filters.maxHourlyRate) return false;
+        if (filters.parkingTypeFilter === 'garages_only' || filters.coveredOrGarageOnly) {
+          const isGarage = spot.infrastructure.structureType === 'covered_underground_garage' ||
+            spot.infrastructure.structureType === 'multi_level_deck' ||
+            spot.infrastructure.structureType === 'gated_surface_lot';
+          if (!isGarage) return false;
+        }
+        if (filters.parkingTypeFilter === 'street_only') {
+          const isStreet = spot.infrastructure.structureType === 'curbside_street_metered' ||
+            spot.infrastructure.structureType === 'curbside_residential';
+          if (!isStreet) return false;
+        }
+        if (filters.gatedAccessOnly && !spot.infrastructure.hasControlledAccessBarrier) return false;
+        if (filters.monitoredCctvOnly && spot.infrastructure.surveillance !== 'monitored_cctv_24_7') return false;
+        return true;
+      });
 
-    filtered.sort((a, b) => b.csi.totalScore - a.csi.totalScore);
-    setLocations(filtered);
+      filtered.sort((a, b) => b.csi.totalScore - a.csi.totalScore);
+      setLocations(filtered);
+      if (filtered.length > 0 && (!selectedLocation || !filtered.some(s => s.id === selectedLocation.id))) {
+        setSelectedLocation(filtered[0]);
+      }
+    };
 
-    if (filtered.length > 0 && (!selectedLocation || !filtered.some(s => s.id === selectedLocation.id))) {
-      setSelectedLocation(filtered[0]);
-    }
+    applyFiltersAndSet(scoredSpots);
+
+    // Asynchronously enrich with live DataSF police & 311 telemetry
+    DynamicParkingGenerator.generateSpotsAroundCoordinatesAsync(
+      coords,
+      areaName,
+      !isNightMode
+    ).then((liveSpots) => {
+      if (liveSpots.length > 0) {
+        applyFiltersAndSet(liveSpots);
+      }
+    }).catch(() => {});
   };
 
   useEffect(() => {

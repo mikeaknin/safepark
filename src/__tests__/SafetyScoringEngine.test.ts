@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { SafetyScoringEngine } from '../domain/services/SafetyScoringEngine';
 import { getSfNeighborhoodProfile } from '../domain/data/sfNeighborhoodSafetyData';
+import { DataSFPoliceReportSummary } from '../infrastructure/api/DataSFPoliceService';
+import { SF311MunicipalSummary } from '../infrastructure/api/SF311Service';
 
 describe('SafetyScoringEngine & SF Neighborhood Geospatial Profiling', () => {
   it('correctly maps real San Francisco coordinates to their neighborhood profiles', () => {
@@ -48,31 +50,113 @@ describe('SafetyScoringEngine & SF Neighborhood Geospatial Profiling', () => {
       isDaytime: false,
     });
 
-    // Marina CSI should be substantially higher than Tenderloin CSI
     expect(marinaCsi.totalScore).toBeGreaterThan(85);
     expect(tenderloinCsi.totalScore).toBeLessThan(65);
     expect(marinaCsi.totalScore - tenderloinCsi.totalScore).toBeGreaterThanOrEqual(25);
   });
 
-  it('boosts CSI for secure underground garages compared to surface lots', () => {
-    const coords = { lat: 37.7780, lng: -122.4030 }; // SoMa
+  it('deducts -3 points per live vehicle larceny and -10 points for active 311 streetlight outages', () => {
+    const coords = { lat: 37.7842, lng: -122.4015 }; // Moscone SoMa
+
+    const cleanPolice: DataSFPoliceReportSummary = {
+      incidentsLast30Days: 0,
+      incidentsLast90Days: 0,
+      vehicleLarcenyCount30Days: 0,
+      vehicleLarcenyCount90Days: 0,
+      smashAndGrabCount: 0,
+      recentIncidentTimestamps: [],
+      isHotspotCluster: false,
+      incidents: [],
+      isLive: true,
+    };
+
+    const highLarcenyPolice: DataSFPoliceReportSummary = {
+      incidentsLast30Days: 4,
+      incidentsLast90Days: 9,
+      vehicleLarcenyCount30Days: 4, // 4 vehicle larcenies -> -12 pts
+      vehicleLarcenyCount90Days: 9,
+      smashAndGrabCount: 3,
+      recentIncidentTimestamps: [new Date().toISOString()],
+      isHotspotCluster: true,
+      incidents: [],
+      isLive: true,
+    };
+
+    const clean311: SF311MunicipalSummary = {
+      hasStreetlightOutage: false,
+      openStreetlightOutagesCount: 0,
+      openSidewalkHazardsCount: 0,
+      cases: [],
+      isLive: true,
+    };
+
+    const outage311: SF311MunicipalSummary = {
+      hasStreetlightOutage: true, // -10 pts
+      openStreetlightOutagesCount: 1,
+      openSidewalkHazardsCount: 0,
+      cases: [],
+      isLive: true,
+    };
+
+    const baselineCsi = SafetyScoringEngine.computeGeospatialCsi({
+      spotId: 'base-test',
+      coordinates: coords,
+      structureType: 'curbside_street_metered',
+      isDaytime: false,
+      policeSummary: cleanPolice,
+      municipalSummary: clean311,
+    });
+
+    const larcenyCsi = SafetyScoringEngine.computeGeospatialCsi({
+      spotId: 'larceny-test',
+      coordinates: coords,
+      structureType: 'curbside_street_metered',
+      isDaytime: false,
+      policeSummary: highLarcenyPolice,
+      municipalSummary: clean311,
+    });
+
+    const outageCsi = SafetyScoringEngine.computeGeospatialCsi({
+      spotId: 'outage-test',
+      coordinates: coords,
+      structureType: 'curbside_street_metered',
+      isDaytime: false,
+      policeSummary: cleanPolice,
+      municipalSummary: outage311,
+    });
+
+    expect(larcenyCsi.totalScore).toBeLessThan(baselineCsi.totalScore);
+    expect(baselineCsi.totalScore - larcenyCsi.totalScore).toBeGreaterThanOrEqual(10);
+
+    expect(outageCsi.totalScore).toBeLessThan(baselineCsi.totalScore);
+    expect(baselineCsi.totalScore - outageCsi.totalScore).toBe(10);
+  });
+
+  it('awards +15 points for verified zero-incident secured garages', () => {
+    const coords = { lat: 37.7920, lng: -122.3995 }; // Financial District
+
+    const cleanPolice: DataSFPoliceReportSummary = {
+      incidentsLast30Days: 0,
+      incidentsLast90Days: 0,
+      vehicleLarcenyCount30Days: 0,
+      vehicleLarcenyCount90Days: 0,
+      smashAndGrabCount: 0,
+      recentIncidentTimestamps: [],
+      isHotspotCluster: false,
+      incidents: [],
+      isLive: true,
+    };
 
     const garageCsi = SafetyScoringEngine.computeGeospatialCsi({
-      spotId: 'soma-garage',
+      spotId: 'fidi-garage',
       coordinates: coords,
       structureType: 'covered_underground_garage',
       isDaytime: false,
+      policeSummary: cleanPolice,
     });
 
-    const surfaceLotCsi = SafetyScoringEngine.computeGeospatialCsi({
-      spotId: 'soma-lot',
-      coordinates: coords,
-      structureType: 'open_surface_lot',
-      isDaytime: false,
-    });
-
-    expect(garageCsi.totalScore).toBeGreaterThan(surfaceLotCsi.totalScore);
-    expect(garageCsi.totalScore - surfaceLotCsi.totalScore).toBeGreaterThanOrEqual(20);
+    expect(garageCsi.totalScore).toBeGreaterThanOrEqual(90);
+    expect(garageCsi.recommendations.some(r => r.includes('Maximum vehicle break-in defense'))).toBe(true);
   });
 
   it('clamps CSI strictly within [20, 99]', () => {

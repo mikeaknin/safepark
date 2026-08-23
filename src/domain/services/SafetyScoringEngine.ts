@@ -1,6 +1,4 @@
-import { ParkingStructureType, PhysicalInfrastructure } from '../models/Infrastructure';
-import { LightingEnvironment } from '../models/LightingData';
-import { CrimeDataAggregate } from '../models/CrimeIncident';
+import { ParkingStructureType } from '../models/Infrastructure';
 import { HazardReport } from '../models/HazardReport';
 import { CompositeSafetyIndex, ScoreComponentBreakdown } from '../models/SafetyScore';
 import { getRiskLevel } from '../../theme/tokens';
@@ -8,6 +6,14 @@ import {
   getSfNeighborhoodProfile,
   NeighborhoodSafetyProfile,
 } from '../data/sfNeighborhoodSafetyData';
+import {
+  DataSFPoliceService,
+  DataSFPoliceReportSummary,
+} from '../../infrastructure/api/DataSFPoliceService';
+import {
+  SF311Service,
+  SF311MunicipalSummary,
+} from '../../infrastructure/api/SF311Service';
 
 export interface DynamicCsiCalculationOptions {
   spotId: string;
@@ -17,6 +23,8 @@ export interface DynamicCsiCalculationOptions {
   luxLevel?: number;
   hazards?: HazardReport[];
   customSurveillanceBonus?: number;
+  policeSummary?: DataSFPoliceReportSummary;
+  municipalSummary?: SF311MunicipalSummary;
 }
 
 export class SafetyScoringEngine {
@@ -31,7 +39,6 @@ export class SafetyScoringEngine {
       hash ^= str.charCodeAt(i);
       hash = Math.imul(hash, 16777619);
     }
-    // Normalize unsigned 32-bit int to [0, 1)
     return ((hash >>> 0) % 10000) / 10000;
   }
 
@@ -44,8 +51,26 @@ export class SafetyScoringEngine {
   }
 
   /**
+   * Asynchronously fetches live SFPD & 311 telemetry, then computes the Geospatial CSI.
+   */
+  public static async computeLiveGeospatialCsi(
+    options: Omit<DynamicCsiCalculationOptions, 'policeSummary' | 'municipalSummary'>
+  ): Promise<CompositeSafetyIndex> {
+    const [policeSummary, municipalSummary] = await Promise.all([
+      DataSFPoliceService.fetchIncidentsNearCoordinates(options.coordinates, 500),
+      SF311Service.fetchMunicipalCasesNearCoordinates(options.coordinates, 250),
+    ]);
+
+    return this.computeGeospatialCsi({
+      ...options,
+      policeSummary,
+      municipalSummary,
+    });
+  }
+
+  /**
    * Main Dynamic Geospatial Composite Safety Index (CSI) Scoring Formula:
-   * CSI = Clamp(NeighborhoodBase + FacilityModifier + LightingScore - IncidentPenalty, 20, 99)
+   * CSI = Clamp(NeighborhoodBase + FacilityModifier + LightingScore - IncidentPenalty - 311OutagePenalty, 20, 99)
    */
   public static computeGeospatialCsi(options: DynamicCsiCalculationOptions): CompositeSafetyIndex {
     const {
@@ -54,28 +79,33 @@ export class SafetyScoringEngine {
       structureType,
       isDaytime = false,
       hazards = [],
+      policeSummary,
+      municipalSummary,
     } = options;
 
     const { lat, lng } = coordinates;
     const neighborhood: NeighborhoodSafetyProfile = getSfNeighborhoodProfile(coordinates);
 
-    // 1. Neighborhood Baseline Score (Deterministic jitter within neighborhood range)
+    // 1. Neighborhood Baseline Score (Deterministic jitter within empirical neighborhood range)
     const baseVariance = this.hashRange(lat, lng, neighborhood.baseCsiMin, neighborhood.baseCsiMax, 'base_csi');
     const neighborhoodBaseScore = baseVariance;
 
     // 2. Facility Type Modifier
-    // - Secure Gated / Attended Multi-Level Garage: +12 to +18 pts
+    // - Secure Gated / Attended Multi-Level Garage: +12 to +18 pts (or +15 verified if zero incidents)
     // - High-Visibility Commercial Metered Strip: +0 to +5 pts
-    // - 2-Hour Residential Curbside: -3 to +4 pts (based on block lighting)
+    // - 2-Hour Residential Curbside: -3 to +4 pts
     // - Surface Unattended Lot / Dark Alleyway: -12 to -20 pts
     let facilityModifier = 0;
     let infrastructureDescription = '';
+    const isGarage =
+      structureType === 'covered_underground_garage' || structureType === 'multi_level_deck';
 
     switch (structureType) {
       case 'covered_underground_garage':
       case 'multi_level_deck': {
         const garageBonus = this.hashRange(lat, lng, 12, 18, 'garage_mod');
-        facilityModifier = garageBonus;
+        const zeroIncidents = policeSummary ? policeSummary.incidentsLast90Days === 0 : true;
+        facilityModifier = zeroIncidents ? 15 : garageBonus;
         infrastructureDescription = 'Secure gated access, concrete enclosure, and CCTV surveillance';
         break;
       }
@@ -108,11 +138,18 @@ export class SafetyScoringEngine {
 
     // 3. Lighting Score Modifier
     // High-Lux municipal smart LEDs add up to +6 pts; unlit side streets subtract -8 pts.
-    const effectiveLux = options.luxLevel !== undefined
-      ? options.luxLevel
-      : isDaytime
-      ? 95
-      : this.hashRange(lat, lng, Math.max(15, neighborhood.typicalLuxLevel - 15), Math.min(90, neighborhood.typicalLuxLevel + 10), 'lux_level');
+    const effectiveLux =
+      options.luxLevel !== undefined
+        ? options.luxLevel
+        : isDaytime
+        ? 95
+        : this.hashRange(
+            lat,
+            lng,
+            Math.max(15, neighborhood.typicalLuxLevel - 15),
+            Math.min(90, neighborhood.typicalLuxLevel + 10),
+            'lux_level'
+          );
 
     let lightingModifier = 0;
     if (isDaytime) {
@@ -129,75 +166,133 @@ export class SafetyScoringEngine {
       }
     }
 
-    // 4. Incident Penalty
-    // Based on neighborhood baseline incident density + micro-block variance
-    const microIncidentVariance = this.hashRange(lat, lng, 0, 4, 'crime_variance');
-    let incidentPenalty = Math.round(neighborhood.incidentRatePerSqKm * 0.75 + microIncidentVariance);
-
-    if (structureType === 'covered_underground_garage' || structureType === 'multi_level_deck') {
-      // Garages isolate vehicles from curbside larceny
-      incidentPenalty = Math.round(incidentPenalty * 0.35);
+    // 4. Municipal 311 Streetlight Outage Penalty: Deduct -10 points if active outage exists
+    let streetlightOutagePenalty = 0;
+    if (municipalSummary && municipalSummary.hasStreetlightOutage) {
+      streetlightOutagePenalty = 10;
     }
 
-    // Hazard penalties (time decayed)
+    // 5. Incident Penalty (Live SFPD Socrata Data or Neighborhood Fallback)
+    // Rule: Deduct -3 points for every verified vehicle larceny within 250m in the last 30 days
+    let incidentPenalty = 0;
+    let liveIncidentNotice = '';
+    let totalRecentBreakins = 0;
+
+    if (policeSummary && policeSummary.isLive) {
+      totalRecentBreakins = policeSummary.vehicleLarcenyCount90Days;
+      const vehicleThefts30 = policeSummary.vehicleLarcenyCount30Days;
+      const otherIncidents30 = Math.max(0, policeSummary.incidentsLast30Days - vehicleThefts30);
+
+      incidentPenalty = vehicleThefts30 * 3 + otherIncidents30 * 1.5;
+
+      if (isGarage) {
+        incidentPenalty = Math.round(incidentPenalty * 0.35); // Enclosed structure isolation
+      } else {
+        incidentPenalty = Math.round(incidentPenalty);
+      }
+
+      liveIncidentNotice =
+        totalRecentBreakins === 0
+          ? '0 vehicle break-ins reported within 500ft in the last 90 days'
+          : `${totalRecentBreakins} vehicle break-in${totalRecentBreakins === 1 ? '' : 's'} reported within 500ft in the last 90 days`;
+    } else {
+      // Fallback to statistical neighborhood baseline
+      const microIncidentVariance = this.hashRange(lat, lng, 0, 4, 'crime_variance');
+      totalRecentBreakins = Math.max(0, Math.round(neighborhood.incidentRatePerSqKm * 0.6 + microIncidentVariance));
+      incidentPenalty = Math.round(neighborhood.incidentRatePerSqKm * 0.75 + microIncidentVariance);
+
+      if (isGarage) {
+        incidentPenalty = Math.round(incidentPenalty * 0.35);
+      }
+
+      liveIncidentNotice =
+        totalRecentBreakins === 0
+          ? 'Verified zero property crimes reported on this block'
+          : `Estimated ${totalRecentBreakins} incident${totalRecentBreakins === 1 ? '' : 's'} in ${neighborhood.name} baseline`;
+    }
+
+    // Hazard penalties (time decayed user reports)
     let hazardPenalty = 0;
     for (const h of hazards) {
       hazardPenalty += 8;
     }
 
-    // Formula execution: Clamp(NeighborhoodBase + FacilityModifier + LightingScore - IncidentPenalty - HazardPenalty, 20, 99)
-    const rawSum = neighborhoodBaseScore + facilityModifier + lightingModifier - incidentPenalty - hazardPenalty;
+    // Execute Formula: Clamp(NeighborhoodBase + FacilityModifier + LightingScore - IncidentPenalty - OutagePenalty - HazardPenalty, 20, 99)
+    const rawSum =
+      neighborhoodBaseScore +
+      facilityModifier +
+      lightingModifier -
+      incidentPenalty -
+      streetlightOutagePenalty -
+      hazardPenalty;
+
     const finalScore = Math.min(99, Math.max(20, Math.round(rawSum)));
     const riskLevel = getRiskLevel(finalScore);
 
-    // Diagnostics & Key Factors
+    // Diagnostics, Key Risk Factors & Actionable Recommendations
     const keyRiskFactors: string[] = [];
     const recommendations: string[] = [];
 
-    if (neighborhood.smashAndGrabRisk === 'high' || neighborhood.smashAndGrabRisk === 'elevated') {
+    if (streetlightOutagePenalty > 0) {
+      keyRiskFactors.push(`Active SF 311 streetlight outage reported on block (-10 pts)`);
+      recommendations.push('Active lighting outage: Prioritize commercial illuminated return path');
+    }
+
+    if (policeSummary && policeSummary.vehicleLarcenyCount30Days >= 2) {
+      keyRiskFactors.push(
+        `${policeSummary.vehicleLarcenyCount30Days} live vehicle larcenies logged within 500m in the last 30 days`
+      );
+      recommendations.push('Do NOT leave sunglasses, charging cables, or backpacks in view');
+    } else if (neighborhood.smashAndGrabRisk === 'high' || neighborhood.smashAndGrabRisk === 'elevated') {
       keyRiskFactors.push(`Elevated vehicle property crime zone (${neighborhood.name})`);
-      recommendations.push('Do NOT leave sunglasses, charging cables, or bags visible');
+      recommendations.push('Do NOT leave bags, electronics, or valuables inside vehicle cabin');
     }
 
-    if (!isDaytime && effectiveLux < 40) {
+    if (!isDaytime && effectiveLux < 40 && streetlightOutagePenalty === 0) {
       keyRiskFactors.push(`Sub-optimal night illumination (${effectiveLux} lux)`);
-      recommendations.push('Return walking route via well-lit commercial avenue');
     }
 
-    if (facilityModifier > 10) {
-      recommendations.push('High-security gated facility: Maximum vehicle break-in defense');
+    if (facilityModifier >= 14) {
+      recommendations.push('High-security gated facility: Maximum vehicle break-in defense (+15 pts)');
     } else if (facilityModifier < -10) {
       keyRiskFactors.push('Unattended open lot without barrier controls');
-      recommendations.push('Consider moving to an attended garage after dark');
+      recommendations.push('Consider moving to a certified attended garage after dark');
     }
 
-    if (recommendations.length === 0) {
-      recommendations.push('Standard urban parking precautions recommended');
-    }
+    // Format primary bottom drawer summary
+    const summaryBadgeNotice = `🛡️ CSI ${finalScore} • ${liveIncidentNotice}`;
+    recommendations.unshift(summaryBadgeNotice);
 
-    // Detailed Component Breakdown for UI Modals
+    // Component Breakdown Objects for CSI Breakdown Modal
     const crimeScoreComponent: ScoreComponentBreakdown = {
       rawScore: Math.max(10, Math.min(100, 100 - incidentPenalty * 4)),
       weightedScore: (100 - incidentPenalty * 4) * 0.40,
       weightPercentage: 40,
-      description: `Empirical SF Incident Rate: ${neighborhood.incidentRatePerSqKm} incidents/sq km (${neighborhood.name})`,
+      description: policeSummary?.isLive
+        ? `Live SFPD Police Telemetry: ${policeSummary.incidentsLast90Days} total reports in 500m`
+        : `Empirical SF Incident Rate: ${neighborhood.incidentRatePerSqKm} incidents/sq km (${neighborhood.name})`,
       factorDetails: {
         neighborhood: neighborhood.name,
-        incidentRate: `${neighborhood.incidentRatePerSqKm} per sq km`,
-        smashAndGrabRisk: neighborhood.smashAndGrabRisk,
-        microIncidentPenalty: incidentPenalty,
+        liveSfpdConnected: policeSummary?.isLive || false,
+        breakinsLast30Days: policeSummary?.vehicleLarcenyCount30Days || 0,
+        breakinsLast90Days: totalRecentBreakins,
+        incidentPenalty: `-${incidentPenalty} pts`,
       },
     };
 
     const lightingScoreComponent: ScoreComponentBreakdown = {
-      rawScore: Math.max(10, Math.min(100, Math.round(isDaytime ? 95 : (effectiveLux / 75) * 100))),
+      rawScore: Math.max(10, Math.min(100, Math.round(isDaytime ? 95 : (effectiveLux / 75) * 100) - streetlightOutagePenalty * 2)),
       weightedScore: (isDaytime ? 95 : (effectiveLux / 75) * 100) * 0.25,
       weightPercentage: 25,
-      description: `${isDaytime ? 'Daylight Solar Zenith' : `${effectiveLux} Lux Municipal Smart Grid`}`,
+      description: municipalSummary?.hasStreetlightOutage
+        ? `⚠️ Active 311 Streetlight Outage on Block (${effectiveLux} lux)`
+        : `${isDaytime ? 'Daylight Solar Zenith' : `${effectiveLux} Lux Municipal Smart Grid`}`,
       factorDetails: {
         isDaytime,
         ambientLux: `${effectiveLux} lux`,
+        active311Outage: municipalSummary?.hasStreetlightOutage || false,
         lightingModifier: `${lightingModifier > 0 ? '+' : ''}${lightingModifier} pts`,
+        outagePenalty: streetlightOutagePenalty > 0 ? `-${streetlightOutagePenalty} pts` : 'None',
       },
     };
 
@@ -209,6 +304,7 @@ export class SafetyScoringEngine {
       factorDetails: {
         structureType: structureType.replace(/_/g, ' '),
         facilityModifier: `${facilityModifier > 0 ? '+' : ''}${facilityModifier} pts`,
+        gatedSecurityAward: facilityModifier >= 14 ? '+15 pts' : '0 pts',
       },
     };
 
@@ -219,6 +315,7 @@ export class SafetyScoringEngine {
       description: 'Active Community-Reported Physical Hazards',
       factorDetails: {
         activeHazardsCount: hazards.length,
+        openSidewalkHazards: municipalSummary?.openSidewalkHazardsCount || 0,
         hazardPenalty: `-${hazardPenalty} pts`,
       },
     };

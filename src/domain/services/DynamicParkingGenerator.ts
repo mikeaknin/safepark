@@ -4,6 +4,8 @@ import { SafeWalkBackEngine } from './SafeWalkBackEngine';
 import { SearchDestination } from '../../presentation/context/AppContext';
 import { getSfNeighborhoodProfile, NeighborhoodSafetyProfile } from '../data/sfNeighborhoodSafetyData';
 import { SafetyScoringEngine } from './SafetyScoringEngine';
+import { DataSFPoliceService, DataSFPoliceReportSummary } from '../../infrastructure/api/DataSFPoliceService';
+import { SF311Service, SF311MunicipalSummary } from '../../infrastructure/api/SF311Service';
 
 export class DynamicParkingGenerator {
   /**
@@ -12,13 +14,41 @@ export class DynamicParkingGenerator {
    */
   public static generateSpotsAroundDestination(
     destination: SearchDestination,
-    isDaytime: boolean = false
+    isDaytime: boolean = false,
+    policeSummary?: DataSFPoliceReportSummary,
+    municipalSummary?: SF311MunicipalSummary
   ): ParkingLocation[] {
     return this.generateSpotsAroundCoordinates(
       destination.coordinates,
       destination.name,
       isDaytime,
-      destination.id
+      destination.id,
+      policeSummary,
+      municipalSummary
+    );
+  }
+
+  /**
+   * Async generator that queries live DataSF SFPD Police Telemetry & SF 311 Outage Cases
+   */
+  public static async generateSpotsAroundCoordinatesAsync(
+    coordinates: { lat: number; lng: number },
+    referenceName?: string,
+    isDaytime: boolean = false,
+    idPrefix?: string
+  ): Promise<ParkingLocation[]> {
+    const [policeSummary, municipalSummary] = await Promise.all([
+      DataSFPoliceService.fetchIncidentsNearCoordinates(coordinates, 500),
+      SF311Service.fetchMunicipalCasesNearCoordinates(coordinates, 250),
+    ]);
+
+    return this.generateSpotsAroundCoordinates(
+      coordinates,
+      referenceName,
+      isDaytime,
+      idPrefix,
+      policeSummary,
+      municipalSummary
     );
   }
 
@@ -29,7 +59,9 @@ export class DynamicParkingGenerator {
     coordinates: { lat: number; lng: number },
     referenceName?: string,
     isDaytime: boolean = false,
-    idPrefix?: string
+    idPrefix?: string,
+    policeSummary?: DataSFPoliceReportSummary,
+    municipalSummary?: SF311MunicipalSummary
   ): ParkingLocation[] {
     const { lat, lng } = coordinates;
 
@@ -182,29 +214,69 @@ export class DynamicParkingGenerator {
       const spotLng = Number((lng + template.lngOffset).toFixed(5));
       const spotId = `spot-${baseId}-${template.idSuffix}`;
 
+      // Crime Aggregate (Enhanced with live SFPD data if available)
+      const incidents30 = policeSummary?.isLive
+        ? policeSummary.incidentsLast30Days
+        : neighborhood.smashAndGrabRisk === 'high'
+        ? 5
+        : neighborhood.smashAndGrabRisk === 'elevated'
+        ? 3
+        : 1;
+
+      const incidents90 = policeSummary?.isLive
+        ? policeSummary.incidentsLast90Days
+        : neighborhood.smashAndGrabRisk === 'high'
+        ? 14
+        : neighborhood.smashAndGrabRisk === 'elevated'
+        ? 8
+        : 2;
+
+      const smashCount = policeSummary?.isLive
+        ? policeSummary.smashAndGrabCount
+        : neighborhood.smashAndGrabRisk === 'high'
+        ? 3
+        : neighborhood.smashAndGrabRisk === 'elevated'
+        ? 1
+        : 0;
+
       const crimeData = {
-        incidentsLast30Days: neighborhood.smashAndGrabRisk === 'high' ? 5 : neighborhood.smashAndGrabRisk === 'elevated' ? 3 : 1,
-        incidentsLast90Days: neighborhood.smashAndGrabRisk === 'high' ? 14 : neighborhood.smashAndGrabRisk === 'elevated' ? 8 : 2,
-        smashAndGrabCount: neighborhood.smashAndGrabRisk === 'high' ? 3 : neighborhood.smashAndGrabRisk === 'elevated' ? 1 : 0,
+        incidentsLast30Days: incidents30,
+        incidentsLast90Days: incidents90,
+        smashAndGrabCount: smashCount,
         catalyticConverterCount: neighborhood.smashAndGrabRisk === 'high' ? 2 : 0,
-        incidentDensityPerSqKm: neighborhood.incidentRatePerSqKm,
-        recentIncidents: [],
+        incidentDensityPerSqKm: policeSummary?.isLive
+          ? Number((incidents90 * 0.7).toFixed(1))
+          : neighborhood.incidentRatePerSqKm,
+        recentIncidents: (policeSummary?.incidents || []).slice(0, 10).map((inc) => ({
+          id: inc.id,
+          category: inc.isVehicleLarceny ? ('smash_and_grab' as const) : ('petty_theft_exterior' as const),
+          timestamp: inc.incidentDatetime,
+          distanceMeters: inc.distanceMeters,
+          severityWeight: inc.isVehicleLarceny ? 1.0 : 0.5,
+          verifiedByPoliceReport: true,
+          blockDescription: inc.incidentDescription,
+          coordinates: { lat: inc.latitude, lng: inc.longitude },
+        })),
       };
 
-      const luxLevel = isDaytime ? 95 : neighborhood.typicalLuxLevel;
+      const luxLevel = isDaytime
+        ? 95
+        : municipalSummary?.hasStreetlightOutage
+        ? Math.max(15, neighborhood.typicalLuxLevel - 25)
+        : neighborhood.typicalLuxLevel;
 
       const lighting = {
         ambientLuxLevel: luxLevel,
         isDaytime,
         sunElevationAngleDegrees: isDaytime ? 45 : -18,
         coverageIndexPercentage: isDaytime ? 100 : Math.min(98, Math.round(luxLevel * 1.3)),
-        blindSpotDetected: luxLevel < 35,
+        blindSpotDetected: luxLevel < 35 || !!municipalSummary?.hasStreetlightOutage,
         municipalSmartLamps: [
           {
             id: `lamp-${spotId}-1`,
             lampType: 'smart_led' as const,
             luxOutput: luxLevel,
-            status: 'active' as const,
+            status: municipalSummary?.hasStreetlightOutage ? ('reported_out' as const) : ('active' as const),
             distanceMeters: 6,
             poleHeightMeters: 4.5,
             motionActivated: true,
@@ -222,7 +294,7 @@ export class DynamicParkingGenerator {
         clearSightlines: luxLevel >= 40,
       };
 
-      // Compute Deterministic Geospatial CSI
+      // Compute Deterministic Geospatial CSI with Live SFPD & 311 Telemetry
       const csi = SafetyScoringEngine.computeGeospatialCsi({
         spotId,
         coordinates: { lat: spotLat, lng: spotLng },
@@ -230,6 +302,8 @@ export class DynamicParkingGenerator {
         isDaytime,
         luxLevel,
         hazards: [],
+        policeSummary,
+        municipalSummary,
       });
 
       const routes = SafeWalkBackEngine.calculateWalkingRoutes(
@@ -270,7 +344,6 @@ export class DynamicParkingGenerator {
       }
     }
 
-    // Pick street names from neighborhood profile deterministically
     const stIndex = SafetyScoringEngine.hashRange(lat, lng, 0, Math.max(0, neighborhood.primaryStreets.length - 1), 'street_pick');
     const street = neighborhood.primaryStreets[stIndex] || 'Market St';
 
