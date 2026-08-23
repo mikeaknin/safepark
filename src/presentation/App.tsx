@@ -14,6 +14,7 @@ import { OnboardingModal } from './components/onboarding/OnboardingModal';
 import { StripeCheckoutModal } from './components/monetization/StripeCheckoutModal';
 import { SafeGaragesView } from './views/SafeGaragesView';
 import { UserProfileView } from './views/UserProfileView';
+import { MyCarView } from './views/MyCarView';
 import { SafeParkLogo } from './components/SafeParkLogo';
 import { ParkingLocation } from '../domain/models/ParkingLocation';
 
@@ -132,6 +133,7 @@ export const App: React.FC = () => {
           </header>
 
           <main style={{ flex: 1, width: '100%', margin: '0 auto' }}>
+            {currentView === 'my_car' && <MyCarView />}
             {(currentView === 'safe_garages' || currentView === 'b2b_portal') && <SafeGaragesView />}
             {(currentView === 'profile' || currentView === 'user_profile') && <UserProfileView />}
           </main>

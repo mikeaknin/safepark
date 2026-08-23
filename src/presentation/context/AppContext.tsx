@@ -13,7 +13,7 @@ import { GeocodingAdapter } from '../../data/adapters/GeocodingAdapter';
 import { DynamicParkingGenerator } from '../../domain/services/DynamicParkingGenerator';
 import { SavedParkingSession } from '../../domain/models/SavedParkingSession';
 
-export type ActiveAppView = 'driver' | 'safe_garages' | 'profile' | 'carplay' | 'b2b_portal' | 'enterprise_api' | 'user_profile' | 'admin_ops';
+export type ActiveAppView = 'driver' | 'my_car' | 'safe_garages' | 'profile' | 'carplay' | 'b2b_portal' | 'enterprise_api' | 'user_profile' | 'admin_ops';
 export type MotionState = 'driving' | 'parked' | 'walking';
 
 export interface SearchDestination {

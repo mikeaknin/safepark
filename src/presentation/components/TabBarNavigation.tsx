@@ -2,21 +2,37 @@ import React from 'react';
 import { useApp, ActiveAppView } from '../context/AppContext';
 import {
   Compass,
+  Car,
   ShieldCheck,
   User,
 } from 'lucide-react';
 
 export const TabBarNavigation: React.FC = () => {
-  const { currentView, setCurrentView } = useApp();
+  const { currentView, setCurrentView, activeParkedSession } = useApp();
 
-  const tabs: Array<{ id: ActiveAppView; testId: string; label: string; icon: React.ReactNode }> = [
-    { id: 'driver', testId: 'tab-driver', label: 'Explore', icon: <Compass size={22} /> },
-    { id: 'safe_garages', testId: 'tab-safe_garages', label: 'Safe Garages', icon: <ShieldCheck size={22} /> },
-    { id: 'profile', testId: 'tab-profile', label: 'Profile', icon: <User size={22} /> },
+  const tabs: Array<{
+    id: ActiveAppView;
+    testId: string;
+    label: string;
+    icon: React.ReactNode;
+    hasBadge?: boolean;
+    badgeText?: string;
+  }> = [
+    { id: 'driver', testId: 'tab-driver', label: 'Explore', icon: <Compass size={21} /> },
+    {
+      id: 'my_car',
+      testId: 'tab-my_car',
+      label: 'My Car',
+      icon: <Car size={21} />,
+      hasBadge: !!activeParkedSession,
+    },
+    { id: 'safe_garages', testId: 'tab-safe_garages', label: 'Safe Garages', icon: <ShieldCheck size={21} /> },
+    { id: 'profile', testId: 'tab-profile', label: 'Profile', icon: <User size={21} /> },
   ];
 
   const isTabActive = (tabId: ActiveAppView) => {
     if (tabId === 'driver') return currentView === 'driver';
+    if (tabId === 'my_car') return currentView === 'my_car';
     if (tabId === 'safe_garages') return currentView === 'safe_garages' || currentView === 'b2b_portal';
     if (tabId === 'profile') return currentView === 'profile' || currentView === 'user_profile';
     return currentView === tabId;
@@ -39,10 +55,10 @@ export const TabBarNavigation: React.FC = () => {
         display: 'flex',
         justifyContent: 'space-around',
         alignItems: 'center',
-        paddingTop: '8px',
+        paddingTop: '6px',
         paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
-        paddingLeft: '16px',
-        paddingRight: '16px',
+        paddingLeft: '12px',
+        paddingRight: '12px',
         boxShadow: '0 -4px 20px rgba(15, 23, 42, 0.08)',
         height: '64px',
       }}
@@ -61,7 +77,7 @@ export const TabBarNavigation: React.FC = () => {
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '3px',
+              gap: '2px',
               backgroundColor: 'transparent',
               border: 'none',
               color: active ? '#2563EB' : '#64748B',
@@ -69,9 +85,10 @@ export const TabBarNavigation: React.FC = () => {
               flex: 1,
               minWidth: 0,
               minHeight: '44px',
-              padding: '2px 8px',
+              padding: '2px 4px',
               borderRadius: '12px',
               transition: 'all 0.15s ease',
+              position: 'relative',
             }}
           >
             <div
@@ -82,14 +99,30 @@ export const TabBarNavigation: React.FC = () => {
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: active ? '#2563EB' : '#64748B',
+                position: 'relative',
               }}
             >
               {tab.icon}
+              {tab.hasBadge && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '-2px',
+                    right: '-4px',
+                    width: '8px',
+                    height: '8px',
+                    backgroundColor: '#10B981',
+                    borderRadius: '50%',
+                    border: '1.5px solid #FFFFFF',
+                    boxShadow: '0 0 0 2px rgba(16, 185, 129, 0.3)',
+                  }}
+                />
+              )}
             </div>
             <span
               style={{
-                fontSize: '0.725rem',
-                fontWeight: active ? 700 : 500,
+                fontSize: '0.7rem',
+                fontWeight: active ? 700 : 600,
                 letterSpacing: '-0.01em',
                 color: active ? '#2563EB' : '#64748B',
                 whiteSpace: 'nowrap',
