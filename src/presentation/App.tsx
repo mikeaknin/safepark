@@ -21,6 +21,7 @@ import { ParkingLocation } from '../domain/models/ParkingLocation';
 export const App: React.FC = () => {
   const {
     currentView,
+    setCurrentView,
     isOnboardingOpen,
     setIsOnboardingOpen,
     isStripeCheckoutOpen,
@@ -133,7 +134,9 @@ export const App: React.FC = () => {
           </header>
 
           <main style={{ flex: 1, width: '100%', margin: '0 auto' }}>
-            {currentView === 'my_car' && <MyCarView />}
+            {currentView === 'my_car' && (
+              <MyCarView onNavigateToExplore={() => setCurrentView('driver')} />
+            )}
             {(currentView === 'safe_garages' || currentView === 'b2b_portal') && <SafeGaragesView />}
             {(currentView === 'profile' || currentView === 'user_profile') && <UserProfileView />}
           </main>

@@ -20,11 +20,15 @@ import { PedestrianRoutingAdapter } from '../../data/adapters/PedestrianRoutingA
 interface ActiveParkedSpotCardProps {
   session: SavedParkingSession;
   onClose?: () => void;
+  onClear?: () => void;
+  onNavigateToExplore?: () => void;
   className?: string;
 }
 
 export const ActiveParkedSpotCard: React.FC<ActiveParkedSpotCardProps> = ({
   session,
+  onClear,
+  onNavigateToExplore,
   className = '',
 }) => {
   const { clearParkedSpot, updateParkedNotes, guideMeToMyCar, setCurrentView } = useApp();
@@ -118,11 +122,19 @@ export const ActiveParkedSpotCard: React.FC<ActiveParkedSpotCardProps> = ({
 
   const handleSafeWalk = () => {
     guideMeToMyCar();
-    setCurrentView('driver');
+    if (onNavigateToExplore) {
+      onNavigateToExplore();
+    } else {
+      setCurrentView('driver');
+    }
   };
 
   const handleLeaveSpot = () => {
-    clearParkedSpot();
+    if (onClear) {
+      onClear();
+    } else {
+      clearParkedSpot();
+    }
   };
 
   return (

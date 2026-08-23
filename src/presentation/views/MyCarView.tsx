@@ -1,86 +1,104 @@
 import React from 'react';
+import { Car, MapPin, ShieldCheck, Clock, Navigation, Footprints } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import { ActiveParkedSpotCard } from '../components/ActiveParkedSpotCard';
-import { Car, Compass, Clock, MapPin, Sparkles, ShieldCheck } from 'lucide-react';
 
-export const MyCarView: React.FC = () => {
-  const { activeParkedSession, setCurrentView } = useApp();
+interface MyCarViewProps {
+  onNavigateToExplore?: () => void;
+}
+
+export const MyCarView: React.FC<MyCarViewProps> = ({ onNavigateToExplore }) => {
+  const { activeParkedSession, clearParkedSpot, setCurrentView } = useApp();
+  const handleExplore = onNavigateToExplore || (() => setCurrentView('driver'));
 
   return (
-    <div className="w-full max-w-lg mx-auto px-4 pt-2 pb-28 space-y-4">
-      {/* Page Header Banner */}
-      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-2">
-        <div className="flex items-center gap-2">
-          <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-              activeParkedSession
-                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                : 'bg-blue-50 text-blue-700 border border-blue-200'
-            }`}
-          >
+    <div className="min-h-screen bg-slate-50/50 pt-6 pb-32 px-4">
+      <div className="w-full max-w-lg mx-auto space-y-4">
+        
+        {/* TOP HEADER */}
+        <div className="bg-white rounded-2xl p-5 border border-slate-200/90 shadow-sm">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200 mb-2">
             <Car className="w-3.5 h-3.5" />
-            <span>{activeParkedSession ? 'Active Tracking' : 'Vehicle Radar'}</span>
-          </span>
-          <span className="text-xs text-slate-500 font-medium">
-            {activeParkedSession ? 'Live GPS Location Armed' : 'Find My Car & Parking Timers'}
-          </span>
+            <span>VEHICLE RADAR</span>
+          </div>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
+            My Parked Vehicle
+          </h1>
+          <p className="text-xs text-slate-500 mt-1 leading-relaxed">
+            Live GPS location tracking, street sweeping countdowns, and illuminated return walking routes.
+          </p>
         </div>
 
-        <h1 className="text-2xl font-bold text-slate-900 leading-tight">
-          My Parked Vehicle
-        </h1>
-        <p className="text-xs text-slate-500 leading-relaxed">
-          Live location, street sweeping alerts, and illuminated return walk.
-        </p>
-      </div>
-
-      {activeParkedSession ? (
-        /* Active Parked Vehicle Layout */
-        <ActiveParkedSpotCard session={activeParkedSession} />
-      ) : (
-        /* Empty State: No Vehicle Tracked */
-        <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm flex flex-col items-center text-center space-y-4">
-          <div className="w-16 h-16 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 relative">
-            <Car className="w-8 h-8" />
-            <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-white text-[10px]">
-              <Sparkles className="w-3 h-3" />
+        {/* ACTIVE SESSION OR CLEAN EMPTY STATE */}
+        {activeParkedSession ? (
+          <ActiveParkedSpotCard 
+            session={activeParkedSession} 
+            onClear={clearParkedSpot}
+            onNavigateToExplore={handleExplore}
+          />
+        ) : (
+          /* EMPTY STATE CARD */
+          <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-sm text-center space-y-5">
+            
+            {/* Hero Icon */}
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-blue-50 to-blue-100 border border-blue-200/80 flex items-center justify-center mx-auto text-blue-600 shadow-sm">
+              <Car className="w-8 h-8" />
             </div>
-          </div>
 
-          <div className="max-w-xs space-y-1.5">
-            <h2 className="text-lg font-bold text-slate-900">
-              No Vehicle Currently Tracked
-            </h2>
-            <p className="text-xs text-slate-500 leading-relaxed">
-              Tap <strong className="text-blue-600 font-semibold">"I'm Parked Here"</strong> on any street curb, 2-hour zone, or garage in Explore to start tracking your vehicle, set timers, and get illuminated walking directions back.
-            </p>
-          </div>
+            {/* Heading & Explanation */}
+            <div className="space-y-1.5 max-w-xs mx-auto">
+              <h2 className="text-lg font-bold text-slate-900">
+                No Vehicle Currently Tracked
+              </h2>
+              <p className="text-xs text-slate-500 leading-relaxed">
+                When you park at any street curb, 2-hour residential zone, or garage, tap <span className="font-semibold text-slate-700">"I'm Parked Here"</span> on the map to start live tracking.
+              </p>
+            </div>
 
-          <div className="w-full border-t border-slate-100 pt-4 space-y-3">
+            {/* Primary Action Button */}
             <button
-              onClick={() => setCurrentView('driver')}
-              className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 transition-all"
+              onClick={handleExplore}
+              className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
             >
-              <Compass className="w-4 h-4" />
-              <span>Find Safe Parking on Map</span>
+              <Navigation className="w-4 h-4" />
+              Find Safe Parking on Map
             </button>
 
-            <div className="flex items-center justify-center gap-3 text-[11px] text-slate-400 font-medium">
-              <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-slate-400" /> 2-Hr Reminders
-              </span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <MapPin className="w-3.5 h-3.5 text-slate-400" /> GPS Radar
-              </span>
-              <span>•</span>
-              <span className="flex items-center gap-1">
-                <ShieldCheck className="w-3.5 h-3.5 text-slate-400" /> Safe Walk
-              </span>
+            {/* Feature Highlights Grid */}
+            <div className="pt-2 border-t border-slate-100 grid grid-cols-3 gap-2 text-center">
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col items-center gap-1">
+                <Clock className="w-4 h-4 text-amber-600" />
+                <span className="text-[11px] font-semibold text-slate-700">2-Hr Timers</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col items-center gap-1">
+                <MapPin className="w-4 h-4 text-blue-600" />
+                <span className="text-[11px] font-semibold text-slate-700">GPS Radar</span>
+              </div>
+              <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex flex-col items-center gap-1">
+                <Footprints className="w-4 h-4 text-emerald-600" />
+                <span className="text-[11px] font-semibold text-slate-700">Safe Walk</span>
+              </div>
             </div>
+
+          </div>
+        )}
+
+        {/* BOTTOM INFORMATIONAL SAFEGUARD CARD */}
+        <div className="bg-white rounded-2xl p-4 border border-slate-200/90 shadow-sm flex items-start gap-3">
+          <div className="w-8 h-8 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center shrink-0 text-emerald-600 mt-0.5">
+            <ShieldCheck className="w-4 h-4" />
+          </div>
+          <div>
+            <h3 className="text-xs font-bold text-slate-900">
+              Automated Safety Monitoring
+            </h3>
+            <p className="text-[11px] text-slate-500 mt-0.5 leading-relaxed">
+              SafePark tracks real-time break-in telemetry and street lighting grids to safeguard your parked spot.
+            </p>
           </div>
         </div>
-      )}
+
+      </div>
     </div>
   );
 };
