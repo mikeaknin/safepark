@@ -22,6 +22,7 @@ export interface ParkingFacilityCardProps {
   onInspectCsi?: (loc: ParkingLocation) => void;
   onSafeWalk?: (loc: ParkingLocation) => void;
   onParkHere?: (loc: ParkingLocation) => void;
+  onLeaveSpot?: (loc: ParkingLocation) => void;
   onReportHazard?: (loc: ParkingLocation) => void;
   onOpenDirections?: (loc: ParkingLocation) => void;
 }
@@ -35,6 +36,7 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
   onInspectCsi,
   onSafeWalk,
   onParkHere,
+  onLeaveSpot,
   onReportHazard,
   onOpenDirections,
 }) => {
@@ -226,67 +228,133 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
         </div>
       )}
 
-      {/* Action Buttons Row */}
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '6px' }}>
-        {/* Turn-by-Turn Driving Directions */}
-        {onOpenDirections && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenDirections(location);
-            }}
-            aria-label={`Open turn-by-turn driving directions for ${location.name}`}
-            style={{
-              backgroundColor: '#EFF6FF',
-              color: '#2563EB',
-              border: '1px solid #BFDBFE',
-              borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-              padding: '8px 12px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              minHeight: '40px',
-              fontSize: '0.775rem',
-              fontWeight: 800,
-              transition: 'background-color 0.15s ease',
-            }}
-          >
-            <Navigation size={14} />
-            <span>Directions</span>
-          </button>
-        )}
+      {/* 2-Stage Action Buttons Row */}
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>
+        {isParkedHere ? (
+          <>
+            {/* Post-Parked State: Safe Walk & Leave Spot */}
+            {onSafeWalk && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSafeWalk(location);
+                }}
+                aria-label={`Safe Walk to parked car at ${location.name}`}
+                style={{
+                  flex: '1 1 140px',
+                  backgroundColor: '#15803D',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
+                  padding: '8px 14px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  minHeight: '42px',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  boxShadow: '0 4px 12px rgba(21, 128, 61, 0.3)',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Footprints size={15} />
+                <span>Safe Walk to Car</span>
+              </button>
+            )}
 
-        {/* On Foot / Safe Walk */}
-        {onSafeWalk && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSafeWalk(location);
-            }}
-            aria-label={`View on foot return walk route for ${location.name}`}
-            style={{
-              flex: '1 1 110px',
-              backgroundColor: '#F1F5F9',
-              color: '#1E293B',
-              border: '1px solid #CBD5E1',
-              borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-              padding: '8px 12px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              minHeight: '40px',
-              fontSize: '0.775rem',
-              fontWeight: 700,
-              transition: 'background-color 0.15s ease',
-            }}
-          >
-            <Footprints size={14} color="#15803D" />
-            <span>Safe Walk {litRoute ? `(${litRoute.estimatedWalkingMinutes}m)` : ''}</span>
-          </button>
+            {onLeaveSpot && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onLeaveSpot(location);
+                }}
+                aria-label="Leave this parked spot"
+                style={{
+                  backgroundColor: '#FFF1F2',
+                  color: '#BE123C',
+                  border: '1px solid #FECDD3',
+                  borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
+                  padding: '8px 14px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '4px',
+                  minHeight: '42px',
+                  fontSize: '0.775rem',
+                  fontWeight: 800,
+                }}
+              >
+                <span>Leave Spot</span>
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            {/* Pre-Parked State: 1. Drive to Spot (Primary Blue), 2. I'm Parked Here (Secondary Slate) */}
+            {onOpenDirections && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenDirections(location);
+                }}
+                aria-label={`Drive to ${location.name}`}
+                style={{
+                  flex: '1 1 130px',
+                  backgroundColor: '#2563EB',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
+                  padding: '8px 14px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  minHeight: '42px',
+                  fontSize: '0.8rem',
+                  fontWeight: 800,
+                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Navigation size={15} />
+                <span>Drive to Spot</span>
+              </button>
+            )}
+
+            {onParkHere && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onParkHere(location);
+                }}
+                aria-label={`Mark parked at ${location.name}`}
+                style={{
+                  flex: '1 1 120px',
+                  backgroundColor: '#F1F5F9',
+                  color: '#334155',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
+                  padding: '8px 12px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '6px',
+                  minHeight: '42px',
+                  fontSize: '0.775rem',
+                  fontWeight: 800,
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                <Car size={15} />
+                <span>I'm Parked Here</span>
+              </button>
+            )}
+          </>
         )}
 
         {/* CSI Score Inspector */}
@@ -302,53 +370,20 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
               color: '#475569',
               border: '1px solid #CBD5E1',
               borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-              padding: '8px 12px',
+              padding: '8px 10px',
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               gap: '4px',
-              minHeight: '40px',
-              fontSize: '0.775rem',
+              minHeight: '42px',
+              fontSize: '0.75rem',
               fontWeight: 700,
               transition: 'all 0.15s ease',
             }}
           >
-            <Info size={14} color="#2563EB" />
-            <span>Why CSI {location.csi.totalScore}?</span>
-          </button>
-        )}
-
-        {/* Primary Action: Park Here */}
-        {onParkHere && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onParkHere(location);
-            }}
-            disabled={isParkedHere}
-            aria-label={`Park vehicle at ${location.name}`}
-            style={{
-              flex: '1 1 120px',
-              backgroundColor: isParkedHere ? '#15803D' : '#2563EB',
-              color: '#FFFFFF',
-              border: 'none',
-              borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-              padding: '8px 14px',
-              cursor: isParkedHere ? 'default' : 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              minHeight: '40px',
-              fontSize: '0.8rem',
-              fontWeight: 800,
-              boxShadow: isParkedHere ? '0 4px 12px rgba(21, 128, 61, 0.3)' : '0 4px 12px rgba(37, 99, 235, 0.3)',
-              transition: 'all 0.15s ease',
-            }}
-          >
-            <Car size={15} />
-            <span>{isParkedHere ? 'Parked Here ✓' : 'Park Here'}</span>
+            <Info size={13} color="#2563EB" />
+            <span>Why CSI?</span>
           </button>
         )}
 

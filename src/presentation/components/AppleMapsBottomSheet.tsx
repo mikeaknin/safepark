@@ -13,6 +13,7 @@ import {
   Building2,
   Car,
   Filter,
+  X,
 } from 'lucide-react';
 
 export type SnapPoint = 'peek' | 'mid' | 'expanded';
@@ -39,6 +40,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
     parkedLocation,
     activeParkedSession,
     handleParkHere,
+    clearParkedSpot,
   } = useApp();
 
   const [snapPoint, setSnapPoint] = useState<SnapPoint>('peek');
@@ -337,62 +339,119 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 )}
               </div>
 
-              {/* Right Action Buttons */}
+              {/* Right Action Buttons: 2-Stage Driver Workflow */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
-                {onOpenDirections && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenDirections(topRankedSpot);
-                    }}
-                    aria-label={`Open driving directions to ${topRankedSpot.name}`}
-                    title="In-Car Directions"
-                    style={{
-                      backgroundColor: '#EFF6FF',
-                      color: '#2563EB',
-                      border: '1px solid #BFDBFE',
-                      borderRadius: '8px',
-                      padding: '5px 9px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '3px',
-                      minHeight: '32px',
-                      fontSize: '0.725rem',
-                      fontWeight: 800,
-                      transition: 'background-color 0.15s ease',
-                    }}
-                  >
-                    <Navigation size={12} />
-                    <span>Nav</span>
-                  </button>
-                )}
+                {parkedLocation?.id === topRankedSpot.id || activeParkedSession?.locationId === topRankedSpot.id ? (
+                  <>
+                    {/* Stage 2 (Parked): Safe Walk to Car & Leave Spot */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSafeWalk(topRankedSpot);
+                      }}
+                      aria-label={`Safe Walk to parked car at ${topRankedSpot.name}`}
+                      style={{
+                        backgroundColor: '#15803D',
+                        color: '#FFFFFF',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '5px 10px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        minHeight: '32px',
+                        fontSize: '0.725rem',
+                        fontWeight: 800,
+                        boxShadow: '0 2px 8px rgba(21, 128, 61, 0.3)',
+                      }}
+                    >
+                      <Footprints size={12} />
+                      <span>Safe Walk</span>
+                    </button>
 
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleParkHere(topRankedSpot);
-                  }}
-                  disabled={parkedLocation?.id === topRankedSpot.id}
-                  style={{
-                    backgroundColor: parkedLocation?.id === topRankedSpot.id ? '#15803D' : '#2563EB',
-                    color: '#FFFFFF',
-                    border: 'none',
-                    borderRadius: '8px',
-                    padding: '5px 11px',
-                    fontSize: '0.725rem',
-                    fontWeight: 800,
-                    cursor: parkedLocation?.id === topRankedSpot.id ? 'default' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '3px',
-                    minHeight: '32px',
-                    boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
-                  }}
-                >
-                  <Car size={12} />
-                  <span>{parkedLocation?.id === topRankedSpot.id ? 'Parked' : 'Park Here'}</span>
-                </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        clearParkedSpot();
+                      }}
+                      aria-label="I Left This Spot"
+                      style={{
+                        backgroundColor: '#FFF1F2',
+                        color: '#BE123C',
+                        border: '1px solid #FECDD3',
+                        borderRadius: '8px',
+                        padding: '5px 8px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '2px',
+                        minHeight: '32px',
+                        fontSize: '0.725rem',
+                        fontWeight: 800,
+                      }}
+                    >
+                      <X size={12} />
+                      <span>Leave</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    {/* Stage 1 (En Route): 1. Drive to Spot (Primary Blue), 2. I'm Parked Here (Secondary Slate) */}
+                    {onOpenDirections && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenDirections(topRankedSpot);
+                        }}
+                        aria-label={`Drive to ${topRankedSpot.name}`}
+                        style={{
+                          backgroundColor: '#2563EB',
+                          color: '#FFFFFF',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '5px 10px',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '3px',
+                          minHeight: '32px',
+                          fontSize: '0.725rem',
+                          fontWeight: 800,
+                          boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+                        }}
+                      >
+                        <Navigation size={12} />
+                        <span>Drive to Spot</span>
+                      </button>
+                    )}
+
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleParkHere(topRankedSpot);
+                      }}
+                      aria-label={`Mark parked at ${topRankedSpot.name}`}
+                      style={{
+                        backgroundColor: '#F1F5F9',
+                        color: '#334155',
+                        border: '1px solid #CBD5E1',
+                        borderRadius: '8px',
+                        padding: '5px 9px',
+                        fontSize: '0.725rem',
+                        fontWeight: 800,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '3px',
+                        minHeight: '32px',
+                      }}
+                    >
+                      <Car size={12} />
+                      <span>Parked Here</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -434,6 +493,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
               onInspectCsi={onInspectCsi}
               onSafeWalk={onSafeWalk}
               onParkHere={handleParkHere}
+              onLeaveSpot={clearParkedSpot}
               onReportHazard={onReportHazard}
               onOpenDirections={onOpenDirections}
             />
