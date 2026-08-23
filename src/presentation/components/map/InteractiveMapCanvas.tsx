@@ -30,6 +30,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     setShowLightingHeatmap,
     parkedLocation,
     showToast,
+    scanLocationsAt,
   } = useApp();
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -39,11 +40,15 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
   const lightingGroupRef = useRef<L.LayerGroup | null>(null);
   const userLocationGroupRef = useRef<L.LayerGroup | null>(null);
 
+  const isProgrammaticFlightRef = useRef<boolean>(false);
+  const scanLocationsAtRef = useRef(scanLocationsAt);
+  scanLocationsAtRef.current = scanLocationsAt;
+
   const [deviceCoordinates, setDeviceCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [deviceAccuracy, setDeviceAccuracy] = useState<number>(30);
   const [isLocating, setIsLocating] = useState<boolean>(false);
 
-  // 1. Initialize Real Slippy Leaflet Tile Map with Standard OpenStreetMap Layer
+  // 1. Initialize Real Slippy Leaflet Tile Map with Standard OpenStreetMap Layer & Moveend Pan-to-Scan Listener
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
@@ -86,9 +91,29 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     };
     window.addEventListener('resize', handleResize);
 
+    // Dynamic "Pan-to-Scan" Moveend Listener (350ms debounce)
+    let moveEndTimeout: any = null;
+    const handleMoveEnd = () => {
+      if (isProgrammaticFlightRef.current) {
+        return;
+      }
+      if (moveEndTimeout) {
+        clearTimeout(moveEndTimeout);
+      }
+      moveEndTimeout = setTimeout(() => {
+        if (!mapInstanceRef.current || isProgrammaticFlightRef.current) return;
+        const center = mapInstanceRef.current.getCenter();
+        scanLocationsAtRef.current({ lat: center.lat, lng: center.lng });
+      }, 350);
+    };
+
+    map.on('moveend', handleMoveEnd);
+
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
+      if (moveEndTimeout) clearTimeout(moveEndTimeout);
+      map.off('moveend', handleMoveEnd);
       window.removeEventListener('resize', handleResize);
       map.remove();
       mapInstanceRef.current = null;
@@ -99,10 +124,15 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
   useEffect(() => {
     if (mapInstanceRef.current && selectedDestination?.coordinates) {
       const { lat, lng } = selectedDestination.coordinates;
+      isProgrammaticFlightRef.current = true;
       mapInstanceRef.current.flyTo([lat, lng], 16, {
         animate: true,
         duration: 1.2,
       });
+      const flightTimer = setTimeout(() => {
+        isProgrammaticFlightRef.current = false;
+      }, 1500);
+      return () => clearTimeout(flightTimer);
     }
   }, [selectedDestination]);
 
@@ -216,6 +246,8 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         badgeIcon = '⚠️';
       }
 
+      const rateDisplay = loc.hourlyRate === 0 ? 'Free' : `$${loc.hourlyRate.toFixed(0)}/hr`;
+
       const parkingIcon = L.divIcon({
         className: `safepark-pin-${loc.id}`,
         html: `
@@ -234,7 +266,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         }; display: flex; align-items: center; gap: 5px;">
               <span>${badgeIcon} CSI ${loc.csi.totalScore}</span>
               <span style="opacity: 0.5;">•</span>
-              <span>$${loc.hourlyRate.toFixed(0)}/hr</span>
+              <span>${rateDisplay}</span>
             </div>
             <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid ${
               isSelected ? '#2563EB' : pinBorder
@@ -266,12 +298,15 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     routeGroupRef.current.clearLayers();
 
     const activeSpot = selectedLocation || locations[0];
-    if (!activeSpot || !selectedDestination?.coordinates) return;
+    if (!activeSpot) return;
 
-    const spotCoords = activeSpot.coordinates;
-    const destCoords = selectedDestination.coordinates;
+    // Use selectedDestination coordinates, or fall back to first spot / center
+    const destCoords = selectedDestination?.coordinates || {
+      lat: activeSpot.coordinates.lat + 0.001,
+      lng: activeSpot.coordinates.lng + 0.001,
+    };
 
-    PedestrianRoutingAdapter.getPedestrianRoute(spotCoords, destCoords).then((result) => {
+    PedestrianRoutingAdapter.getPedestrianRoute(activeSpot.coordinates, destCoords).then((result) => {
       if (isCancelled || !routeGroupRef.current) return;
 
       routeGroupRef.current.clearLayers();
@@ -338,12 +373,16 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         setDeviceAccuracy(pos.coords.accuracy || 20);
         setIsLocating(false);
 
+        isProgrammaticFlightRef.current = true;
         if (mapInstanceRef.current) {
           mapInstanceRef.current.flyTo([coords.lat, coords.lng], 16, {
             animate: true,
             duration: 1.2,
           });
         }
+        setTimeout(() => {
+          isProgrammaticFlightRef.current = false;
+        }, 1500);
 
         // Auto-load nearby spots around current location
         setSelectedDestination({
@@ -358,9 +397,13 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
       (err) => {
         setIsLocating(false);
         showToast('⚠️ GPS location access was denied. Showing downtown SF.');
+        isProgrammaticFlightRef.current = true;
         if (mapInstanceRef.current) {
           mapInstanceRef.current.flyTo([37.7842, -122.4015], 16, { animate: true, duration: 1.0 });
         }
+        setTimeout(() => {
+          isProgrammaticFlightRef.current = false;
+        }, 1500);
       },
       { enableHighAccuracy: true, timeout: 8000 }
     );

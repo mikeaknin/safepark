@@ -61,6 +61,7 @@ interface AppContextType {
   selectedLocation: ParkingLocation | null;
   setSelectedLocation: (loc: ParkingLocation | null) => void;
   refreshLocations: () => Promise<void>;
+  scanLocationsAt: (coords: { lat: number; lng: number }, areaName?: string) => Promise<void>;
 
   // Search & Destination
   searchQuery: string;
@@ -244,6 +245,47 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  // Pan-to-Scan dynamic location scanner
+  const scanLocationsAt = async (coords: { lat: number; lng: number }, areaName?: string) => {
+    const rawSpots = DynamicParkingGenerator.generateSpotsAroundCoordinates(
+      coords,
+      areaName,
+      !isNightMode
+    );
+
+    const scoredSpots = rawSpots.map(spot => {
+      const lighting = { ...spot.lighting, isDaytime: !isNightMode };
+      const csi = CsiEngine.calculate(
+        spot.id,
+        spot.crimeData,
+        lighting,
+        spot.infrastructure,
+        spot.activeHazards
+      );
+      return { ...spot, lighting, csi };
+    });
+
+    OfflineCacheService.cacheParkingLocations(scoredSpots);
+
+    const filtered = scoredSpots.filter(spot => {
+      if (spot.csi.totalScore < filters.minCsi) return false;
+      if (spot.hourlyRate > filters.maxHourlyRate) return false;
+      if (filters.coveredOrGarageOnly && spot.infrastructure.structureType !== 'covered_underground_garage' && spot.infrastructure.structureType !== 'multi_level_deck') {
+        return false;
+      }
+      if (filters.gatedAccessOnly && !spot.infrastructure.hasControlledAccessBarrier) return false;
+      if (filters.monitoredCctvOnly && spot.infrastructure.surveillance !== 'monitored_cctv_24_7') return false;
+      return true;
+    });
+
+    filtered.sort((a, b) => b.csi.totalScore - a.csi.totalScore);
+    setLocations(filtered);
+
+    if (filtered.length > 0 && (!selectedLocation || !filtered.some(s => s.id === selectedLocation.id))) {
+      setSelectedLocation(filtered[0]);
+    }
+  };
+
   useEffect(() => {
     refreshLocations();
   }, [selectedDestination, isNightMode, filters]);
@@ -334,6 +376,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         selectedLocation,
         setSelectedLocation,
         refreshLocations,
+        scanLocationsAt,
         searchQuery,
         setSearchQuery,
         selectedDestination,

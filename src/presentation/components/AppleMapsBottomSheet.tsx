@@ -242,7 +242,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
           }}
         >
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px', minWidth: 0, width: '100%' }}>
               <span
                 style={{
                   backgroundColor: activeSpotStatus.bg,
@@ -259,12 +259,14 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
               </span>
               <span
                 style={{
-                  fontSize: '0.925rem',
-                  fontWeight: 800,
+                  fontSize: '0.875rem',
+                  fontWeight: 700,
                   color: '#0F172A',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
+                  flex: 1,
+                  minWidth: 0,
                 }}
                 title={topRankedSpot.name}
               >

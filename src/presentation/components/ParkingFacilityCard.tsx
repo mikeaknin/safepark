@@ -92,20 +92,23 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
       )}
 
       {/* Header Row: Title & CSI Badge */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', gap: '10px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px', gap: '10px', minWidth: 0 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <h3
             style={{
-              fontSize: '1rem',
-              fontWeight: 800,
+              fontSize: '0.95rem',
+              fontWeight: 700,
               color: '#0F172A',
               marginBottom: '2px',
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
+              minWidth: 0,
             }}
           >
-            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{location.name}</span>
+            <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {location.name}
+            </span>
             {location.csi.totalScore >= 75 && (
               <span title="SafePark Low Risk Certified" style={{ display: 'inline-flex', flexShrink: 0 }}>
                 <ShieldCheck size={16} color="#15803D" />
