@@ -1,3 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 /* Leaflet Fullscreen Tile Canvas Styles */
 .leaflet-container {
   width: 100% !important;
