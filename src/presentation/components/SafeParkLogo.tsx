@@ -4,6 +4,7 @@ export interface SafeParkLogoProps {
   size?: number;
   showText?: boolean;
   className?: string;
+  textColor?: 'dark' | 'light';
   onClick?: () => void;
 }
 
@@ -11,6 +12,7 @@ export const SafeParkLogo: React.FC<SafeParkLogoProps> = ({
   size = 36,
   showText = false,
   className = '',
+  textColor = 'dark',
   onClick,
 }) => {
   return (
@@ -24,7 +26,7 @@ export const SafeParkLogo: React.FC<SafeParkLogoProps> = ({
         gap: '10px',
       }}
     >
-      {/* SVG Shield-P & Safety Beacon Vector Graphic */}
+      {/* Clean Minimalist Geometric P with Emerald Beacon Dot (No Shield) */}
       <svg
         width={size}
         height={size}
@@ -40,79 +42,66 @@ export const SafeParkLogo: React.FC<SafeParkLogoProps> = ({
             <stop offset="100%" stopColor="#0F172A" />
           </linearGradient>
 
-          <linearGradient id={`brandGrad-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#38BDF8" />
-            <stop offset="100%" stopColor="#2C73D2" />
+          <linearGradient id={`pGrad-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FFFFFF" />
+            <stop offset="100%" stopColor="#F8FAFC" />
           </linearGradient>
 
-          <linearGradient id={`shieldFill-${size}`} x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="#2C73D2" stopOpacity="0.04" />
+          <linearGradient id={`emeraldGrad-${size}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#34D399" />
+            <stop offset="100%" stopColor="#059669" />
           </linearGradient>
+
+          <filter id={`emeraldGlow-${size}`} x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="12" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
         </defs>
 
         {/* Squircle Surface */}
         <rect
           width="512"
           height="512"
-          rx="112"
+          rx="120"
           fill={`url(#bgGrad-${size})`}
-          stroke="rgba(56, 189, 248, 0.25)"
+          stroke="rgba(255, 255, 255, 0.08)"
           strokeWidth="6"
         />
 
-        {/* Protective Shield Contour */}
+        {/* Minimalist Geometric P */}
         <path
-          d="M 256 70 
-             C 335 70, 395 90, 412 125 
-             C 412 250, 350 365, 256 442 
-             C 162 365, 100 250, 100 125 
-             C 117 90, 177 70, 256 70 Z"
-          fill={`url(#shieldFill-${size})`}
-          stroke={`url(#brandGrad-${size})`}
-          strokeWidth="14"
-          strokeLinejoin="round"
+          d="M 148 108
+             L 276 108
+             C 342 108, 396 162, 396 228
+             C 396 294, 342 348, 276 348
+             L 204 348
+             L 204 404
+             C 204 419, 192 432, 176 432
+             C 160 432, 148 419, 148 404
+             Z
+             M 204 164
+             L 204 292
+             L 276 292
+             C 311 292, 340 263, 340 228
+             C 340 193, 311 164, 276 164
+             Z"
+          fill={`url(#pGrad-${size})`}
+          fillRule="evenodd"
         />
 
-        {/* Inner Protective Outline */}
-        <path
-          d="M 256 96 
-             C 320 96, 370 112, 386 140 
-             C 386 242, 334 338, 256 406 
-             C 178 338, 126 242, 126 140 
-             C 142 112, 192 96, 256 96 Z"
-          fill="none"
-          stroke="rgba(56, 189, 248, 0.35)"
-          strokeWidth="4"
-          strokeLinejoin="round"
+        {/* Emerald Beacon Dot inside loop of P */}
+        <circle
+          cx="272"
+          cy="228"
+          r="32"
+          fill={`url(#emeraldGrad-${size})`}
+          filter={`url(#emeraldGlow-${size})`}
+          stroke="#FFFFFF"
+          strokeWidth="6"
         />
-
-        {/* Parking P Stem */}
-        <rect x="180" y="150" width="36" height="210" rx="18" fill={`url(#brandGrad-${size})`} />
-
-        {/* Parking P Bowl */}
-        <path
-          d="M 198 150 
-             H 275 
-             C 325 150, 355 178, 355 222 
-             C 355 266, 325 294, 275 294 
-             H 198"
-          fill="none"
-          stroke={`url(#brandGrad-${size})`}
-          strokeWidth="36"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* Glowing Emerald Safety Beacon */}
-        <circle cx="275" cy="222" r="28" fill="#22C55E" opacity="0.45" />
-        <circle cx="275" cy="222" r="18" fill="#22C55E" />
-        <circle cx="275" cy="222" r="7" fill="#FFFFFF" />
-
-        {/* CSI Grounding Dots */}
-        <circle cx="236" cy="385" r="5" fill="#38BDF8" opacity="0.7" />
-        <circle cx="256" cy="396" r="6" fill="#22C55E" opacity="0.95" />
-        <circle cx="276" cy="385" r="5" fill="#38BDF8" opacity="0.7" />
       </svg>
 
       {/* Wordmark and Navigation Sub-Badge */}
@@ -124,16 +113,16 @@ export const SafeParkLogo: React.FC<SafeParkLogoProps> = ({
                 fontSize: size >= 36 ? '1.15rem' : '1rem',
                 fontWeight: 800,
                 letterSpacing: '-0.02em',
-                color: '#FFFFFF',
+                color: textColor === 'light' ? '#FFFFFF' : '#0F172A',
               }}
             >
-              SafePark
+              Safe<span style={{ color: '#2563EB' }}>Park</span>
             </span>
             <span
               style={{
-                backgroundColor: 'rgba(34, 197, 94, 0.18)',
-                color: '#22C55E',
-                border: '1px solid rgba(34, 197, 94, 0.4)',
+                backgroundColor: 'rgba(34, 197, 94, 0.12)',
+                color: '#15803D',
+                border: '1px solid rgba(34, 197, 94, 0.3)',
                 borderRadius: '4px',
                 padding: '1px 5px',
                 fontSize: '0.625rem',
@@ -142,11 +131,11 @@ export const SafeParkLogo: React.FC<SafeParkLogoProps> = ({
                 textTransform: 'uppercase',
               }}
             >
-              SF Navigation
+              SF
             </span>
           </div>
-          <span style={{ fontSize: '0.675rem', color: '#94A3B8', fontWeight: 500 }}>
-            San Francisco Municipal Intelligence
+          <span style={{ fontSize: '0.675rem', color: '#64748B', fontWeight: 500 }}>
+            Smart Parking Radar
           </span>
         </div>
       )}

@@ -112,13 +112,13 @@ export const App: React.FC = () => {
             backgroundColor: '#F8FAFC',
           }}
         >
-          {/* Mobile Top Header */}
+          {/* Mobile Top Brand Header */}
           <header
             style={{
               backgroundColor: '#FFFFFF',
               borderBottom: '1px solid #E2E8F0',
-              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
-              paddingBottom: '12px',
+              paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)',
+              paddingBottom: '10px',
               paddingLeft: '16px',
               paddingRight: '16px',
               display: 'flex',
@@ -128,9 +128,10 @@ export const App: React.FC = () => {
               top: 0,
               zIndex: 30,
               boxShadow: '0 1px 3px rgba(15, 23, 42, 0.05)',
+              minHeight: '56px',
             }}
           >
-            <SafeParkLogo size={32} showText={true} />
+            <SafeParkLogo size={36} showText={true} />
           </header>
 
           <main style={{ flex: 1, width: '100%', margin: '0 auto' }}>
