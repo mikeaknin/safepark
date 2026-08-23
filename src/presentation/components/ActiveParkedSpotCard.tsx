@@ -3,20 +3,19 @@ import { useApp } from '../context/AppContext';
 import { SavedParkingSession } from '../../domain/models/SavedParkingSession';
 import {
   Car,
-  Navigation,
-  Footprints,
+  MapPin,
   Clock,
+  DollarSign,
+  Footprints,
+  Sun,
+  ShieldCheck,
+  FileText,
+  Edit2,
+  Navigation,
   X,
   Check,
-  Edit2,
-  ShieldCheck,
-  AlertTriangle,
-  MapPin,
-  Lightbulb,
-  CheckCircle2,
 } from 'lucide-react';
 import { PedestrianRoutingAdapter } from '../../data/adapters/PedestrianRoutingAdapter';
-import { getStatusStyle } from '../../theme/tokens';
 
 interface ActiveParkedSpotCardProps {
   session: SavedParkingSession;
@@ -28,8 +27,8 @@ export const ActiveParkedSpotCard: React.FC<ActiveParkedSpotCardProps> = ({
   session,
   className = '',
 }) => {
-  const { clearParkedSpot, updateParkedNotes, guideMeToMyCar, setCurrentView, showToast } = useApp();
-  const [timeLeftStr, setTimeLeftStr] = useState<string>('');
+  const { clearParkedSpot, updateParkedNotes, guideMeToMyCar, setCurrentView } = useApp();
+  const [timeLeftStr, setTimeLeftStr] = useState<string>('Calculating...');
   const [isWarning, setIsWarning] = useState<boolean>(false);
   const [isExpired, setIsExpired] = useState<boolean>(false);
   const [isEditingNotes, setIsEditingNotes] = useState<boolean>(false);
@@ -38,8 +37,6 @@ export const ActiveParkedSpotCard: React.FC<ActiveParkedSpotCardProps> = ({
   const [customNote, setCustomNote] = useState<string>(session.garageNotes?.note || '');
   const [walkingDistance, setWalkingDistance] = useState<string>('350 ft');
   const [walkingDuration, setWalkingDuration] = useState<number>(2);
-
-  const status = getStatusStyle(session.csiScore);
 
   // Live Countdown calculation
   useEffect(() => {
@@ -65,9 +62,9 @@ export const ActiveParkedSpotCard: React.FC<ActiveParkedSpotCardProps> = ({
         setIsWarning(totalMinutes <= 20);
 
         if (hours > 0) {
-          setTimeLeftStr(`⏱️ ${hours}h ${minutes}m Remaining`);
+          setTimeLeftStr(`${hours}h ${minutes}m Remaining`);
         } else {
-          setTimeLeftStr(`⏱️ ${minutes}m Remaining`);
+          setTimeLeftStr(`${minutes}m Remaining`);
         }
       }
     };
@@ -110,7 +107,7 @@ export const ActiveParkedSpotCard: React.FC<ActiveParkedSpotCardProps> = ({
     setIsEditingNotes(false);
   };
 
-  const handleOpenNav = () => {
+  const handleInCarNav = () => {
     const { lat, lng } = session.coordinates;
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const url = isIOS
@@ -119,232 +116,215 @@ export const ActiveParkedSpotCard: React.FC<ActiveParkedSpotCardProps> = ({
     window.open(url, '_blank');
   };
 
-  const handleTriggerSafeWalk = () => {
+  const handleSafeWalk = () => {
     guideMeToMyCar();
     setCurrentView('driver');
   };
 
+  const handleLeaveSpot = () => {
+    clearParkedSpot();
+  };
+
   return (
-    <div
-      className={`w-full bg-white rounded-2xl border border-slate-200/90 shadow-sm p-5 flex flex-col gap-4 ${className}`}
-      style={{
-        boxShadow: '0 4px 20px rgba(15, 23, 42, 0.06)',
-      }}
-    >
-      {/* 1. Header Row: Spot Title & Address (Left) + CSI Badge (Right) */}
-      <div className="flex justify-between items-start gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
-            <h2 className="text-lg font-bold text-slate-900 leading-snug break-words">
+    <div className={`w-full max-w-lg mx-auto space-y-4 ${className}`}>
+      {/* 1. TOP SPOT HERO CARD */}
+      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-4">
+        {/* Title + CSI Badge */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 mb-1.5">
+              <Car className="w-3.5 h-3.5" /> Active Parked Spot
+            </span>
+            <h2 className="text-lg font-bold text-slate-900 leading-snug truncate">
               {session.spotName}
             </h2>
+            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+              <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <span className="truncate">{session.address}</span>
+            </p>
           </div>
-          <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-            <MapPin size={13} className="text-slate-400 flex-shrink-0" />
-            <span className="truncate">{session.address}</span>
-          </p>
-        </div>
-
-        {/* CSI Score Badge */}
-        <div
-          style={{
-            backgroundColor: status.bg,
-            color: status.text,
-            border: `1px solid ${status.border}`,
-            borderRadius: '12px',
-            padding: '4px 12px',
-            textAlign: 'center',
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ fontSize: '0.65rem', fontWeight: 800, textTransform: 'uppercase' }}>
-            {status.label}
-          </div>
-          <div className="tabular-nums font-bold text-base leading-none mt-0.5">
-            CSI {session.csiScore}
+          {/* CSI Badge */}
+          <div className="shrink-0 text-center px-3 py-1.5 rounded-xl bg-emerald-50 border border-emerald-200">
+            <div className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">CSI Score</div>
+            <div className="text-lg font-extrabold text-emerald-700">{session.csiScore || 85}</div>
           </div>
         </div>
-      </div>
 
-      {/* 2. Timer & Alert Banner */}
-      <div
-        className={`rounded-xl p-3 flex items-center justify-between gap-2 text-xs font-bold border ${
-          isExpired
-            ? 'bg-rose-50 border-rose-200 text-rose-800 animate-pulse'
-            : isWarning
-            ? 'bg-amber-50 border-amber-200 text-amber-800'
-            : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-        }`}
-      >
-        <div className="flex items-center gap-2">
-          <Clock size={16} className={isExpired ? 'text-rose-600' : isWarning ? 'text-amber-600' : 'text-emerald-600'} />
-          <span>{timeLeftStr}</span>
+        {/* 2. TIMER & STREET SWEEPING BANNER */}
+        <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <div
+              className={`w-9 h-9 rounded-full ${
+                isExpired
+                  ? 'bg-rose-100 text-rose-600'
+                  : isWarning
+                  ? 'bg-amber-100 text-amber-600'
+                  : 'bg-blue-100 text-blue-600'
+              } flex items-center justify-center shrink-0`}
+            >
+              <Clock className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-900">{timeLeftStr}</div>
+              <div className="text-[11px] text-slate-500">
+                {session.spotType === 'free_curbside'
+                  ? '2-Hour Residential Limit'
+                  : session.spotType === 'metered'
+                  ? 'Curbside Meter Limit'
+                  : 'Garage Facility'}
+              </div>
+            </div>
+          </div>
+          {session.streetSweepingNotice ? (
+            <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200 shrink-0">
+              🧹 {session.streetSweepingNotice}
+            </span>
+          ) : (
+            <span className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 shrink-0">
+              ✓ No Sweeping Alert
+            </span>
+          )}
         </div>
-        <span
-          className={`px-2 py-0.5 rounded-full text-[11px] font-extrabold uppercase tracking-wide ${
-            isExpired
-              ? 'bg-rose-600 text-white'
-              : isWarning
-              ? 'bg-amber-500 text-white'
-              : 'bg-emerald-600 text-white'
-          }`}
-        >
-          {session.spotType === 'free_curbside' ? '2-Hr Zone' : session.spotType === 'metered' ? 'Meter' : 'Garage'}
-        </span>
-      </div>
 
-      {/* Street Sweeping Notice Banner (if active) */}
-      {session.streetSweepingNotice && (
-        <div className="flex items-center gap-2 bg-amber-50/80 border border-amber-200 text-amber-900 rounded-xl px-3 py-2 text-xs font-semibold">
-          <AlertTriangle size={14} className="text-amber-600 flex-shrink-0" />
-          <span>{session.streetSweepingNotice}</span>
-        </div>
-      )}
-
-      {/* 3. 2x2 Feature Badge Grid (Identical to Safe Garages) */}
-      <div
-        style={{
-          backgroundColor: '#F8FAFC',
-          borderRadius: '12px',
-          border: '1px solid #F1F5F9',
-          padding: '10px 12px',
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '8px',
-          fontSize: '0.75rem',
-          color: '#334155',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Clock size={14} color="#2563EB" />
-          <span style={{ fontWeight: 600 }}>
-            {session.hourlyRate === 0 ? 'Free Parking ($0.00)' : `$${session.hourlyRate.toFixed(2)}/hr Rate`}
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Footprints size={14} color="#15803D" />
-          <span style={{ fontWeight: 600 }}>
-            {walkingDistance} ({walkingDuration}m walk)
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <Lightbulb size={14} color="#F59E0B" />
-          <span style={{ fontWeight: 600 }}>High-Lux Streetlight</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-          <ShieldCheck size={14} color="#15803D" />
-          <span style={{ fontWeight: 600 }}>Verified Safe Zone</span>
-        </div>
-      </div>
-
-      {/* 4. Garage Stall / Location Memo Card */}
-      {!isEditingNotes ? (
-        <div className="flex items-center justify-between bg-slate-50 border border-slate-200/80 rounded-xl px-3 py-2.5 text-xs">
-          <div className="flex items-center gap-2 text-slate-600 overflow-hidden">
-            <span className="font-bold text-slate-800 flex-shrink-0">Spot Memo:</span>
-            <span className="truncate text-slate-600 font-medium">
-              {session.garageNotes?.level ? `Level ${session.garageNotes.level}` : ''}
-              {session.garageNotes?.stallNumber ? ` • Space ${session.garageNotes.stallNumber}` : ''}
-              {session.garageNotes?.note ? ` • "${session.garageNotes.note}"` : ''}
-              {!session.garageNotes?.level && !session.garageNotes?.stallNumber && !session.garageNotes?.note
-                ? 'Add level, stall # or note'
-                : ''}
+        {/* 3. 2x2 TELEMETRY GRID */}
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 flex items-center gap-2 text-slate-700">
+            <DollarSign className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="font-semibold truncate">
+              {session.hourlyRate === 0 ? 'Free ($0.00)' : `$${session.hourlyRate.toFixed(2)}/hr`}
             </span>
           </div>
-          <button
-            onClick={() => setIsEditingNotes(true)}
-            className="text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 flex-shrink-0 ml-2 py-1 px-1.5 rounded"
-            aria-label="Edit parking location notes"
-          >
-            <Edit2 size={13} />
-            <span>Edit</span>
-          </button>
+          <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 flex items-center gap-2 text-slate-700">
+            <Footprints className="w-4 h-4 text-blue-600 shrink-0" />
+            <span className="font-semibold truncate">
+              {walkingDistance} ({walkingDuration}m walk)
+            </span>
+          </div>
+          <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 flex items-center gap-2 text-slate-700">
+            <Sun className="w-4 h-4 text-amber-500 shrink-0" />
+            <span className="font-semibold truncate">High-Lux Streetlight</span>
+          </div>
+          <div className="bg-slate-50 rounded-xl p-2.5 border border-slate-100 flex items-center gap-2 text-slate-700">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span className="font-semibold truncate">Verified Safe Block</span>
+          </div>
         </div>
-      ) : (
-        <div className="bg-slate-50 border border-blue-200 rounded-xl p-3 flex flex-col gap-2.5 text-xs">
+
+        {/* 4. GARAGE STALL & MEMO INPUT */}
+        {!isEditingNotes ? (
+          <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs text-slate-600 truncate">
+              <FileText className="w-4 h-4 text-slate-400 shrink-0" />
+              <span className="truncate">
+                {session.garageNotes?.level ? `Level ${session.garageNotes.level}` : ''}
+                {session.garageNotes?.stallNumber ? ` • Space ${session.garageNotes.stallNumber}` : ''}
+                {session.garageNotes?.note ? ` • "${session.garageNotes.note}"` : ''}
+                {!session.garageNotes?.level &&
+                !session.garageNotes?.stallNumber &&
+                !session.garageNotes?.note
+                  ? 'Add floor, stall # or note...'
+                  : ''}
+              </span>
+            </div>
+            <button
+              onClick={() => setIsEditingNotes(true)}
+              className="text-xs font-semibold text-blue-600 hover:text-blue-700 shrink-0 flex items-center gap-1"
+            >
+              <Edit2 className="w-3.5 h-3.5" /> Edit
+            </button>
+          </div>
+        ) : (
+          <div className="bg-slate-50 border border-blue-200 rounded-xl p-3 flex flex-col gap-2.5 text-xs">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Level / Floor</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Level 3, P2"
+                  value={levelNote}
+                  onChange={(e) => setLevelNote(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Stall / Space #</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Space 412"
+                  value={stallNote}
+                  onChange={(e) => setStallNote(e.target.value)}
+                  className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-slate-500 uppercase">Quick Memo</label>
+              <input
+                type="text"
+                placeholder="e.g. Near yellow pillar by elevator"
+                value={customNote}
+                onChange={(e) => setCustomNote(e.target.value)}
+                className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+              />
+            </div>
+            <div className="flex justify-end gap-2 mt-0.5">
+              <button
+                onClick={() => setIsEditingNotes(false)}
+                className="px-3 py-1.5 text-slate-600 hover:text-slate-800 font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveNotes}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-lg font-bold flex items-center gap-1 shadow-sm"
+              >
+                <Check className="w-3.5 h-3.5" />
+                <span>Save</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 5. HIGH-IMPACT ACTION BUTTONS */}
+        <div className="space-y-2 pt-1">
+          {/* Primary Walk CTA */}
+          <button
+            onClick={handleSafeWalk}
+            className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 transition-all"
+          >
+            <Footprints className="w-4 h-4" />
+            Safe Walk to My Car ({walkingDuration} min walk)
+          </button>
+
+          {/* Secondary 2-Button Row */}
           <div className="grid grid-cols-2 gap-2">
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Level / Floor</label>
-              <input
-                type="text"
-                placeholder="e.g. Level 3, P2"
-                value={levelNote}
-                onChange={(e) => setLevelNote(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-            <div>
-              <label className="text-[10px] font-bold text-slate-500 uppercase">Stall / Space #</label>
-              <input
-                type="text"
-                placeholder="e.g. Space 412"
-                value={stallNote}
-                onChange={(e) => setStallNote(e.target.value)}
-                className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-          </div>
-          <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase">Quick Memo</label>
-            <input
-              type="text"
-              placeholder="e.g. Near yellow pillar by elevator"
-              value={customNote}
-              onChange={(e) => setCustomNote(e.target.value)}
-              className="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-slate-900 focus:outline-none focus:border-blue-500"
-            />
-          </div>
-          <div className="flex justify-end gap-2 mt-0.5">
             <button
-              onClick={() => setIsEditingNotes(false)}
-              className="px-3 py-1.5 text-slate-600 hover:text-slate-800 font-bold"
+              onClick={handleInCarNav}
+              className="h-11 rounded-xl bg-slate-100 hover:bg-slate-200 active:scale-[0.99] text-slate-800 font-semibold text-xs border border-slate-200 flex items-center justify-center gap-1.5 transition-all"
             >
-              Cancel
+              <Navigation className="w-3.5 h-3.5 text-slate-600" />
+              In-Car Nav
             </button>
             <button
-              onClick={handleSaveNotes}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-1.5 rounded-lg font-bold flex items-center gap-1 shadow-sm"
+              onClick={handleLeaveSpot}
+              className="h-11 rounded-xl bg-rose-50 hover:bg-rose-100 active:scale-[0.99] text-rose-700 font-semibold text-xs border border-rose-200 flex items-center justify-center gap-1.5 transition-all"
             >
-              <Check size={13} />
-              <span>Save</span>
+              <X className="w-3.5 h-3.5 text-rose-600" />
+              I Left Spot
             </button>
           </div>
         </div>
-      )}
+      </div>
 
-      {/* 5. High-Impact Ergonomic Action Buttons */}
-      <div className="flex flex-col gap-2 pt-1">
-        {/* Primary CTA (Full Width) */}
-        <button
-          onClick={handleTriggerSafeWalk}
-          className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold text-sm py-3.5 px-4 rounded-xl flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 transition-all"
-          style={{ minHeight: '48px' }}
-        >
-          <Footprints size={18} />
-          <span>Safe Walk to My Car ({walkingDuration} min walk)</span>
-        </button>
-
-        {/* Secondary Action Row */}
-        <div className="flex gap-2">
-          <button
-            onClick={handleOpenNav}
-            className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl py-2.5 px-3 font-semibold text-xs flex items-center justify-center gap-1.5 border border-slate-200 transition-colors"
-            style={{ minHeight: '44px' }}
-          >
-            <Navigation size={14} className="text-blue-600" />
-            <span>In-Car Nav</span>
-          </button>
-
-          <button
-            onClick={clearParkedSpot}
-            className="flex-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl py-2.5 px-3 font-semibold text-xs flex items-center justify-center gap-1.5 border border-rose-200 transition-colors"
-            style={{ minHeight: '44px' }}
-          >
-            <X size={14} />
-            <span>Leave Spot</span>
-          </button>
+      {/* 6. BOTTOM INFORMATIONAL CARD */}
+      <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm space-y-1.5">
+        <div className="flex items-center gap-2 text-xs font-bold text-slate-900">
+          <ShieldCheck className="w-4 h-4 text-emerald-600" />
+          Continuous Vehicle Protection
         </div>
+        <p className="text-xs text-slate-500 leading-relaxed">
+          SafePark monitors municipal crime telemetry and street lighting conditions in real-time. Return walk path prioritizes well-lit, active pedestrian corridors.
+        </p>
       </div>
     </div>
   );

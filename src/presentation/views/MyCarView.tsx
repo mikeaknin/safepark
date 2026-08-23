@@ -1,206 +1,81 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { ActiveParkedSpotCard } from '../components/ActiveParkedSpotCard';
-import { Car, Compass, ShieldCheck, Clock, MapPin, Sparkles, Navigation, Lock } from 'lucide-react';
+import { Car, Compass, Clock, MapPin, Sparkles, ShieldCheck } from 'lucide-react';
 
 export const MyCarView: React.FC = () => {
-  const { activeParkedSession, setCurrentView, guideMeToMyCar } = useApp();
-
-  const handleGuideMe = () => {
-    guideMeToMyCar();
-    setCurrentView('driver');
-  };
+  const { activeParkedSession, setCurrentView } = useApp();
 
   return (
-    <div
-      style={{
-        width: '100%',
-        maxWidth: '600px',
-        margin: '0 auto',
-        paddingLeft: '16px',
-        paddingRight: '16px',
-        paddingTop: '8px',
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 84px)',
-      }}
-    >
+    <div className="w-full max-w-lg mx-auto px-4 pt-2 pb-28 space-y-4">
       {/* Page Header Banner */}
-      <div
-        style={{
-          backgroundColor: '#FFFFFF',
-          borderRadius: '20px',
-          border: '1px solid #E2E8F0',
-          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)',
-          padding: '20px',
-          marginBottom: '16px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm space-y-2">
+        <div className="flex items-center gap-2">
           <span
-            style={{
-              backgroundColor: activeParkedSession ? '#ECFDF5' : '#EFF6FF',
-              color: activeParkedSession ? '#15803D' : '#2563EB',
-              border: `1px solid ${activeParkedSession ? '#A7F3D0' : '#BFDBFE'}`,
-              padding: '2px 8px',
-              borderRadius: '9999px',
-              fontSize: '0.7rem',
-              fontWeight: 800,
-              textTransform: 'uppercase',
-              letterSpacing: '0.04em',
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '4px',
-            }}
+            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+              activeParkedSession
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                : 'bg-blue-50 text-blue-700 border border-blue-200'
+            }`}
           >
-            <Car size={12} />
+            <Car className="w-3.5 h-3.5" />
             <span>{activeParkedSession ? 'Active Tracking' : 'Vehicle Radar'}</span>
           </span>
-          <span style={{ fontSize: '0.75rem', color: '#64748B' }}>
+          <span className="text-xs text-slate-500 font-medium">
             {activeParkedSession ? 'Live GPS Location Armed' : 'Find My Car & Parking Timers'}
           </span>
         </div>
 
-        <h1 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.2 }}>
+        <h1 className="text-2xl font-bold text-slate-900 leading-tight">
           My Parked Vehicle
         </h1>
-        <p style={{ fontSize: '0.825rem', color: '#64748B', marginTop: '4px', lineHeight: 1.4 }}>
+        <p className="text-xs text-slate-500 leading-relaxed">
           Live location, street sweeping alerts, and illuminated return walk.
         </p>
       </div>
 
       {activeParkedSession ? (
         /* Active Parked Vehicle Layout */
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <ActiveParkedSpotCard session={activeParkedSession} />
-
-          {/* Continuous Surveillance & Exit Safety Banner */}
-          <div
-            style={{
-              backgroundColor: '#FFFFFF',
-              borderRadius: '20px',
-              border: '1px solid #E2E8F0',
-              boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)',
-              padding: '16px 20px',
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-              <ShieldCheck size={16} color="#15803D" />
-              <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0F172A' }}>
-                Continuous Vehicle Protection
-              </span>
-            </div>
-            <p style={{ fontSize: '0.775rem', color: '#64748B', lineHeight: 1.4, margin: 0 }}>
-              Your spot at <strong style={{ color: '#0F172A' }}>{activeParkedSession.spotName}</strong> is verified with a Composite Safety Index of <strong style={{ color: '#15803D' }}>CSI {activeParkedSession.csiScore}/100</strong>. Automatic Bluetooth disconnect detection and parking sweep alarms are active.
-            </p>
-          </div>
-        </div>
+        <ActiveParkedSpotCard session={activeParkedSession} />
       ) : (
         /* Empty State: No Vehicle Tracked */
-        <div
-          style={{
-            backgroundColor: '#FFFFFF',
-            borderRadius: '24px',
-            border: '1px solid #E2E8F0',
-            boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
-            padding: '32px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            textAlign: 'center',
-            gap: '16px',
-          }}
-        >
-          <div
-            style={{
-              width: '72px',
-              height: '72px',
-              borderRadius: '50%',
-              backgroundColor: '#EFF6FF',
-              border: '1.5px solid #BFDBFE',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: '#2563EB',
-              position: 'relative',
-            }}
-          >
-            <Car size={32} />
-            <div
-              style={{
-                position: 'absolute',
-                top: '-2px',
-                right: '-2px',
-                width: '22px',
-                height: '22px',
-                borderRadius: '50%',
-                backgroundColor: '#10B981',
-                border: '2px solid #FFFFFF',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: '#FFFFFF',
-                fontSize: '10px',
-              }}
-            >
-              <Sparkles size={12} />
+        <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm flex flex-col items-center text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 relative">
+            <Car className="w-8 h-8" />
+            <div className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-emerald-500 border-2 border-white flex items-center justify-center text-white text-[10px]">
+              <Sparkles className="w-3 h-3" />
             </div>
           </div>
 
-          <div style={{ maxWidth: '320px' }}>
-            <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A', marginBottom: '6px' }}>
+          <div className="max-w-xs space-y-1.5">
+            <h2 className="text-lg font-bold text-slate-900">
               No Vehicle Currently Tracked
             </h2>
-            <p style={{ fontSize: '0.8rem', color: '#64748B', lineHeight: 1.4, margin: 0 }}>
-              Tap <strong style={{ color: '#2563EB' }}>"I'm Parked Here"</strong> on any street curb, 2-hour zone, or garage in Explore to start tracking your vehicle, set timers, and get illuminated walking directions back.
+            <p className="text-xs text-slate-500 leading-relaxed">
+              Tap <strong className="text-blue-600 font-semibold">"I'm Parked Here"</strong> on any street curb, 2-hour zone, or garage in Explore to start tracking your vehicle, set timers, and get illuminated walking directions back.
             </p>
           </div>
 
-          <div style={{ width: '100%', borderTop: '1px solid #F1F5F9', paddingTop: '16px' }}>
+          <div className="w-full border-t border-slate-100 pt-4 space-y-3">
             <button
               onClick={() => setCurrentView('driver')}
-              style={{
-                width: '100%',
-                backgroundColor: '#2563EB',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: '12px',
-                padding: '14px',
-                fontSize: '0.875rem',
-                fontWeight: 800,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)',
-                minHeight: '48px',
-              }}
+              className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-[0.99] text-white font-bold text-sm shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 transition-all"
             >
-              <Compass size={18} />
+              <Compass className="w-4 h-4" />
               <span>Find Safe Parking on Map</span>
             </button>
 
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '12px',
-                fontSize: '0.725rem',
-                color: '#94A3B8',
-                fontWeight: 600,
-                marginTop: '12px',
-              }}
-            >
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <Clock size={13} /> 2-Hr Reminders
+            <div className="flex items-center justify-center gap-3 text-[11px] text-slate-400 font-medium">
+              <span className="flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-slate-400" /> 2-Hr Reminders
               </span>
               <span>•</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <MapPin size={13} /> GPS Radar
+              <span className="flex items-center gap-1">
+                <MapPin className="w-3.5 h-3.5 text-slate-400" /> GPS Radar
               </span>
               <span>•</span>
-              <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                <ShieldCheck size={13} /> Safe Walk
+              <span className="flex items-center gap-1">
+                <ShieldCheck className="w-3.5 h-3.5 text-slate-400" /> Safe Walk
               </span>
             </div>
           </div>
