@@ -228,10 +228,28 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     }
 
     // B. Render Parking Facility Pins with Visual Type Badges & Curbside Overlays
+    // Apply clean spatial fanning so 3-4 spots near the same intersection do not stack into an unreadable block
+    const positionBuckets = new Map<string, number>();
+
     locations.forEach((loc) => {
       const isSelected = selectedLocation?.id === loc.id;
       const isParked = parkedLocation?.id === loc.id;
       const status = getStatusStyle(loc.csi.totalScore);
+
+      // Bucket by ~15m precision
+      const gridKey = `${loc.coordinates.lat.toFixed(4)},${loc.coordinates.lng.toFixed(4)}`;
+      const indexInBucket = positionBuckets.get(gridKey) || 0;
+      positionBuckets.set(gridKey, indexInBucket + 1);
+
+      // Subtle dynamic offset to fan out overlapping pins neatly
+      let displayLat = loc.coordinates.lat;
+      let displayLng = loc.coordinates.lng;
+      if (indexInBucket > 0) {
+        const angle = (indexInBucket * (2 * Math.PI)) / 4;
+        const radius = 0.00015 * Math.ceil(indexInBucket / 4); // ~15m
+        displayLat += radius * Math.cos(angle);
+        displayLng += radius * Math.sin(angle);
+      }
 
       const is2HrFree = loc.hourlyRate === 0 || loc.infrastructure.structureType === 'curbside_residential';
       const isMetered = loc.infrastructure.structureType === 'curbside_street_metered';
@@ -344,7 +362,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         iconAnchor: [0, 0],
       });
 
-      const marker = L.marker([loc.coordinates.lat, loc.coordinates.lng], {
+      const marker = L.marker([displayLat, displayLng], {
         icon: parkingIcon,
         zIndexOffset: isSelected ? 2500 : isParked ? 1500 : 500,
         interactive: true,
@@ -355,8 +373,8 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         setSelectedLocation(loc);
       });
 
-        marker.addTo(markersGroupRef.current!);
-      });
+      marker.addTo(markersGroupRef.current!);
+    });
 
       // 3. Render Persistent Active Vehicle Pin & Radiating Radar Beacon
       if (activeParkedSession) {

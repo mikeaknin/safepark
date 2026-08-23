@@ -11,8 +11,8 @@ test.describe('Consumer 4-Tab Streamlined Navigation & My Car', () => {
 
     // 2. My Car Tab (Empty State)
     await page.click('[data-testid="tab-my_car"]');
-    await expect(page.locator('h1:has-text("My Parked Car")')).toBeVisible();
-    await expect(page.locator('text=No Parked Vehicle Tracked')).toBeVisible();
+    await expect(page.locator('h1:has-text("My Parked Vehicle")')).toBeVisible();
+    await expect(page.locator('text=No Vehicle Currently Tracked')).toBeVisible();
 
     // 3. Safe Garages Tab
     await page.click('[data-testid="tab-safe_garages"]');
