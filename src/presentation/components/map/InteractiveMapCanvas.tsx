@@ -11,6 +11,7 @@ import {
   Footprints,
   Compass,
   Navigation,
+  X,
 } from 'lucide-react';
 
 interface InteractiveMapCanvasProps {
@@ -30,6 +31,8 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     setShowLightingHeatmap,
     parkedLocation,
     activeParkedSession,
+    activeRoute,
+    clearActiveRoute,
     showToast,
     scanLocationsAt,
   } = useApp();
@@ -421,6 +424,64 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     let isCancelled = false;
     routeGroupRef.current.clearLayers();
 
+    // Case A: Active Safe Walk Return Route
+    if (activeRoute && activeRoute.mode === 'safe_walk_return') {
+      const waypoints = activeRoute.waypoints;
+      if (waypoints.length > 0) {
+        // Outer Glowing Halo (Emerald/Mint)
+        L.polyline(waypoints, {
+          color: '#86EFAC',
+          weight: 12,
+          opacity: 0.65,
+          lineCap: 'round',
+          lineJoin: 'round',
+        }).addTo(routeGroupRef.current);
+
+        // Core Illuminated Polyline
+        const corePolyline = L.polyline(waypoints, {
+          color: '#10B981',
+          weight: 6,
+          opacity: 0.95,
+          lineCap: 'round',
+          lineJoin: 'round',
+        }).addTo(routeGroupRef.current);
+
+        // Pulsing Pedestrian Origin Marker
+        const walkerIcon = L.divIcon({
+          className: 'safepark-walker-marker',
+          html: `
+            <div style="position: relative; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; transform: translate(-50%, -50%); pointer-events: none;">
+              <div style="position: absolute; inset: -4px; border-radius: 50%; background-color: rgba(16, 185, 129, 0.45); animation: ping 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+              <div style="width: 26px; height: 26px; border-radius: 50%; background-color: #065F46; border: 2.5px solid #10B981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.9); display: flex; align-items: center; justify-content: center; font-size: 14px;">
+                🚶
+              </div>
+            </div>
+          `,
+          iconSize: [0, 0],
+          iconAnchor: [0, 0],
+        });
+
+        L.marker([activeRoute.originCoordinates.lat, activeRoute.originCoordinates.lng], {
+          icon: walkerIcon,
+          zIndexOffset: 3200,
+        }).addTo(routeGroupRef.current);
+
+        // Fit map bounds to frame full illuminated walking route
+        try {
+          isProgrammaticFlightRef.current = true;
+          mapInstanceRef.current.fitBounds(corePolyline.getBounds(), {
+            padding: [70, 70],
+            maxZoom: 17,
+          });
+          setTimeout(() => {
+            isProgrammaticFlightRef.current = false;
+          }, 1000);
+        } catch {}
+      }
+      return;
+    }
+
+    // Case B: General Spot-to-Destination Walking Route
     const activeSpot = selectedLocation || locations[0];
     if (!activeSpot) return;
 
@@ -458,7 +519,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     return () => {
       isCancelled = true;
     };
-  }, [selectedLocation, selectedDestination, locations]);
+  }, [activeRoute, selectedLocation, selectedDestination, locations]);
 
   // 7. Render Municipal Lighting Heatmaps
   useEffect(() => {
@@ -623,8 +684,105 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         </button>
       </aside>
 
+      {/* Floating Top Return Walk Active HUD Card */}
+      {activeRoute && activeRoute.mode === 'safe_walk_return' && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 'calc(env(safe-area-inset-top, 0px) + 98px)',
+            left: '16px',
+            right: '16px',
+            zIndex: 35,
+            backgroundColor: 'rgba(15, 23, 42, 0.95)',
+            color: '#FFFFFF',
+            borderRadius: '16px',
+            padding: '10px 14px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '10px',
+            boxShadow: '0 8px 32px rgba(15, 23, 42, 0.45)',
+            border: '1.5px solid rgba(16, 185, 129, 0.5)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0, flex: 1 }}>
+            <div
+              style={{
+                width: '36px',
+                height: '36px',
+                borderRadius: '50%',
+                backgroundColor: '#065F46',
+                border: '1.5px solid #10B981',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                color: '#34D399',
+              }}
+            >
+              <Footprints size={18} />
+            </div>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#F8FAFC' }}>
+                  Return Walk Active
+                </span>
+                <span
+                  style={{
+                    backgroundColor: '#065F46',
+                    color: '#6EE7B7',
+                    fontSize: '0.625rem',
+                    fontWeight: 800,
+                    padding: '1px 5px',
+                    borderRadius: '4px',
+                    border: '1px solid #059669',
+                  }}
+                >
+                  ILLUMINATED
+                </span>
+              </div>
+              <div
+                style={{
+                  fontSize: '0.7rem',
+                  color: '#CBD5E1',
+                  fontWeight: 600,
+                  marginTop: '1px',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {activeRoute.distanceText} • {activeRoute.durationText} to your car ({activeRoute.destinationName})
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={clearActiveRoute}
+            style={{
+              backgroundColor: 'rgba(255, 255, 255, 0.12)',
+              color: '#F8FAFC',
+              border: '1px solid rgba(255, 255, 255, 0.25)',
+              padding: '6px 11px',
+              borderRadius: '10px',
+              fontSize: '0.725rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              flexShrink: 0,
+            }}
+          >
+            <X size={13} />
+            <span>Exit Route</span>
+          </button>
+        </div>
+      )}
+
       {/* Floating Top Parked Vehicle Banner ("Find My Car" Radar Pill) */}
-      {activeParkedSession && (
+      {activeParkedSession && (!activeRoute || activeRoute.mode !== 'safe_walk_return') && (
         <div
           onClick={() => {
             isProgrammaticFlightRef.current = true;

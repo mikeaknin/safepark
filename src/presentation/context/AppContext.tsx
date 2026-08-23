@@ -13,9 +13,22 @@ import { GeocodingAdapter } from '../../data/adapters/GeocodingAdapter';
 import { DynamicParkingGenerator } from '../../domain/services/DynamicParkingGenerator';
 import { SafetyScoringEngine } from '../../domain/services/SafetyScoringEngine';
 import { SavedParkingSession } from '../../domain/models/SavedParkingSession';
+import { PedestrianRoutingAdapter } from '../../data/adapters/PedestrianRoutingAdapter';
 
 export type ActiveAppView = 'driver' | 'my_car' | 'safe_garages' | 'profile' | 'carplay' | 'b2b_portal' | 'enterprise_api' | 'user_profile' | 'admin_ops';
 export type MotionState = 'driving' | 'parked' | 'walking';
+
+export interface ActiveNavigationRoute {
+  mode: 'safe_walk_return' | 'in_car_directions' | 'illuminated_path';
+  waypoints: Array<[number, number]>;
+  distanceMeters: number;
+  distanceText: string;
+  durationMinutes: number;
+  durationText: string;
+  originCoordinates: { lat: number; lng: number };
+  destinationCoordinates: { lat: number; lng: number };
+  destinationName: string;
+}
 
 export interface SearchDestination {
   id: string;
@@ -47,6 +60,12 @@ interface AppContextType {
   setCurrentView: (view: ActiveAppView) => void;
   isOnboardingOpen: boolean;
   setIsOnboardingOpen: (open: boolean) => void;
+
+  // Active Navigation / Return Walking Route
+  activeRoute: ActiveNavigationRoute | null;
+  setActiveRoute: React.Dispatch<React.SetStateAction<ActiveNavigationRoute | null>>;
+  startSafeWalkToCar: (origin?: { lat: number; lng: number }) => Promise<void>;
+  clearActiveRoute: () => void;
 
   // Authentication & Driver Profile
   currentUser: AuthUser | null;
@@ -121,6 +140,18 @@ interface AppContextType {
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+
+const haversineDistanceMeters = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
+  const R = 6371e3;
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+};
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const safetyRepo = useMemo(() => new SafetyRepositoryImpl(), []);
@@ -448,15 +479,54 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     showToast('Saved vehicle notes');
   };
 
-  const guideMeToMyCar = () => {
-    if (!activeParkedSession) return;
-    setSelectedDestination({
-      id: activeParkedSession.id,
-      name: activeParkedSession.spotName,
-      address: activeParkedSession.address,
-      coordinates: activeParkedSession.coordinates,
+  // Active Navigation Route state (Safe Walk Return / In-car directions)
+  const [activeRoute, setActiveRoute] = useState<ActiveNavigationRoute | null>(null);
+
+  const startSafeWalkToCar = async (origin?: { lat: number; lng: number }) => {
+    if (!activeParkedSession) {
+      showToast('⚠️ No active vehicle parked to route back to.');
+      return;
+    }
+
+    const dest = activeParkedSession.coordinates;
+    let startPoint = origin;
+
+    // Check geofence distance (> 10 km or missing/denied -> Smart Fallback ~250m away)
+    if (startPoint) {
+      const d = haversineDistanceMeters(startPoint.lat, startPoint.lng, dest.lat, dest.lng);
+      if (d > 10000 || isNaN(d)) {
+        startPoint = { lat: dest.lat + 0.0018, lng: dest.lng + 0.0018 };
+      }
+    } else {
+      startPoint = { lat: dest.lat + 0.0018, lng: dest.lng + 0.0018 };
+    }
+
+    const routeResult = await PedestrianRoutingAdapter.getPedestrianRoute(startPoint, dest);
+    const feet = Math.round(routeResult.distanceMeters * 3.28084);
+    const distanceText = routeResult.distanceMeters < 1000 ? `${feet} ft` : `${(routeResult.distanceMeters / 1609.34).toFixed(1)} mi`;
+
+    setActiveRoute({
+      mode: 'safe_walk_return',
+      waypoints: routeResult.coordinates,
+      distanceMeters: routeResult.distanceMeters,
+      distanceText,
+      durationMinutes: routeResult.durationMinutes,
+      durationText: `${routeResult.durationMinutes} min`,
+      originCoordinates: startPoint,
+      destinationCoordinates: dest,
+      destinationName: activeParkedSession.spotName,
     });
-    showToast(`🚶 Guided Safe Walk back to ${activeParkedSession.spotName} illuminated`);
+
+    setCurrentView('driver');
+    showToast(`🚶 Safe Walk to ${activeParkedSession.spotName} illuminated (${distanceText} • ${routeResult.durationMinutes} min)`);
+  };
+
+  const clearActiveRoute = () => {
+    setActiveRoute(null);
+  };
+
+  const guideMeToMyCar = () => {
+    startSafeWalkToCar();
   };
 
   // Action: Simulate Bluetooth disconnect manually
@@ -544,6 +614,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         setReportingHazardLocation,
         safeWalkLocation,
         setSafeWalkLocation,
+        activeRoute,
+        setActiveRoute,
+        startSafeWalkToCar,
+        clearActiveRoute,
         activeExitAlert,
         setActiveExitAlert,
         toastMessage,

@@ -31,7 +31,7 @@ export const ActiveParkedSpotCard: React.FC<ActiveParkedSpotCardProps> = ({
   onNavigateToExplore,
   className = '',
 }) => {
-  const { clearParkedSpot, updateParkedNotes, guideMeToMyCar, setCurrentView } = useApp();
+  const { clearParkedSpot, updateParkedNotes, startSafeWalkToCar, guideMeToMyCar, setCurrentView } = useApp();
   const [timeLeftStr, setTimeLeftStr] = useState<string>('Calculating...');
   const [isWarning, setIsWarning] = useState<boolean>(false);
   const [isExpired, setIsExpired] = useState<boolean>(false);
@@ -58,17 +58,17 @@ export const ActiveParkedSpotCard: React.FC<ActiveParkedSpotCardProps> = ({
         const overMinutes = Math.floor(Math.abs(diffMs) / (1000 * 60));
         setTimeLeftStr(`🚨 Expired ${overMinutes}m ago`);
       } else {
-        setIsExpired(false);
         const totalMinutes = Math.floor(diffMs / (1000 * 60));
         const hours = Math.floor(totalMinutes / 60);
-        const minutes = totalMinutes % 60;
-
-        setIsWarning(totalMinutes <= 20);
-
-        if (hours > 0) {
-          setTimeLeftStr(`${hours}h ${minutes}m Remaining`);
+        const mins = totalMinutes % 60;
+        if (totalMinutes <= 15) {
+          setIsWarning(true);
+          setIsExpired(false);
+          setTimeLeftStr(`⚠️ ${totalMinutes}m remaining`);
         } else {
-          setTimeLeftStr(`${minutes}m Remaining`);
+          setIsWarning(false);
+          setIsExpired(false);
+          setTimeLeftStr(`${hours > 0 ? `${hours}h ` : ''}${mins}m`);
         }
       }
     };
@@ -78,24 +78,46 @@ export const ActiveParkedSpotCard: React.FC<ActiveParkedSpotCardProps> = ({
     return () => clearInterval(interval);
   }, [session.expirationTimestamp]);
 
-  // Estimate distance from live user GPS
+  // Estimate walking distance from user's current GPS position to parked spot
   useEffect(() => {
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(
-        async (pos) => {
-          const userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-          const route = await PedestrianRoutingAdapter.getPedestrianRoute(
-            userCoords,
-            session.coordinates
-          );
-          if (route) {
-            const feet = Math.round(route.distanceMeters * 3.28084);
+        (pos) => {
+          const userLat = pos.coords.latitude;
+          const userLng = pos.coords.longitude;
+          const spotLat = session.coordinates.lat;
+          const spotLng = session.coordinates.lng;
+
+          // Haversine distance in meters
+          const R = 6371e3;
+          const φ1 = (userLat * Math.PI) / 180;
+          const φ2 = (spotLat * Math.PI) / 180;
+          const Δφ = ((spotLat - userLat) * Math.PI) / 180;
+          const Δλ = ((spotLng - userLng) * Math.PI) / 180;
+          const a =
+            Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+          const meters = R * c;
+
+          if (meters > 10000) {
+            // Far away demo fallback (~350 ft)
+            setWalkingDistance('350 ft');
+            setWalkingDuration(2);
+          } else if (meters < 1000) {
+            const feet = Math.round(meters * 3.28084);
             setWalkingDistance(`${feet} ft`);
-            setWalkingDuration(route.durationMinutes);
+            setWalkingDuration(Math.max(1, Math.round(meters / 80)));
+          } else {
+            const miles = (meters / 1609.34).toFixed(1);
+            setWalkingDistance(`${miles} mi`);
+            setWalkingDuration(Math.max(1, Math.round(meters / 80)));
           }
         },
         () => {
-          // Fallback estimate
+          // Default fallback
+          setWalkingDistance('350 ft');
+          setWalkingDuration(2);
         },
         { timeout: 5000 }
       );
@@ -121,11 +143,34 @@ export const ActiveParkedSpotCard: React.FC<ActiveParkedSpotCardProps> = ({
   };
 
   const handleSafeWalk = () => {
-    guideMeToMyCar();
-    if (onNavigateToExplore) {
-      onNavigateToExplore();
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          startSafeWalkToCar({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          if (onNavigateToExplore) {
+            onNavigateToExplore();
+          } else {
+            setCurrentView('driver');
+          }
+        },
+        () => {
+          // GPS unavailable / denied -> smart demo fallback
+          startSafeWalkToCar();
+          if (onNavigateToExplore) {
+            onNavigateToExplore();
+          } else {
+            setCurrentView('driver');
+          }
+        },
+        { timeout: 3500, enableHighAccuracy: true }
+      );
     } else {
-      setCurrentView('driver');
+      startSafeWalkToCar();
+      if (onNavigateToExplore) {
+        onNavigateToExplore();
+      } else {
+        setCurrentView('driver');
+      }
     }
   };
 
