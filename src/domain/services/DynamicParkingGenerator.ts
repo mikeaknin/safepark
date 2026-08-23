@@ -1,8 +1,9 @@
 import { ParkingLocation } from '../models/ParkingLocation';
 import { ParkingStructureType, SurveillanceTier } from '../models/Infrastructure';
-import { CsiEngine } from './CsiEngine';
 import { SafeWalkBackEngine } from './SafeWalkBackEngine';
 import { SearchDestination } from '../../presentation/context/AppContext';
+import { getSfNeighborhoodProfile, NeighborhoodSafetyProfile } from '../data/sfNeighborhoodSafetyData';
+import { SafetyScoringEngine } from './SafetyScoringEngine';
 
 export class DynamicParkingGenerator {
   /**
@@ -32,14 +33,35 @@ export class DynamicParkingGenerator {
   ): ParkingLocation[] {
     const { lat, lng } = coordinates;
 
-    // Extract primary street and neighborhood heuristics
-    const parsed = this.parseCoordinatesOrName(lat, lng, referenceName);
+    // 1. Resolve neighborhood profile
+    const neighborhood: NeighborhoodSafetyProfile = getSfNeighborhoodProfile(coordinates);
+
+    // 2. Parse or resolve authentic street and cross street names
+    const parsed = this.resolveStreets(lat, lng, neighborhood, referenceName);
     const street = parsed.street;
     const crossStreet = parsed.crossStreet;
     const crossStreet2 = parsed.crossStreet2;
-    const neighborhood = parsed.neighborhood;
 
     const baseId = idPrefix || `geo-${lat.toFixed(4).replace('.', '')}-${lng.toFixed(4).replace('.', '')}`;
+
+    // 3. Dynamic Realistic Pricing by Neighborhood & Type
+    const isDowntown = neighborhood.id === 'financial_district' || neighborhood.id === 'soma';
+    const garageHourlyRate = isDowntown
+      ? SafetyScoringEngine.hashRange(lat, lng, 6, 9, 'garage_rate')
+      : SafetyScoringEngine.hashRange(lat, lng, 4, 7, 'garage_rate') + 0.50;
+
+    const meterHourlyRate = isDowntown
+      ? Number((SafetyScoringEngine.hashRange(lat, lng, 350, 450, 'meter_rate') / 100).toFixed(2))
+      : Number((SafetyScoringEngine.hashRange(lat, lng, 250, 350, 'meter_rate') / 100).toFixed(2));
+
+    const lotHourlyRate = isDowntown
+      ? SafetyScoringEngine.hashRange(lat, lng, 4, 6, 'lot_rate')
+      : SafetyScoringEngine.hashRange(lat, lng, 3, 5, 'lot_rate');
+
+    // Dynamic Garage Name Selection
+    const garageNamePrefix = neighborhood.garageNamePrefixes.length > 0
+      ? neighborhood.garageNamePrefixes[SafetyScoringEngine.hashRange(lat, lng, 0, neighborhood.garageNamePrefixes.length - 1, 'garage_name')]
+      : `${neighborhood.name} Covered Garage`;
 
     const spotTemplates: Array<{
       idSuffix: string;
@@ -55,9 +77,6 @@ export class DynamicParkingGenerator {
       availableSpaces: number;
       latOffset: number;
       lngOffset: number;
-      incidents30: number;
-      incidents90: number;
-      lux: number;
       pedestrianRating: 'high' | 'medium' | 'low' | 'isolated';
     }> = [
       {
@@ -65,42 +84,36 @@ export class DynamicParkingGenerator {
         name: `${street} Curbside Metered`,
         address: `${street} near ${crossStreet}, San Francisco, CA`,
         type: 'curbside_street_metered',
-        surveillance: 'unmonitored_recording_cctv',
+        surveillance: 'commercial_storefront_camera_overlap',
         barrier: false,
         attendant: false,
         emergencyBoxes: false,
-        hourlyRate: 3.50,
+        hourlyRate: meterHourlyRate,
         totalSpaces: 18,
-        availableSpaces: 6,
+        availableSpaces: SafetyScoringEngine.hashRange(lat, lng, 3, 9, 'spaces_meter'),
         latOffset: -0.0004,
         lngOffset: 0.0003,
-        incidents30: 1,
-        incidents90: 3,
-        lux: 54,
         pedestrianRating: 'high',
       },
       {
         idSuffix: 'garage-main',
-        name: `${neighborhood} Covered Garage`,
-        address: `${Math.floor(Math.abs(lat * 100) % 800) + 100} ${street}, San Francisco, CA`,
+        name: garageNamePrefix,
+        address: `${SafetyScoringEngine.hashRange(lat, lng, 100, 850, 'garage_addr')} ${street}, San Francisco, CA`,
         type: 'covered_underground_garage',
         surveillance: 'monitored_cctv_24_7',
         barrier: true,
         attendant: true,
         emergencyBoxes: true,
-        hourlyRate: 5.50,
-        totalSpaces: 160,
-        availableSpaces: 32,
+        hourlyRate: garageHourlyRate,
+        totalSpaces: SafetyScoringEngine.hashRange(lat, lng, 140, 280, 'spaces_garage_tot'),
+        availableSpaces: SafetyScoringEngine.hashRange(lat, lng, 18, 55, 'spaces_garage_avail'),
         latOffset: 0.0008,
         lngOffset: 0.0007,
-        incidents30: 0,
-        incidents90: 1,
-        lux: 70,
         pedestrianRating: 'high',
       },
       {
         idSuffix: 'street-free',
-        name: `${crossStreet} 2-Hour Free Zone`,
+        name: `${crossStreet} & ${street} 2-Hour Zone`,
         address: `${crossStreet} & ${street}, San Francisco, CA`,
         type: 'curbside_residential',
         surveillance: 'none',
@@ -109,31 +122,25 @@ export class DynamicParkingGenerator {
         emergencyBoxes: false,
         hourlyRate: 0.00,
         totalSpaces: 14,
-        availableSpaces: 4,
+        availableSpaces: SafetyScoringEngine.hashRange(lat, lng, 2, 6, 'spaces_free'),
         latOffset: 0.0004,
         lngOffset: -0.0011,
-        incidents30: 2,
-        incidents90: 4,
-        lux: 32,
         pedestrianRating: 'medium',
       },
       {
         idSuffix: 'deck-secure',
-        name: `${street} Multi-Level Deck`,
-        address: `${Math.floor(Math.abs(lng * 100) % 800) + 200} ${street}, San Francisco, CA`,
+        name: `${crossStreet} Multi-Level Deck`,
+        address: `${SafetyScoringEngine.hashRange(lat, lng, 200, 950, 'deck_addr')} ${crossStreet}, San Francisco, CA`,
         type: 'multi_level_deck',
         surveillance: 'monitored_cctv_24_7',
         barrier: true,
         attendant: true,
         emergencyBoxes: true,
-        hourlyRate: 5.00,
+        hourlyRate: Math.max(4.00, garageHourlyRate - 1.00),
         totalSpaces: 110,
-        availableSpaces: 19,
+        availableSpaces: SafetyScoringEngine.hashRange(lat, lng, 12, 28, 'spaces_deck'),
         latOffset: 0.0012,
         lngOffset: -0.0008,
-        incidents30: 0,
-        incidents90: 2,
-        lux: 60,
         pedestrianRating: 'high',
       },
       {
@@ -145,62 +152,58 @@ export class DynamicParkingGenerator {
         barrier: false,
         attendant: false,
         emergencyBoxes: false,
-        hourlyRate: 3.00,
+        hourlyRate: meterHourlyRate,
         totalSpaces: 20,
-        availableSpaces: 7,
+        availableSpaces: SafetyScoringEngine.hashRange(lat, lng, 4, 11, 'spaces_smart'),
         latOffset: -0.0009,
         lngOffset: 0.0012,
-        incidents30: 1,
-        incidents90: 2,
-        lux: 55,
         pedestrianRating: 'high',
       },
       {
         idSuffix: 'lot-attended',
-        name: `${neighborhood} Surface Lot`,
+        name: `${crossStreet2} & ${crossStreet} Surface Lot`,
         address: `${crossStreet2} & ${crossStreet}, San Francisco, CA`,
         type: 'gated_surface_lot',
         surveillance: 'unmonitored_recording_cctv',
         barrier: true,
         attendant: true,
         emergencyBoxes: false,
-        hourlyRate: 4.00,
+        hourlyRate: lotHourlyRate,
         totalSpaces: 55,
-        availableSpaces: 12,
+        availableSpaces: SafetyScoringEngine.hashRange(lat, lng, 8, 19, 'spaces_lot'),
         latOffset: -0.0013,
         lngOffset: -0.0006,
-        incidents30: 1,
-        incidents90: 3,
-        lux: 48,
         pedestrianRating: 'medium',
       },
     ];
 
-    return spotTemplates.map((template, index) => {
+    return spotTemplates.map((template) => {
       const spotLat = Number((lat + template.latOffset).toFixed(5));
       const spotLng = Number((lng + template.lngOffset).toFixed(5));
       const spotId = `spot-${baseId}-${template.idSuffix}`;
 
       const crimeData = {
-        incidentsLast30Days: template.incidents30,
-        incidentsLast90Days: template.incidents90,
-        smashAndGrabCount: template.incidents30 > 0 ? 1 : 0,
-        catalyticConverterCount: template.incidents90 > 3 ? 1 : 0,
-        incidentDensityPerSqKm: template.incidents90 * 0.8,
+        incidentsLast30Days: neighborhood.smashAndGrabRisk === 'high' ? 5 : neighborhood.smashAndGrabRisk === 'elevated' ? 3 : 1,
+        incidentsLast90Days: neighborhood.smashAndGrabRisk === 'high' ? 14 : neighborhood.smashAndGrabRisk === 'elevated' ? 8 : 2,
+        smashAndGrabCount: neighborhood.smashAndGrabRisk === 'high' ? 3 : neighborhood.smashAndGrabRisk === 'elevated' ? 1 : 0,
+        catalyticConverterCount: neighborhood.smashAndGrabRisk === 'high' ? 2 : 0,
+        incidentDensityPerSqKm: neighborhood.incidentRatePerSqKm,
         recentIncidents: [],
       };
 
+      const luxLevel = isDaytime ? 95 : neighborhood.typicalLuxLevel;
+
       const lighting = {
-        ambientLuxLevel: isDaytime ? 95 : template.lux,
+        ambientLuxLevel: luxLevel,
         isDaytime,
         sunElevationAngleDegrees: isDaytime ? 45 : -18,
-        coverageIndexPercentage: isDaytime ? 100 : Math.min(98, template.lux * 1.5),
-        blindSpotDetected: template.lux < 35,
+        coverageIndexPercentage: isDaytime ? 100 : Math.min(98, Math.round(luxLevel * 1.3)),
+        blindSpotDetected: luxLevel < 35,
         municipalSmartLamps: [
           {
             id: `lamp-${spotId}-1`,
             lampType: 'smart_led' as const,
-            luxOutput: isDaytime ? 95 : template.lux,
+            luxOutput: luxLevel,
             status: 'active' as const,
             distanceMeters: 6,
             poleHeightMeters: 4.5,
@@ -216,16 +219,18 @@ export class DynamicParkingGenerator {
         hasActiveAttendantOrPatrol: template.attendant,
         hasEmergencyCallBoxes: template.emergencyBoxes,
         pedestrianTrafficRating: template.pedestrianRating,
-        clearSightlines: template.lux >= 40,
+        clearSightlines: luxLevel >= 40,
       };
 
-      const csi = CsiEngine.calculate(
+      // Compute Deterministic Geospatial CSI
+      const csi = SafetyScoringEngine.computeGeospatialCsi({
         spotId,
-        crimeData,
-        lighting,
-        infrastructure,
-        []
-      );
+        coordinates: { lat: spotLat, lng: spotLng },
+        structureType: template.type,
+        isDaytime,
+        luxLevel,
+        hazards: [],
+      });
 
       const routes = SafeWalkBackEngine.calculateWalkingRoutes(
         spotId,
@@ -252,63 +257,30 @@ export class DynamicParkingGenerator {
     });
   }
 
-  private static parseCoordinatesOrName(lat: number, lng: number, name?: string) {
-    if (name) {
-      const parsed = this.parseAddressComponents(name, '');
+  private static resolveStreets(
+    lat: number,
+    lng: number,
+    neighborhood: NeighborhoodSafetyProfile,
+    referenceName?: string
+  ) {
+    if (referenceName) {
+      const parsed = this.parseAddressComponents(referenceName, '');
       if (parsed.street !== 'Municipal Corridor') {
         return parsed;
       }
     }
 
-    // Heuristic Geographic District & Street Resolver for San Francisco
-    let neighborhood = 'San Francisco';
-    let street = 'Market St';
-    let crossStreet = '4th St';
-    let crossStreet2 = 'Mission St';
+    // Pick street names from neighborhood profile deterministically
+    const stIndex = SafetyScoringEngine.hashRange(lat, lng, 0, Math.max(0, neighborhood.primaryStreets.length - 1), 'street_pick');
+    const street = neighborhood.primaryStreets[stIndex] || 'Market St';
 
-    if (lat > 37.795 && lng > -122.415) {
-      neighborhood = 'North Beach';
-      street = 'Vallejo St';
-      crossStreet = 'Columbus Ave';
-      crossStreet2 = 'Green St';
-    } else if (lat > 37.790 && lng > -122.405) {
-      neighborhood = 'Financial District';
-      street = 'California St';
-      crossStreet = 'Montgomery St';
-      crossStreet2 = 'Pine St';
-    } else if (lat > 37.795 && lng <= -122.415) {
-      neighborhood = 'Marina';
-      street = 'Chestnut St';
-      crossStreet = 'Fillmore St';
-      crossStreet2 = 'Lombard St';
-    } else if (lat >= 37.770 && lat <= 37.790 && lng > -122.415) {
-      neighborhood = 'SoMa';
-      street = 'Howard St';
-      crossStreet = '3rd St';
-      crossStreet2 = 'Folsom St';
-    } else if (lat < 37.770 && lng > -122.430) {
-      neighborhood = 'Mission';
-      street = 'Valencia St';
-      crossStreet = '16th St';
-      crossStreet2 = 'Mission St';
-    } else if (lng <= -122.450 && lat < 37.770) {
-      neighborhood = 'Sunset';
-      street = 'Irving St';
-      crossStreet = '19th Ave';
-      crossStreet2 = 'Judah St';
-    } else if (lng <= -122.450 && lat >= 37.770) {
-      neighborhood = 'Richmond';
-      street = 'Clement St';
-      crossStreet = '8th Ave';
-      crossStreet2 = 'Geary Blvd';
-    } else {
-      neighborhood = 'Civic Center';
-      street = 'Van Ness Ave';
-      crossStreet = 'McAllister St';
-      crossStreet2 = 'Golden Gate Ave';
-    }
+    const crossIndex1 = SafetyScoringEngine.hashRange(lat, lng, 0, Math.max(0, neighborhood.crossStreets.length - 1), 'cross1_pick');
+    let crossStreet = neighborhood.crossStreets[crossIndex1] || '4th St';
 
-    return { street, crossStreet, crossStreet2, neighborhood };
+    const crossIndex2 = (crossIndex1 + 1) % (neighborhood.crossStreets.length || 1);
+    const crossStreet2 = neighborhood.crossStreets[crossIndex2] || '5th St';
+
+    return { street, crossStreet, crossStreet2, neighborhood: neighborhood.name };
   }
 
   private static parseAddressComponents(name: string, address: string) {
@@ -322,7 +294,8 @@ export class DynamicParkingGenerator {
       '8th', '9th', '10th', 'Hayes', 'Fell', 'Oak', 'Page', 'Haight',
       'Divisadero', 'Castro', 'Fillmore', 'Valencia', 'Guerrero', 'Dolores',
       'Polk', 'Lombard', 'Chestnut', 'Union', 'Filbert', 'California', 'Bush',
-      'Pine', 'Clay', 'Sacramento', 'Washington', 'Jackson', 'Pacific'
+      'Pine', 'Clay', 'Sacramento', 'Washington', 'Jackson', 'Pacific',
+      'Clement', 'Irving', 'Judah', 'Noriega', 'Taraval', 'Eddy', 'Ellis'
     ];
 
     let foundStreet = '';
@@ -336,25 +309,7 @@ export class DynamicParkingGenerator {
       }
     }
 
-    const sfNeighborhoods = [
-      'North Beach', 'Chinatown', 'Financial District', 'SoMa', 'Mission',
-      'Marina', 'Pacific Heights', 'Russian Hill', 'Nob Hill', 'Hayes Valley',
-      'Castro', 'Sunset', 'Richmond', 'Presidio', 'Embarcadero', 'Civic Center',
-      'Tenderloin', 'Potrero Hill', 'Dogpatch', 'Mission Bay', 'Twin Peaks'
-    ];
-
-    let foundNeighborhood = '';
-    for (const nh of sfNeighborhoods) {
-      const regex = new RegExp(`\\b${nh}\\b`, 'i');
-      if (regex.test(combined)) {
-        foundNeighborhood = nh;
-        break;
-      }
-    }
-
     const street = foundStreet || (name.length > 2 && !name.includes('http') ? `${name.split(',')[0].trim()} St` : 'Municipal Corridor');
-    const neighborhood = foundNeighborhood || 'San Francisco';
-
     let crossStreet = 'Columbus Ave';
     let crossStreet2 = 'Broadway';
 
@@ -373,8 +328,11 @@ export class DynamicParkingGenerator {
     } else if (street.includes('California') || street.includes('Pine') || street.includes('Bush')) {
       crossStreet = 'Montgomery St';
       crossStreet2 = 'Kearny St';
+    } else if (street.includes('Eddy') || street.includes('Ellis')) {
+      crossStreet = 'Jones St';
+      crossStreet2 = 'Leavenworth St';
     }
 
-    return { street, crossStreet, crossStreet2, neighborhood };
+    return { street, crossStreet, crossStreet2, neighborhood: 'San Francisco' };
   }
 }

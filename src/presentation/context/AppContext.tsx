@@ -11,6 +11,7 @@ import { AuthService, AuthUser } from '../../domain/services/AuthService';
 import { PushNotificationService } from '../../domain/services/PushNotificationService';
 import { GeocodingAdapter } from '../../data/adapters/GeocodingAdapter';
 import { DynamicParkingGenerator } from '../../domain/services/DynamicParkingGenerator';
+import { SafetyScoringEngine } from '../../domain/services/SafetyScoringEngine';
 import { SavedParkingSession } from '../../domain/models/SavedParkingSession';
 
 export type ActiveAppView = 'driver' | 'my_car' | 'safe_garages' | 'profile' | 'carplay' | 'b2b_portal' | 'enterprise_api' | 'user_profile' | 'admin_ops';
@@ -225,13 +226,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const scoredSpots = rawSpots.map(spot => {
       const lighting = { ...spot.lighting, isDaytime: !isNightMode };
-      const csi = CsiEngine.calculate(
-        spot.id,
-        spot.crimeData,
-        lighting,
-        spot.infrastructure,
-        spot.activeHazards
-      );
+      const csi = spot.csi || SafetyScoringEngine.computeGeospatialCsi({
+        spotId: spot.id,
+        coordinates: spot.coordinates,
+        structureType: spot.infrastructure.structureType,
+        isDaytime: !isNightMode,
+        luxLevel: lighting.ambientLuxLevel,
+        hazards: spot.activeHazards,
+      });
       return { ...spot, lighting, csi };
     });
 
@@ -280,13 +282,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
     const scoredSpots = rawSpots.map(spot => {
       const lighting = { ...spot.lighting, isDaytime: !isNightMode };
-      const csi = CsiEngine.calculate(
-        spot.id,
-        spot.crimeData,
-        lighting,
-        spot.infrastructure,
-        spot.activeHazards
-      );
+      const csi = spot.csi || SafetyScoringEngine.computeGeospatialCsi({
+        spotId: spot.id,
+        coordinates: spot.coordinates,
+        structureType: spot.infrastructure.structureType,
+        isDaytime: !isNightMode,
+        luxLevel: lighting.ambientLuxLevel,
+        hazards: spot.activeHazards,
+      });
       return { ...spot, lighting, csi };
     });
 
