@@ -20,6 +20,8 @@ export const SearchAndFilterHeader: React.FC = () => {
     selectedDestination,
     setSelectedDestination,
     showToast,
+    filters,
+    setFilters,
   } = useApp();
 
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -227,6 +229,107 @@ export const SearchAndFilterHeader: React.FC = () => {
                 <X size={16} />
               </button>
             )}
+          </div>
+
+          {/* Quick Parking Type Filter Pills Toggle */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              marginTop: '8px',
+              overflowX: 'auto',
+              WebkitOverflowScrolling: 'touch',
+              scrollbarWidth: 'none',
+              paddingBottom: '2px',
+            }}
+          >
+            {/* All Spots Pill */}
+            <button
+              onClick={() => {
+                setFilters((prev) => ({ ...prev, parkingTypeFilter: 'all' }));
+              }}
+              style={{
+                backgroundColor:
+                  filters.parkingTypeFilter === 'all' ? '#0F172A' : 'rgba(255, 255, 255, 0.95)',
+                color: filters.parkingTypeFilter === 'all' ? '#FFFFFF' : '#475569',
+                border: `1px solid ${
+                  filters.parkingTypeFilter === 'all' ? '#0F172A' : 'rgba(203, 213, 225, 0.9)'
+                }`,
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                borderRadius: '9999px',
+                padding: '4px 11px',
+                fontSize: '0.725rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              All Spots
+            </button>
+
+            {/* Street & 2-Hr Free Pill */}
+            <button
+              onClick={() => {
+                setFilters((prev) => ({
+                  ...prev,
+                  parkingTypeFilter: prev.parkingTypeFilter === 'street_only' ? 'all' : 'street_only',
+                }));
+              }}
+              style={{
+                backgroundColor:
+                  filters.parkingTypeFilter === 'street_only' ? '#047857' : 'rgba(255, 255, 255, 0.95)',
+                color: filters.parkingTypeFilter === 'street_only' ? '#FFFFFF' : '#047857',
+                border: `1px solid ${
+                  filters.parkingTypeFilter === 'street_only' ? '#047857' : '#A7F3D0'
+                }`,
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                borderRadius: '9999px',
+                padding: '4px 11px',
+                fontSize: '0.725rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              ⏱️ Street & 2-Hr
+            </button>
+
+            {/* Garages Only Pill */}
+            <button
+              onClick={() => {
+                setFilters((prev) => ({
+                  ...prev,
+                  parkingTypeFilter: prev.parkingTypeFilter === 'garages_only' ? 'all' : 'garages_only',
+                }));
+              }}
+              style={{
+                backgroundColor:
+                  filters.parkingTypeFilter === 'garages_only' ? '#1D4ED8' : 'rgba(255, 255, 255, 0.95)',
+                color: filters.parkingTypeFilter === 'garages_only' ? '#FFFFFF' : '#1D4ED8',
+                border: `1px solid ${
+                  filters.parkingTypeFilter === 'garages_only' ? '#1D4ED8' : '#BFDBFE'
+                }`,
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                borderRadius: '9999px',
+                padding: '4px 11px',
+                fontSize: '0.725rem',
+                fontWeight: 700,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              🏢 Garages Only
+            </button>
           </div>
 
           {/* Autocomplete & Recent Destinations Dropdown */}

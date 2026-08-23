@@ -229,147 +229,188 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
         </div>
       </div>
 
-      {/* Peek Mode (120px fixed height): Clean Unclipped Spot Overview Card */}
-      {snapPoint === 'peek' && topRankedSpot && activeSpotStatus && (
-        <div
-          style={{
-            padding: '4px 16px 8px 16px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flex: 1,
-            gap: '12px',
-          }}
-        >
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '2px', minWidth: 0, width: '100%' }}>
-              <span
+      {/* Peek Mode (120px fixed height): 2-Row Unclipped Mobile Layout */}
+      {snapPoint === 'peek' && topRankedSpot && activeSpotStatus && (() => {
+        const isMeter = topRankedSpot.infrastructure.structureType === 'curbside_street_metered';
+        const is2Hr = topRankedSpot.hourlyRate === 0 || topRankedSpot.infrastructure.structureType === 'curbside_residential';
+        const tagText = isMeter ? '🅿️ Meter' : is2Hr ? '⏱️ 2-Hr Free' : '🏢 Garage';
+        const tagBg = isMeter ? '#EFF6FF' : is2Hr ? '#ECFDF5' : '#FAF5FF';
+        const tagColor = isMeter ? '#1D4ED8' : is2Hr ? '#047857' : '#7E22CE';
+        const tagBorder = isMeter ? '#BFDBFE' : is2Hr ? '#A7F3D0' : '#E9D5FF';
+
+        return (
+          <div
+            style={{
+              padding: '6px 16px 10px 16px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              flex: 1,
+              gap: '6px',
+              minWidth: 0,
+            }}
+          >
+            {/* Row 1 (Top): Full Spot Name on Left (100% Width Priority), Category & CSI Badge on Right */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '8px',
+                minWidth: 0,
+                width: '100%',
+              }}
+            >
+              <h3
                 style={{
-                  backgroundColor: activeSpotStatus.bg,
-                  color: activeSpotStatus.text,
-                  border: `1px solid ${activeSpotStatus.border}`,
-                  padding: '2px 7px',
-                  borderRadius: '6px',
-                  fontSize: '0.725rem',
+                  fontSize: '0.975rem',
                   fontWeight: 800,
-                  flexShrink: 0,
-                }}
-              >
-                CSI {topRankedSpot.csi.totalScore}
-              </span>
-              <span
-                style={{
-                  fontSize: '0.875rem',
-                  fontWeight: 700,
                   color: '#0F172A',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
                   whiteSpace: 'nowrap',
                   flex: 1,
                   minWidth: 0,
+                  margin: 0,
                 }}
                 title={topRankedSpot.name}
               >
                 {topRankedSpot.name}
-              </span>
-            </div>
-            <div style={{ fontSize: '0.75rem', color: '#64748B', display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'nowrap' }}>
-              <span style={{ fontWeight: 800, color: '#2563EB' }}>${topRankedSpot.hourlyRate.toFixed(2)}/hr</span>
-              <span>•</span>
-              <span>{topRankedSpot.availableSpaces} open</span>
-              {currentLitRoute && (
-                <>
-                  <span>•</span>
-                  <span style={{ color: '#15803D', fontWeight: 700 }}>{currentLitRoute.estimatedWalkingMinutes} min walk</span>
-                </>
-              )}
-            </div>
-          </div>
+              </h3>
 
-          <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
-            {onOpenDirections && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenDirections(topRankedSpot);
-                }}
-                aria-label={`Open turn-by-turn driving directions to ${topRankedSpot.name}`}
-                title="In-Car Directions"
+              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexShrink: 0 }}>
+                <span
+                  style={{
+                    backgroundColor: tagBg,
+                    color: tagColor,
+                    border: `1px solid ${tagBorder}`,
+                    padding: '2px 7px',
+                    borderRadius: '6px',
+                    fontSize: '0.7rem',
+                    fontWeight: 800,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  {tagText}
+                </span>
+
+                <span
+                  style={{
+                    backgroundColor: activeSpotStatus.bg,
+                    color: activeSpotStatus.text,
+                    border: `1px solid ${activeSpotStatus.border}`,
+                    padding: '2px 7px',
+                    borderRadius: '6px',
+                    fontSize: '0.725rem',
+                    fontWeight: 800,
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  🛡️ CSI {topRankedSpot.csi.totalScore}
+                </span>
+              </div>
+            </div>
+
+            {/* Row 2 (Bottom): Rates & Walking Time on Left, Compact Nav & Park Buttons on Right */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '8px',
+                minWidth: 0,
+                width: '100%',
+              }}
+            >
+              <div
                 style={{
-                  backgroundColor: '#EFF6FF',
-                  color: '#2563EB',
-                  border: '1px solid #BFDBFE',
-                  borderRadius: '10px',
-                  padding: '8px 10px',
-                  cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '4px',
-                  minHeight: '40px',
-                  fontSize: '0.75rem',
-                  fontWeight: 800,
-                  transition: 'background-color 0.15s ease',
+                  gap: '6px',
+                  fontSize: '0.775rem',
+                  color: '#64748B',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  flex: 1,
+                  minWidth: 0,
                 }}
               >
-                <Navigation size={14} />
-                <span>Nav</span>
-              </button>
-            )}
+                <span style={{ fontWeight: 800, color: topRankedSpot.hourlyRate === 0 ? '#15803D' : '#2563EB' }}>
+                  {topRankedSpot.hourlyRate === 0 ? 'Free' : `$${topRankedSpot.hourlyRate.toFixed(2)}/hr`}
+                </span>
+                <span>•</span>
+                <span>{topRankedSpot.availableSpaces} open</span>
+                {currentLitRoute && (
+                  <>
+                    <span>•</span>
+                    <span style={{ color: '#15803D', fontWeight: 700 }}>
+                      {currentLitRoute.estimatedWalkingMinutes} min walk
+                    </span>
+                  </>
+                )}
+              </div>
 
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onSafeWalk(topRankedSpot);
-              }}
-              aria-label={`View illuminated return walk for ${topRankedSpot.name}`}
-              style={{
-                backgroundColor: '#F1F5F9',
-                color: '#1E293B',
-                border: '1px solid #CBD5E1',
-                borderRadius: '10px',
-                padding: '8px 10px',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '4px',
-                minHeight: '40px',
-                fontSize: '0.75rem',
-                fontWeight: 700,
-                transition: 'background-color 0.15s ease',
-              }}
-            >
-              <Footprints size={14} color="#15803D" />
-              <span>Route</span>
-            </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexShrink: 0 }}>
+                {onOpenDirections && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenDirections(topRankedSpot);
+                    }}
+                    aria-label={`Open driving directions to ${topRankedSpot.name}`}
+                    title="In-Car Directions"
+                    style={{
+                      backgroundColor: '#EFF6FF',
+                      color: '#2563EB',
+                      border: '1px solid #BFDBFE',
+                      borderRadius: '10px',
+                      padding: '6px 10px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      minHeight: '34px',
+                      fontSize: '0.75rem',
+                      fontWeight: 800,
+                      transition: 'background-color 0.15s ease',
+                    }}
+                  >
+                    <Navigation size={13} />
+                    <span>Nav</span>
+                  </button>
+                )}
 
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleParkHere(topRankedSpot);
-              }}
-              disabled={parkedLocation?.id === topRankedSpot.id}
-              style={{
-                backgroundColor: parkedLocation?.id === topRankedSpot.id ? '#15803D' : '#2563EB',
-                color: '#FFFFFF',
-                border: 'none',
-                borderRadius: '10px',
-                padding: '8px 12px',
-                fontSize: '0.775rem',
-                fontWeight: 800,
-                cursor: parkedLocation?.id === topRankedSpot.id ? 'default' : 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '5px',
-                minHeight: '40px',
-                boxShadow: parkedLocation?.id === topRankedSpot.id ? '0 4px 12px rgba(21, 128, 61, 0.3)' : '0 4px 12px rgba(37, 99, 235, 0.3)',
-              }}
-            >
-              <Car size={14} />
-              <span>{parkedLocation?.id === topRankedSpot.id ? 'Parked' : 'Park Here'}</span>
-            </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleParkHere(topRankedSpot);
+                  }}
+                  disabled={parkedLocation?.id === topRankedSpot.id}
+                  style={{
+                    backgroundColor: parkedLocation?.id === topRankedSpot.id ? '#15803D' : '#2563EB',
+                    color: '#FFFFFF',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '6px 12px',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                    cursor: parkedLocation?.id === topRankedSpot.id ? 'default' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    minHeight: '34px',
+                    boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+                  }}
+                >
+                  <Car size={13} />
+                  <span>{parkedLocation?.id === topRankedSpot.id ? 'Parked' : 'Park Here'}</span>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Mid & Full Modes: Scrollable List of Ranked Facilities */}
       {snapPoint !== 'peek' && (

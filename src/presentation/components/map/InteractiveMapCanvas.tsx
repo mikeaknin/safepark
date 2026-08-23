@@ -35,6 +35,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const curbSegmentsGroupRef = useRef<L.LayerGroup | null>(null);
   const markersGroupRef = useRef<L.LayerGroup | null>(null);
   const routeGroupRef = useRef<L.LayerGroup | null>(null);
   const lightingGroupRef = useRef<L.LayerGroup | null>(null);
@@ -69,8 +70,9 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     });
     tileLayer.addTo(map);
 
-    // Initialize Layer Groups
+    // Initialize Layer Groups in proper z-index order
     lightingGroupRef.current = L.layerGroup().addTo(map);
+    curbSegmentsGroupRef.current = L.layerGroup().addTo(map);
     routeGroupRef.current = L.layerGroup().addTo(map);
     markersGroupRef.current = L.layerGroup().addTo(map);
     userLocationGroupRef.current = L.layerGroup().addTo(map);
@@ -195,11 +197,12 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     L.marker([lat, lng], { icon: userBeaconIcon, zIndexOffset: 2000 }).addTo(userLocationGroupRef.current);
   }, [deviceCoordinates, deviceAccuracy]);
 
-  // 5. Render Markers (Destination Pin + Parking Facilities)
+  // 5. Render Markers & Curbside Parking Overlays (Metered, 2-Hr Free, Garages)
   useEffect(() => {
-    if (!mapInstanceRef.current || !markersGroupRef.current) return;
+    if (!mapInstanceRef.current || !markersGroupRef.current || !curbSegmentsGroupRef.current) return;
 
     markersGroupRef.current.clearLayers();
+    curbSegmentsGroupRef.current.clearLayers();
 
     // A. Render Destination Pin
     if (selectedDestination?.coordinates) {
@@ -223,30 +226,77 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
       L.marker([lat, lng], { icon: destIcon, zIndexOffset: 1000 }).addTo(markersGroupRef.current);
     }
 
-    // B. Render Parking Facility Pins with Real Lat/Lng & CSI Styling
+    // B. Render Parking Facility Pins with Visual Type Badges & Curbside Overlays
     locations.forEach((loc) => {
       const isSelected = selectedLocation?.id === loc.id;
       const isParked = parkedLocation?.id === loc.id;
       const status = getStatusStyle(loc.csi.totalScore);
 
-      let pinBg = '#ECFDF5';
-      let pinText = '#15803D';
-      let pinBorder = '#86EFAC';
-      let badgeIcon = '🛡️';
+      const is2HrFree = loc.hourlyRate === 0 || loc.infrastructure.structureType === 'curbside_residential';
+      const isMetered = loc.infrastructure.structureType === 'curbside_street_metered';
+      const isGarage = !is2HrFree && !isMetered;
 
-      if (loc.csi.totalScore < 50) {
-        pinBg = '#FFF1F2';
-        pinText = '#BE123C';
-        pinBorder = '#FECDD3';
-        badgeIcon = '🚨';
-      } else if (loc.csi.totalScore < 75) {
-        pinBg = '#FFFBEB';
-        pinText = '#B45309';
-        pinBorder = '#FDE68A';
-        badgeIcon = '⚠️';
+      let typeTag = '🏢 GARAGE';
+      let typeColor = '#7E22CE';
+      let typeBg = '#FAF5FF';
+      let curbColor = '#8B5CF6';
+      let rateDisplay = `$${loc.hourlyRate.toFixed(0)}/hr`;
+
+      if (is2HrFree) {
+        typeTag = '⏱️ 2-HR FREE';
+        typeColor = '#047857';
+        typeBg = '#ECFDF5';
+        curbColor = '#10B981';
+        rateDisplay = 'Free';
+      } else if (isMetered) {
+        typeTag = '🅿️ METER';
+        typeColor = '#1D4ED8';
+        typeBg = '#EFF6FF';
+        curbColor = '#3B82F6';
+        rateDisplay = `$${loc.hourlyRate.toFixed(2)}/hr`;
       }
 
-      const rateDisplay = loc.hourlyRate === 0 ? 'Free' : `$${loc.hourlyRate.toFixed(0)}/hr`;
+      // 1. Draw Visual Street Curbside Highlight / Garage Footprint on Map Canvas
+      if (is2HrFree || isMetered) {
+        // Draw dashed curb line along street
+        const curbPolyline = L.polyline(
+          [
+            [loc.coordinates.lat - 0.0003, loc.coordinates.lng - 0.0003],
+            [loc.coordinates.lat + 0.0003, loc.coordinates.lng + 0.0003],
+          ],
+          {
+            color: curbColor,
+            weight: isSelected ? 6 : 4,
+            opacity: isSelected ? 0.95 : 0.7,
+            dashArray: '6, 6',
+            lineCap: 'round',
+          }
+        );
+        curbPolyline.addTo(curbSegmentsGroupRef.current!);
+      } else {
+        // Draw garage secure boundary outline
+        L.circle([loc.coordinates.lat, loc.coordinates.lng], {
+          radius: 28,
+          color: '#8B5CF6',
+          fillColor: '#C4B5FD',
+          fillOpacity: isSelected ? 0.25 : 0.12,
+          weight: isSelected ? 2.5 : 1.5,
+          interactive: false,
+        }).addTo(curbSegmentsGroupRef.current!);
+      }
+
+      // 2. Build High-Clarity Multi-Attribute Map Pin
+      let pinBg = '#FFFFFF';
+      let pinText = '#15803D';
+      let pinBorder = isSelected ? '#2563EB' : '#CBD5E1';
+
+      if (loc.csi.totalScore < 50) {
+        pinText = '#BE123C';
+        pinBorder = isSelected ? '#2563EB' : '#FECDD3';
+      } else if (loc.csi.totalScore < 75) {
+        pinText = '#B45309';
+        pinBorder = isSelected ? '#2563EB' : '#FDE68A';
+      }
 
       const parkingIcon = L.divIcon({
         className: `safepark-pin-${loc.id}`,
@@ -257,16 +307,23 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
                 ? `<div style="background-color: #15803D; color: #FFFFFF; font-size: 0.6rem; font-weight: 800; padding: 1px 6px; border-radius: 9999px; margin-bottom: 2px; box-shadow: 0 2px 6px rgba(21,128,61,0.4); text-transform: uppercase;">Active Spot</div>`
                 : ''
             }
-            <div style="background-color: ${pinBg}; color: ${pinText}; border: ${
-          isSelected ? '2px solid #2563EB' : `1.5px solid ${pinBorder}`
-        }; border-radius: 12px; padding: 4px 8px; font-size: 0.75rem; font-weight: 800; white-space: nowrap; box-shadow: ${
+            <div style="background-color: ${pinBg}; border: ${
+          isSelected ? '2.5px solid #2563EB' : `1.5px solid ${pinBorder}`
+        }; border-radius: 12px; padding: 4px 8px; box-shadow: ${
           isSelected
-            ? '0 0 0 3px rgba(37,99,235,0.3), 0 6px 18px rgba(15,23,42,0.2)'
-            : '0 2px 10px rgba(15,23,42,0.12)'
-        }; display: flex; align-items: center; gap: 5px;">
-              <span>${badgeIcon} CSI ${loc.csi.totalScore}</span>
-              <span style="opacity: 0.5;">•</span>
-              <span>${rateDisplay}</span>
+            ? '0 0 0 3px rgba(37,99,235,0.3), 0 8px 20px rgba(15,23,42,0.25)'
+            : '0 3px 12px rgba(15,23,42,0.15)'
+        }; display: flex; flex-direction: column; gap: 2px; min-width: 90px;">
+              <!-- Top Row: Spot Type Tag & Rate -->
+              <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: 800;">
+                <span style="color: ${typeColor}; background-color: ${typeBg}; padding: 1px 4px; border-radius: 4px;">${typeTag}</span>
+                <span style="color: #0F172A; font-weight: 800;">${rateDisplay}</span>
+              </div>
+              <!-- Bottom Row: CSI Score & Open Spaces -->
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 0.725rem; font-weight: 800; color: ${pinText}; border-top: 1px solid #F1F5F9; padding-top: 2px;">
+                <span>🛡️ CSI ${loc.csi.totalScore}</span>
+                <span style="font-size: 0.65rem; color: #64748B; font-weight: 700;">${loc.availableSpaces} open</span>
+              </div>
             </div>
             <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid ${
               isSelected ? '#2563EB' : pinBorder
@@ -439,7 +496,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         aria-label="Map Visual Controls"
         style={{
           position: 'fixed',
-          top: 'calc(env(safe-area-inset-top, 0px) + 72px)',
+          top: 'calc(env(safe-area-inset-top, 0px) + 110px)',
           right: '14px',
           zIndex: 25,
           display: 'flex',

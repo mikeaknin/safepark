@@ -135,7 +135,9 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
           flexWrap: 'wrap',
         }}
       >
-        <span style={{ fontWeight: 800, color: '#2563EB', fontSize: '0.85rem' }}>${location.hourlyRate.toFixed(2)}/hr</span>
+        <span style={{ fontWeight: 800, color: location.hourlyRate === 0 ? '#15803D' : '#2563EB', fontSize: '0.85rem' }}>
+          {location.hourlyRate === 0 ? 'Free' : `$${location.hourlyRate.toFixed(2)}/hr`}
+        </span>
         <span>•</span>
         <span style={{ fontWeight: 600 }}>{location.availableSpaces} spots open</span>
         <span>•</span>

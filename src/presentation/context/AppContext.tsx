@@ -36,6 +36,7 @@ export interface FilterSettings {
   coveredOrGarageOnly: boolean;
   gatedAccessOnly: boolean;
   monitoredCctvOnly: boolean;
+  parkingTypeFilter: 'all' | 'street_only' | 'garages_only';
 }
 
 interface AppContextType {
@@ -164,10 +165,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Filter state
   const defaultFilters: FilterSettings = {
     minCsi: 0,
-    maxHourlyRate: 15,
+    maxHourlyRate: 25,
     coveredOrGarageOnly: false,
     gatedAccessOnly: false,
     monitoredCctvOnly: false,
+    parkingTypeFilter: 'all',
   };
   const [filters, setFilters] = useState<FilterSettings>(defaultFilters);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState<boolean>(false);
@@ -225,8 +227,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const filtered = scoredSpots.filter(spot => {
       if (spot.csi.totalScore < filters.minCsi) return false;
       if (spot.hourlyRate > filters.maxHourlyRate) return false;
-      if (filters.coveredOrGarageOnly && spot.infrastructure.structureType !== 'covered_underground_garage' && spot.infrastructure.structureType !== 'multi_level_deck') {
-        return false;
+      if (filters.parkingTypeFilter === 'garages_only' || filters.coveredOrGarageOnly) {
+        const isGarage = spot.infrastructure.structureType === 'covered_underground_garage' ||
+          spot.infrastructure.structureType === 'multi_level_deck' ||
+          spot.infrastructure.structureType === 'gated_surface_lot';
+        if (!isGarage) return false;
+      }
+      if (filters.parkingTypeFilter === 'street_only') {
+        const isStreet = spot.infrastructure.structureType === 'curbside_street_metered' ||
+          spot.infrastructure.structureType === 'curbside_residential';
+        if (!isStreet) return false;
       }
       if (filters.gatedAccessOnly && !spot.infrastructure.hasControlledAccessBarrier) return false;
       if (filters.monitoredCctvOnly && spot.infrastructure.surveillance !== 'monitored_cctv_24_7') return false;
@@ -270,8 +280,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const filtered = scoredSpots.filter(spot => {
       if (spot.csi.totalScore < filters.minCsi) return false;
       if (spot.hourlyRate > filters.maxHourlyRate) return false;
-      if (filters.coveredOrGarageOnly && spot.infrastructure.structureType !== 'covered_underground_garage' && spot.infrastructure.structureType !== 'multi_level_deck') {
-        return false;
+      if (filters.parkingTypeFilter === 'garages_only' || filters.coveredOrGarageOnly) {
+        const isGarage = spot.infrastructure.structureType === 'covered_underground_garage' ||
+          spot.infrastructure.structureType === 'multi_level_deck' ||
+          spot.infrastructure.structureType === 'gated_surface_lot';
+        if (!isGarage) return false;
+      }
+      if (filters.parkingTypeFilter === 'street_only') {
+        const isStreet = spot.infrastructure.structureType === 'curbside_street_metered' ||
+          spot.infrastructure.structureType === 'curbside_residential';
+        if (!isStreet) return false;
       }
       if (filters.gatedAccessOnly && !spot.infrastructure.hasControlledAccessBarrier) return false;
       if (filters.monitoredCctvOnly && spot.infrastructure.surveillance !== 'monitored_cctv_24_7') return false;
