@@ -9,6 +9,15 @@ import { App } from './presentation/App';
 import { registerServiceWorker } from './utils/swRegistration';
 import { Telemetry } from './utils/telemetry';
 
+// Unregister stale service workers to ensure clients always fetch the latest bundle
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.unregister();
+    }
+  });
+}
+
 // Initialize Sentry and Crash Reporting Telemetry
 Telemetry.init();
 
