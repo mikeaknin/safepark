@@ -1,11 +1,13 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import 'leaflet/dist/leaflet.css';
+import './index.css';
+import './theme/theme.css';
 import { ThemeProvider } from './theme/ThemeProvider';
 import { AppProvider } from './presentation/context/AppContext';
 import { App } from './presentation/App';
 import { registerServiceWorker } from './utils/swRegistration';
 import { Telemetry } from './utils/telemetry';
-import './theme/theme.css';
 
 // Initialize Sentry and Crash Reporting Telemetry
 Telemetry.init();

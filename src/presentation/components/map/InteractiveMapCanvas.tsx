@@ -43,7 +43,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
   const [deviceAccuracy, setDeviceAccuracy] = useState<number>(30);
   const [isLocating, setIsLocating] = useState<boolean>(false);
 
-  // 1. Initialize Real Slippy Leaflet Tile Map
+  // 1. Initialize Real Slippy Leaflet Tile Map with Standard OpenStreetMap Layer
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
@@ -57,12 +57,12 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
       attributionControl: false,
     });
 
-    // High-resolution Daylight Carto Voyager Tiles
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-      subdomains: 'abcd',
-      maxZoom: 20,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
-    }).addTo(map);
+    // Standard Bulletproof Zero-Auth OpenStreetMap Tiles
+    const tileLayer = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    });
+    tileLayer.addTo(map);
 
     // Initialize Layer Groups
     lightingGroupRef.current = L.layerGroup().addTo(map);
@@ -72,10 +72,14 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
 
     mapInstanceRef.current = map;
 
-    // Invalidate size to ensure crisp rendering
-    const timer = setTimeout(() => {
+    // Invalidate size immediately and with delay to force full viewport painting
+    map.invalidateSize();
+    const timer1 = setTimeout(() => {
       map.invalidateSize();
     }, 100);
+    const timer2 = setTimeout(() => {
+      map.invalidateSize();
+    }, 200);
 
     const handleResize = () => {
       map.invalidateSize();
@@ -83,7 +87,8 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     window.addEventListener('resize', handleResize);
 
     return () => {
-      clearTimeout(timer);
+      clearTimeout(timer1);
+      clearTimeout(timer2);
       window.removeEventListener('resize', handleResize);
       map.remove();
       mapInstanceRef.current = null;
@@ -368,7 +373,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        width: '100%',
+        width: '100vw',
         height: '100dvh',
         zIndex: 0,
         overflow: 'hidden',
@@ -378,10 +383,11 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
       {/* Real Leaflet Map DOM Node */}
       <div
         ref={mapContainerRef}
+        id="safepark-map"
         style={{
           width: '100%',
           height: '100%',
-          backgroundColor: '#F8FAFC',
+          backgroundColor: '#E2E8F0',
         }}
       />
 
