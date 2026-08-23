@@ -11,6 +11,7 @@ import { AuthService, AuthUser } from '../../domain/services/AuthService';
 import { PushNotificationService } from '../../domain/services/PushNotificationService';
 import { GeocodingAdapter } from '../../data/adapters/GeocodingAdapter';
 import { DynamicParkingGenerator } from '../../domain/services/DynamicParkingGenerator';
+import { SavedParkingSession } from '../../domain/models/SavedParkingSession';
 
 export type ActiveAppView = 'driver' | 'safe_garages' | 'profile' | 'carplay' | 'b2b_portal' | 'enterprise_api' | 'user_profile' | 'admin_ops';
 export type MotionState = 'driving' | 'parked' | 'walking';
@@ -90,6 +91,7 @@ interface AppContextType {
   motionState: MotionState;
   setMotionState: (state: MotionState) => void;
   parkedLocation: ParkingLocation | null;
+  activeParkedSession: SavedParkingSession | null;
   bluetoothConnected: boolean;
   toggleBluetooth: () => void;
 
@@ -106,8 +108,12 @@ interface AppContextType {
   showToast: (msg: string) => void;
 
   // Workflow Actions
-  handleParkHere: (loc: ParkingLocation) => void;
+  handleParkHere: (loc: ParkingLocation, notes?: { level?: string; stallNumber?: string; note?: string }, durationMinutes?: number) => void;
   handleLeaveParkedSpot: () => void;
+  saveParkedSpot: (loc: ParkingLocation, notes?: { level?: string; stallNumber?: string; note?: string }, durationMinutes?: number) => void;
+  clearParkedSpot: () => void;
+  updateParkedNotes: (notes: { level?: string; stallNumber?: string; note?: string }) => void;
+  guideMeToMyCar: () => void;
   handleSimulateBluetoothDisconnect: () => void;
   handleHazardSubmitted: (result: HazardValidationResult) => void;
   handleToggleSubterraneanSignalLoss: () => void;
@@ -178,10 +184,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [showLightingHeatmap, setShowLightingHeatmap] = useState<boolean>(true);
   const [showFootTrafficZones, setShowFootTrafficZones] = useState<boolean>(false);
 
-  // Simulation State
+  // Simulation & Parked State
   const [isNightMode, setIsNightMode] = useState<boolean>(true);
   const [motionState, setMotionState] = useState<MotionState>('driving');
-  const [parkedLocation, setParkedLocation] = useState<ParkingLocation | null>(() => OfflineCacheService.getCachedActiveSession());
+  const [activeParkedSession, setActiveParkedSession] = useState<SavedParkingSession | null>(() => {
+    try {
+      const stored = localStorage.getItem('safepark_active_session_v1');
+      if (stored) return JSON.parse(stored);
+    } catch {}
+    return null;
+  });
+  const [parkedLocation, setParkedLocation] = useState<ParkingLocation | null>(() => {
+    return OfflineCacheService.getCachedActiveSession();
+  });
   const [bluetoothConnected, setBluetoothConnected] = useState<boolean>(true);
 
   // Modals state
@@ -317,25 +332,99 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return () => unsub();
   }, []);
 
-  // Action: User clicks "Park Here"
-  const handleParkHere = (loc: ParkingLocation) => {
+  // Action: Save Parked Spot / Find My Car
+  const saveParkedSpot = (
+    loc: ParkingLocation,
+    notes?: { level?: string; stallNumber?: string; note?: string },
+    durationMinutes?: number
+  ) => {
+    const is2Hr = loc.hourlyRate === 0 || loc.infrastructure.structureType === 'curbside_residential';
+    const isMeter = loc.infrastructure.structureType === 'curbside_street_metered';
+    const spotType = is2Hr ? 'free_curbside' : isMeter ? 'metered' : 'garage';
+
+    const now = Date.now();
+    const duration = durationMinutes || (is2Hr ? 120 : isMeter ? 120 : 480);
+    const expirationTimestamp = now + duration * 60 * 1000;
+
+    const session: SavedParkingSession = {
+      id: `session-${now}`,
+      locationId: loc.id,
+      spotName: loc.name,
+      address: loc.address,
+      spotType,
+      coordinates: loc.coordinates,
+      parkedAtTimestamp: now,
+      expirationTimestamp,
+      streetSweepingNotice: is2Hr || isMeter ? '🧹 Sweeping: 1st & 3rd Tue 9–11 AM' : undefined,
+      garageNotes: notes,
+      csiScore: loc.csi.totalScore,
+      hourlyRate: loc.hourlyRate,
+    };
+
+    setActiveParkedSession(session);
+    try {
+      localStorage.setItem('safepark_active_session_v1', JSON.stringify(session));
+    } catch {}
+
     setParkedLocation(loc);
     setMotionState('parked');
     setBluetoothConnected(false);
     OfflineCacheService.cacheActiveSession(loc);
+
     const alert = ExitDetectionService.triggerBluetoothDisconnect(loc);
     setActiveExitAlert(alert);
     PushNotificationService.dispatchVehicleExitPush(alert);
-    showToast(`📍 Vehicle Parked at ${loc.name}. Exit safety trigger armed.`);
+
+    showToast(`📍 Vehicle Parked at ${loc.name}. "Find My Car" active.`);
   };
 
-  // Action: Leave parked spot
+  const handleParkHere = (
+    loc: ParkingLocation,
+    notes?: { level?: string; stallNumber?: string; note?: string },
+    durationMinutes?: number
+  ) => {
+    saveParkedSpot(loc, notes, durationMinutes);
+  };
+
+  // Action: Leave parked spot / Clear
   const handleLeaveParkedSpot = () => {
+    setActiveParkedSession(null);
+    try {
+      localStorage.removeItem('safepark_active_session_v1');
+    } catch {}
     setParkedLocation(null);
     setMotionState('driving');
     setBluetoothConnected(true);
     OfflineCacheService.cacheActiveSession(null);
     showToast('🚗 Resumed driving mode. Bluetooth audio reconnected.');
+  };
+
+  const clearParkedSpot = () => {
+    handleLeaveParkedSpot();
+  };
+
+  const updateParkedNotes = (notes: { level?: string; stallNumber?: string; note?: string }) => {
+    if (!activeParkedSession) return;
+    const updated = {
+      ...activeParkedSession,
+      garageNotes: { ...activeParkedSession.garageNotes, ...notes },
+    };
+    setActiveParkedSession(updated);
+    try {
+      localStorage.setItem('safepark_active_session_v1', JSON.stringify(updated));
+    } catch {}
+    showToast('Saved vehicle notes');
+  };
+
+  const guideMeToMyCar = () => {
+    if (!activeParkedSession) return;
+    setSelectedDestination({
+      id: activeParkedSession.id,
+      name: activeParkedSession.spotName,
+      address: activeParkedSession.address,
+      coordinates: activeParkedSession.coordinates,
+    });
+    showToast(`🚶 Guided Safe Walk back to ${activeParkedSession.spotName} illuminated`);
   };
 
   // Action: Simulate Bluetooth disconnect manually
@@ -414,6 +503,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         motionState,
         setMotionState,
         parkedLocation,
+        activeParkedSession,
         bluetoothConnected,
         toggleBluetooth,
         inspectingCsiLocation,
@@ -428,6 +518,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         showToast,
         handleParkHere,
         handleLeaveParkedSpot,
+        saveParkedSpot,
+        clearParkedSpot,
+        updateParkedNotes,
+        guideMeToMyCar,
         handleSimulateBluetoothDisconnect,
         handleHazardSubmitted,
         handleToggleSubterraneanSignalLoss,

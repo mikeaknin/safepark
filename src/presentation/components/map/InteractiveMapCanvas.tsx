@@ -29,6 +29,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     showLightingHeatmap,
     setShowLightingHeatmap,
     parkedLocation,
+    activeParkedSession,
     showToast,
     scanLocationsAt,
   } = useApp();
@@ -354,9 +355,46 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         setSelectedLocation(loc);
       });
 
-      marker.addTo(markersGroupRef.current!);
-    });
-  }, [locations, selectedLocation, selectedDestination, parkedLocation, setSelectedLocation]);
+        marker.addTo(markersGroupRef.current!);
+      });
+
+      // 3. Render Persistent Active Vehicle Pin & Radiating Radar Beacon
+      if (activeParkedSession) {
+        const vehicleIcon = L.divIcon({
+          className: 'safepark-vehicle-pin',
+          html: `
+            <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%); cursor: pointer; pointer-events: auto;">
+              <div style="background-color: #2563EB; color: #FFFFFF; font-size: 0.65rem; font-weight: 800; padding: 2px 8px; border-radius: 9999px; box-shadow: 0 2px 8px rgba(37,99,235,0.4); margin-bottom: 2px; white-space: nowrap; display: flex; align-items: center; gap: 3px;">
+                <span>🚗 My Car</span>
+              </div>
+              <div style="position: relative; width: 36px; height: 36px; border-radius: 50%; background-color: #2563EB; border: 3px solid #FFFFFF; box-shadow: 0 4px 14px rgba(37,99,235,0.6); display: flex; align-items: center; justify-content: center;">
+                <span style="font-size: 17px;">🚗</span>
+                <div style="position: absolute; inset: -8px; border-radius: 50%; border: 2px solid #3B82F6; opacity: 0.75; animation: ping 2s cubic-bezier(0, 0, 0.2, 1) infinite;"></div>
+              </div>
+              <div style="width: 0; height: 0; border-left: 6px solid transparent; border-right: 6px solid transparent; border-top: 7px solid #2563EB; margin-top: -1px;"></div>
+            </div>
+          `,
+          iconSize: [0, 0],
+          iconAnchor: [0, 0],
+        });
+
+        const carMarker = L.marker([activeParkedSession.coordinates.lat, activeParkedSession.coordinates.lng], {
+          icon: vehicleIcon,
+          zIndexOffset: 3000,
+          interactive: true,
+        });
+
+        carMarker.on('click', (e) => {
+          L.DomEvent.stopPropagation(e);
+          const matched = locations.find((l) => l.id === activeParkedSession.locationId);
+          if (matched) {
+            setSelectedLocation(matched);
+          }
+        });
+
+        carMarker.addTo(markersGroupRef.current!);
+      }
+    }, [locations, selectedLocation, selectedDestination, parkedLocation, activeParkedSession, setSelectedLocation]);
 
   // 6. True Pedestrian Street-Snapped Walking Routing (OSRM Foot Engine)
   useEffect(() => {
@@ -566,6 +604,79 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
           <Sun size={21} />
         </button>
       </aside>
+
+      {/* Floating Top Parked Vehicle Banner ("Find My Car" Radar Pill) */}
+      {activeParkedSession && (
+        <div
+          onClick={() => {
+            isProgrammaticFlightRef.current = true;
+            mapInstanceRef.current?.flyTo(
+              [activeParkedSession.coordinates.lat, activeParkedSession.coordinates.lng],
+              17,
+              { animate: true, duration: 1.2 }
+            );
+            const matched = locations.find((l) => l.id === activeParkedSession.locationId);
+            if (matched) setSelectedLocation(matched);
+          }}
+          role="button"
+          tabIndex={0}
+          aria-label={`View parked vehicle at ${activeParkedSession.spotName}`}
+          style={{
+            position: 'fixed',
+            top: 'calc(env(safe-area-inset-top, 0px) + 98px)',
+            left: '16px',
+            right: '68px',
+            zIndex: 25,
+            backgroundColor: '#1E293B',
+            color: '#FFFFFF',
+            borderRadius: '14px',
+            padding: '8px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '8px',
+            boxShadow: '0 4px 20px rgba(15, 23, 42, 0.35)',
+            border: '1.5px solid rgba(255, 255, 255, 0.15)',
+            cursor: 'pointer',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+            <span style={{ fontSize: '1.1rem' }}>🚗</span>
+            <div style={{ minWidth: 0, flex: 1 }}>
+              <div
+                style={{
+                  fontSize: '0.775rem',
+                  fontWeight: 800,
+                  color: '#F8FAFC',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Parked: {activeParkedSession.spotName}
+              </div>
+              <div style={{ fontSize: '0.675rem', color: '#94A3B8', fontWeight: 600 }}>
+                Tap to re-center • Return walk ready
+              </div>
+            </div>
+          </div>
+          <span
+            style={{
+              backgroundColor: '#2563EB',
+              color: '#FFFFFF',
+              padding: '3px 8px',
+              borderRadius: '8px',
+              fontSize: '0.675rem',
+              fontWeight: 800,
+              flexShrink: 0,
+            }}
+          >
+            Find My Car
+          </span>
+        </div>
+      )}
     </div>
   );
 };

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
 import { ParkingLocation } from '../../domain/models/ParkingLocation';
 import { ParkingFacilityCard } from './ParkingFacilityCard';
+import { ActiveParkedSpotCard } from './ActiveParkedSpotCard';
 import { SAFE_PARK_TOKENS, getStatusStyle } from '../../theme/tokens';
 import {
   ChevronUp,
@@ -36,6 +37,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
     setSelectedLocation,
     selectedDestination,
     parkedLocation,
+    activeParkedSession,
     handleParkHere,
   } = useApp();
 
@@ -411,12 +413,20 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
             backgroundColor: '#F8FAFC',
           }}
         >
+          {/* Active Parked Vehicle Session Card (Find My Car & Countdown Timer) */}
+          {activeParkedSession && (
+            <ActiveParkedSpotCard
+              session={activeParkedSession}
+              className="mb-2"
+            />
+          )}
+
           {locations.map((loc) => (
             <ParkingFacilityCard
               key={loc.id}
               location={loc}
               isSelected={selectedLocation?.id === loc.id}
-              isParkedHere={parkedLocation?.id === loc.id}
+              isParkedHere={parkedLocation?.id === loc.id || activeParkedSession?.locationId === loc.id}
               showFullDetails={snapPoint === 'expanded'}
               onSelect={(l) => {
                 setSelectedLocation(l);
