@@ -22,6 +22,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
   isFullscreen = true,
 }) => {
   const {
+    currentView,
     locations,
     selectedLocation,
     setSelectedLocation,
@@ -126,7 +127,17 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     };
   }, []);
 
-  // 2. Real Panning & Re-Centering on Destination Coordinates Update
+  // 2. Invalidate and resize whenever user switches back to Explore map tab
+  useEffect(() => {
+    if (currentView === 'driver' && mapInstanceRef.current) {
+      const timer = setTimeout(() => {
+        mapInstanceRef.current?.invalidateSize();
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [currentView]);
+
+  // 3. Real Panning & Re-Centering on Destination Coordinates Update
   useEffect(() => {
     if (mapInstanceRef.current && selectedDestination?.coordinates) {
       const { lat, lng } = selectedDestination.coordinates;
@@ -609,15 +620,18 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
       }}
     >
       {/* Real Leaflet Map DOM Node */}
-      <div
-        ref={mapContainerRef}
-        id="safepark-map"
-        style={{
-          width: '100%',
-          height: '100%',
-          backgroundColor: '#E2E8F0',
-        }}
-      />
+      <div className="absolute inset-0 w-full h-full overflow-hidden" style={{ width: '100%', height: '100%' }}>
+        <div
+          ref={mapContainerRef}
+          id="safepark-map"
+          className="w-full h-full"
+          style={{
+            width: '100%',
+            height: '100%',
+            backgroundColor: '#F8FAFC',
+          }}
+        />
+      </div>
 
       {/* Floating Glassmorphic Map Controls (Right Side) */}
       <aside

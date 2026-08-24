@@ -2,13 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Leaflet Fullscreen Tile Canvas Styles */
+@layer base {
+  html, body, #root {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Ensure Leaflet Container Fills 100% of Parent */
 .leaflet-container {
   width: 100% !important;
   height: 100% !important;
-  z-index: 0 !important;
-  background-color: #E2E8F0 !important;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
+  z-index: 1;
+  background: #F8FAFC !important;
 }
 
 .leaflet-tile {
@@ -26,7 +38,9 @@
 
 /* Custom Marker Styling */
 .safepark-destination-marker-wrapper,
-.safepark-user-beacon {
+.safepark-user-beacon,
+.safepark-walker-marker,
+.safepark-vehicle-pin {
   background: transparent !important;
   border: none !important;
 }
