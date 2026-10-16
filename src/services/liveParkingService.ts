@@ -93,11 +93,17 @@ export class LiveParkingService {
 
     const scoredLocations: ParkingLocation[] = facilities.map((fac) => {
       const scoreResult: SafetyScoreResult = calculateSafetyScore(fac, crimes);
-      const structType = mapStructureType(scoreResult.type);
+      const isStreet = Boolean(scoreResult.isStreetParking || fac.isStreetParking);
+      const structType: ParkingStructureType = isStreet
+        ? 'curbside_street_metered'
+        : mapStructureType(scoreResult.type);
 
       // Hourly rate estimation based on structure and city
-      let hourlyRate = 4.0;
-      if (scoreResult.type === 'underground' || scoreResult.type === 'multi-storey') {
+      let hourlyRate = 3.5;
+      if (isStreet) {
+        const rateMatch = (scoreResult.meterRate || fac.meterRate || '').match(/\$([0-9.]+)/);
+        hourlyRate = rateMatch ? parseFloat(rateMatch[1]) : city === 'sf' ? 3.5 : 2.5;
+      } else if (scoreResult.type === 'underground' || scoreResult.type === 'multi-storey') {
         hourlyRate = city === 'sf' ? 14.0 : 10.0;
       } else if (scoreResult.type === 'surface') {
         hourlyRate = city === 'sf' ? 6.0 : 5.0;
@@ -107,8 +113,8 @@ export class LiveParkingService {
       const surveillance: SurveillanceTier =
         scoreResult.type === 'underground' ? 'monitored_cctv_24_7' : 'unmonitored_recording_cctv';
 
-      const totalSpaces = scoreResult.capacity !== 'Unknown' ? parseInt(scoreResult.capacity, 10) || 120 : 120;
-      const availableSpaces = Math.max(5, Math.round(totalSpaces * 0.35));
+      const totalSpaces = scoreResult.capacity !== 'Unknown' ? parseInt(scoreResult.capacity, 10) || 15 : 15;
+      const availableSpaces = Math.max(2, Math.round(totalSpaces * 0.4));
 
       const location: ParkingLocation = {
         id: String(scoreResult.facilityId),
@@ -118,6 +124,12 @@ export class LiveParkingService {
         currency: 'USD',
         totalSpaces,
         availableSpaces,
+        isStreetParking: isStreet,
+        blockName: scoreResult.blockName || fac.blockName || scoreResult.name,
+        meterRate: scoreResult.meterRate || fac.meterRate || (isStreet ? `$${hourlyRate.toFixed(2)}/hr` : undefined),
+        timeLimit: scoreResult.timeLimit || fac.timeLimit || (isStreet ? '2HR' : undefined),
+        smashAndGrabWarning: scoreResult.smashAndGrabWarning,
+        breakInsPast90Days: scoreResult.smashAndGrabCount,
         coordinates: {
           lat: scoreResult.lat,
           lng: scoreResult.lon,
@@ -125,7 +137,7 @@ export class LiveParkingService {
         crimeData: {
           incidentsLast30Days: scoreResult.incidentsWithin250m,
           incidentsLast90Days: scoreResult.incidentCount500m,
-          smashAndGrabCount: scoreResult.incidentsWithin250m,
+          smashAndGrabCount: scoreResult.smashAndGrabCount ?? scoreResult.incidentsWithin250m,
           catalyticConverterCount: Math.round(scoreResult.incidents250to500m * 0.4),
           recentIncidents: [],
           incidentDensityPerSqKm: scoreResult.incidentCount500m * 1.5,

@@ -48,6 +48,17 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
   const isYellow = score >= 60 && score < 80;
   const isRed = score < 60;
 
+  const isStreet = Boolean(
+    location.isStreetParking ||
+    location.infrastructure.structureType === 'curbside_street_metered' ||
+    location.infrastructure.structureType === 'curbside_residential'
+  );
+  const smashAndGrabCount =
+    location.breakInsPast90Days ??
+    location.crimeData?.smashAndGrabCount ??
+    location.crimeData?.incidentsLast30Days ??
+    0;
+
   const cardBorder = isParkedHere
     ? '2px solid #15803D'
     : isSelected
@@ -148,7 +159,7 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
               gap: '6px',
             }}
           >
-            <span>{location.name}</span>
+            <span>{isStreet ? (location.blockName || location.name) : location.name}</span>
             {location.csi.totalScore >= 75 && (
               <span title="SafePark Low Risk Certified" style={{ display: 'inline-flex', flexShrink: 0 }}>
                 <ShieldCheck size={16} color="#15803D" />
@@ -162,7 +173,7 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
         </p>
       </div>
 
-      {/* Quick Specs: Rate, Open Spots, Structure & Curbside Rules */}
+      {/* Quick Specs: Street vs Garage */}
       <div
         style={{
           display: 'flex',
@@ -174,145 +185,217 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
           flexWrap: 'wrap',
         }}
       >
-        <span style={{ fontWeight: 800, color: location.hourlyRate === 0 ? '#15803D' : '#2563EB', fontSize: '0.85rem' }}>
-          {location.hourlyRate === 0 ? 'Free ($0.00)' : `$${location.hourlyRate.toFixed(2)}/hr`}
-        </span>
-        <span>•</span>
-        <span style={{ fontWeight: 600 }}>{location.availableSpaces} spots open</span>
-        <span>•</span>
-        <span style={{ textTransform: 'capitalize', color: '#64748B' }}>
-          {location.infrastructure.structureType.replace(/_/g, ' ')}
-        </span>
-        {location.infrastructure.surveillance === 'monitored_cctv_24_7' && (
-          <span
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '3px',
-              color: '#1D4ED8',
-              backgroundColor: '#EFF6FF',
-              padding: '1px 6px',
-              borderRadius: '4px',
-              fontSize: '0.675rem',
-              fontWeight: 700,
-            }}
-          >
-            <Video size={12} color="#2563EB" /> CCTV Monitored
-          </span>
+        {isStreet ? (
+          <>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                color: '#047857',
+                backgroundColor: '#ECFDF5',
+                border: '1px solid #A7F3D0',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                fontSize: '0.725rem',
+                fontWeight: 800,
+              }}
+            >
+              🚗 Curbside Metered
+            </span>
+            <span>•</span>
+            <span style={{ fontWeight: 800, color: '#2563EB' }}>
+              {location.meterRate || `$${location.hourlyRate.toFixed(2)}/hr`}
+            </span>
+            <span>•</span>
+            <span style={{ fontWeight: 600 }}>{location.timeLimit || '2-Hr Limit'}</span>
+          </>
+        ) : (
+          <>
+            <span
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px',
+                color: '#1D4ED8',
+                backgroundColor: '#EFF6FF',
+                border: '1px solid #BFDBFE',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                fontSize: '0.725rem',
+                fontWeight: 800,
+              }}
+            >
+              🏢 {location.infrastructure.structureType.includes('underground') ? 'Underground Garage' : location.infrastructure.structureType.includes('deck') ? 'Multi-Level Deck' : 'Surface Public Lot'}
+            </span>
+            <span>•</span>
+            <span style={{ fontWeight: 800, color: '#2563EB' }}>
+              ${location.hourlyRate.toFixed(2)}/hr
+            </span>
+            <span>•</span>
+            <span style={{ fontWeight: 600 }}>{location.totalSpaces} spots capacity</span>
+          </>
         )}
       </div>
 
-      {/* Deterministic Multi-Factor CSI Scorecard */}
-      <div
-        style={{
-          backgroundColor: '#F8FAFC',
-          borderRadius: '14px',
-          border: '1px solid #E2E8F0',
-          padding: '12px 14px',
-          marginBottom: '14px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '12px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-            <span
-              style={{
-                display: 'inline-block',
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                backgroundColor: isGreen ? '#16A34A' : isYellow ? '#CA8A04' : '#DC2626',
-              }}
-            />
-            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: isGreen ? '#15803D' : isYellow ? '#854D0E' : '#991B1B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              {isGreen ? 'Low Incident Zone' : isYellow ? 'Moderate Risk' : 'High Break-In Frequency'}
-            </span>
+      {/* Street Smash & Grab Warning OR Garage 3-Factor Scorecard */}
+      {isStreet ? (
+        <div
+          style={{
+            backgroundColor: '#F8FAFC',
+            borderRadius: '14px',
+            border: '1px solid #E2E8F0',
+            padding: '12px 14px',
+            marginBottom: '14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '10px',
+          }}
+        >
+          {/* Smash & Grab Warning Banner */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              backgroundColor: isRed ? '#FEE2E2' : isYellow ? '#FEF9C3' : '#DCFCE7',
+              border: `1px solid ${isRed ? '#FCA5A5' : isYellow ? '#FDE047' : '#86EFAC'}`,
+              borderRadius: '10px',
+              padding: '9px 12px',
+            }}
+          >
+            <AlertTriangle size={18} color={isRed ? '#DC2626' : isYellow ? '#CA8A04' : '#15803D'} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: '0.8rem', fontWeight: 800, color: isRed ? '#991B1B' : isYellow ? '#854D0E' : '#166534' }}>
+                {location.smashAndGrabWarning || `${smashAndGrabCount} break-in${smashAndGrabCount === 1 ? '' : 's'} reported on this block in past 90 days`}
+              </div>
+              <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '2px' }}>
+                Curbside spots have open street exposure without attendant or security gate.
+              </div>
+            </div>
           </div>
-          <span style={{ fontSize: '0.85rem', fontWeight: 900, color: isGreen ? '#15803D' : isYellow ? '#854D0E' : '#991B1B' }}>
-            {score}/100 Master CSI
-          </span>
-        </div>
 
-        {/* 1. Vehicle Break-in Risk Progress Bar */}
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-            <span style={{ fontSize: '0.775rem', fontWeight: 800, color: '#1E293B' }}>
-              Vehicle Break-in Risk
+          {/* Rate & Time Limit Row */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 4px', fontSize: '0.775rem' }}>
+            <span style={{ color: '#64748B', fontWeight: 600 }}>Curb Meter Policy:</span>
+            <span style={{ fontWeight: 800, color: '#0F172A' }}>
+              {location.meterRate || `$${location.hourlyRate.toFixed(2)}/hr`} • {location.timeLimit || '2-Hr Time Limit'}
             </span>
-            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: breakInScore >= 80 ? '#15803D' : breakInScore >= 60 ? '#854D0E' : '#B91C1C' }}>
-              {breakInScore}/100 • {breakInLabel}
-            </span>
-          </div>
-          <div style={{ width: '100%', height: '7px', backgroundColor: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
-            <div
-              style={{
-                width: `${breakInScore}%`,
-                height: '100%',
-                backgroundColor: breakInScore >= 80 ? '#16A34A' : breakInScore >= 60 ? '#CA8A04' : '#DC2626',
-                borderRadius: '4px',
-                transition: 'width 0.3s ease',
-              }}
-            />
-          </div>
-          <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '3px' }}>
-            {incidentCount} incident{incidentCount === 1 ? '' : 's'} within 500m in past 90 days
           </div>
         </div>
+      ) : (
+        /* Deterministic Multi-Factor CSI Scorecard for Garages & Lots */
+        <div
+          style={{
+            backgroundColor: '#F8FAFC',
+            borderRadius: '14px',
+            border: '1px solid #E2E8F0',
+            padding: '12px 14px',
+            marginBottom: '14px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '12px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  backgroundColor: isGreen ? '#16A34A' : isYellow ? '#CA8A04' : '#DC2626',
+                }}
+              />
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: isGreen ? '#15803D' : isYellow ? '#854D0E' : '#991B1B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                {isGreen ? 'Low Incident Zone' : isYellow ? 'Moderate Risk' : 'High Break-In Frequency'}
+              </span>
+            </div>
+            <span style={{ fontSize: '0.85rem', fontWeight: 900, color: isGreen ? '#15803D' : isYellow ? '#854D0E' : '#991B1B' }}>
+              {score}/100 Master CSI
+            </span>
+          </div>
 
-        {/* 2. Facility Security Progress Bar */}
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-            <span style={{ fontSize: '0.775rem', fontWeight: 800, color: '#1E293B' }}>
-              Facility Security
-            </span>
-            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: facilitySecurityScore >= 80 ? '#15803D' : facilitySecurityScore >= 60 ? '#854D0E' : '#B91C1C' }}>
-              {facilitySecurityScore}/100 • {facilitySecurityLabel}
-            </span>
+          {/* 1. Vehicle Break-in Risk Progress Bar */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <span style={{ fontSize: '0.775rem', fontWeight: 800, color: '#1E293B' }}>
+                Vehicle Break-in Risk
+              </span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: breakInScore >= 80 ? '#15803D' : breakInScore >= 60 ? '#854D0E' : '#B91C1C' }}>
+                {breakInScore}/100 • {breakInLabel}
+              </span>
+            </div>
+            <div style={{ width: '100%', height: '7px', backgroundColor: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
+              <div
+                style={{
+                  width: `${breakInScore}%`,
+                  height: '100%',
+                  backgroundColor: breakInScore >= 80 ? '#16A34A' : breakInScore >= 60 ? '#CA8A04' : '#DC2626',
+                  borderRadius: '4px',
+                  transition: 'width 0.3s ease',
+                }}
+              />
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '3px' }}>
+              {incidentCount} incident{incidentCount === 1 ? '' : 's'} within 500m in past 90 days
+            </div>
           </div>
-          <div style={{ width: '100%', height: '7px', backgroundColor: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
-            <div
-              style={{
-                width: `${facilitySecurityScore}%`,
-                height: '100%',
-                backgroundColor: facilitySecurityScore >= 80 ? '#16A34A' : facilitySecurityScore >= 60 ? '#CA8A04' : '#DC2626',
-                borderRadius: '4px',
-                transition: 'width 0.3s ease',
-              }}
-            />
-          </div>
-          <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '3px' }}>
-            Structure: {facilitySecurityLabel}
-          </div>
-        </div>
 
-        {/* 3. Lighting & Visibility Progress Bar */}
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-            <span style={{ fontSize: '0.775rem', fontWeight: 800, color: '#1E293B' }}>
-              Lighting & Visibility
-            </span>
-            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: lightingScore >= 80 ? '#15803D' : lightingScore >= 60 ? '#854D0E' : '#B91C1C' }}>
-              {lightingScore}/100 • {lightingLabel}
-            </span>
+          {/* 2. Facility Security Progress Bar */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <span style={{ fontSize: '0.775rem', fontWeight: 800, color: '#1E293B' }}>
+                Facility Security
+              </span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: facilitySecurityScore >= 80 ? '#15803D' : facilitySecurityScore >= 60 ? '#854D0E' : '#B91C1C' }}>
+                {facilitySecurityScore}/100 • {facilitySecurityLabel}
+              </span>
+            </div>
+            <div style={{ width: '100%', height: '7px', backgroundColor: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
+              <div
+                style={{
+                  width: `${facilitySecurityScore}%`,
+                  height: '100%',
+                  backgroundColor: facilitySecurityScore >= 80 ? '#16A34A' : facilitySecurityScore >= 60 ? '#CA8A04' : '#DC2626',
+                  borderRadius: '4px',
+                  transition: 'width 0.3s ease',
+                }}
+              />
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '3px' }}>
+              Structure: {facilitySecurityLabel}
+            </div>
           </div>
-          <div style={{ width: '100%', height: '7px', backgroundColor: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
-            <div
-              style={{
-                width: `${lightingScore}%`,
-                height: '100%',
-                backgroundColor: lightingScore >= 80 ? '#16A34A' : lightingScore >= 60 ? '#CA8A04' : '#DC2626',
-                borderRadius: '4px',
-                transition: 'width 0.3s ease',
-              }}
-            />
-          </div>
-          <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '3px' }}>
-            Environment: {lightingLabel}
+
+          {/* 3. Lighting & Visibility Progress Bar */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+              <span style={{ fontSize: '0.775rem', fontWeight: 800, color: '#1E293B' }}>
+                Lighting & Visibility
+              </span>
+              <span style={{ fontSize: '0.75rem', fontWeight: 800, color: lightingScore >= 80 ? '#15803D' : lightingScore >= 60 ? '#854D0E' : '#B91C1C' }}>
+                {lightingScore}/100 • {lightingLabel}
+              </span>
+            </div>
+            <div style={{ width: '100%', height: '7px', backgroundColor: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
+              <div
+                style={{
+                  width: `${lightingScore}%`,
+                  height: '100%',
+                  backgroundColor: lightingScore >= 80 ? '#16A34A' : lightingScore >= 60 ? '#CA8A04' : '#DC2626',
+                  borderRadius: '4px',
+                  transition: 'width 0.3s ease',
+                }}
+              />
+            </div>
+            <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '3px' }}>
+              Environment: {lightingLabel}
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 2-Stage Action Buttons Row */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>

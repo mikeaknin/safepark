@@ -74,13 +74,14 @@ export class ParkingService {
       access: item.access,
       barrier: item.barrier,
       lit: item.lit,
+      isStreetParking: false,
     }));
   }
 
   /**
-   * Fetches parking facilities:
-   * 1. Try local/Vercel `/api/parking?city=${city}` (6s timeout)
-   * 2. Direct Overpass API query (6s timeout per mirror) merged with anchor garages
+   * Fetches dual-layer parking facilities:
+   * 1. Try local/Vercel `/api/parking?city=${city}` (6s timeout) which returns both street meters and garages
+   * 2. Direct Socrata meters query (SFMTA or LADOT) merged with anchor garages
    * 3. Fallback to client-bundled JSON (sf_parking_backup.json / la_parking_backup.json)
    */
   public static async fetchParkingFacilities(
@@ -92,7 +93,7 @@ export class ParkingService {
 
     // 1. Try proxy route first with 6s timeout
     const proxyController = new AbortController();
-    const proxyTimeout = setTimeout(() => proxyController.abort(), 6000);
+    const proxyTimeout = setTimeout(() => proxyController.abort(), 6500);
 
     const onExternalAbort = () => proxyController.abort();
     if (externalSignal) {
@@ -100,7 +101,7 @@ export class ParkingService {
     }
 
     try {
-      const resp = await fetch(`/api/parking?city=${city}&v=garages_v2`, {
+      const resp = await fetch(`/api/parking?city=${city}&v=dual_layer_v3`, {
         headers: { Accept: 'application/json' },
         signal: proxyController.signal,
       });
@@ -111,13 +112,12 @@ export class ParkingService {
         if (text && !text.trim().startsWith('<') && !text.includes('<!DOCTYPE') && !text.includes('DOCTYPE html')) {
           const parsed = JSON.parse(text);
           if (Array.isArray(parsed.data) && parsed.data.length > 0) {
-            // Merge with local anchors to guarantee all 15 named municipal garages are present
-            return mergeWithAnchorGarages(anchors, parsed.data);
+            return parsed.data;
           }
         }
       }
     } catch {
-      // Proceed to direct Overpass / Bundled fallback
+      // Proceed to direct Socrata meter query / Overpass fallback
     } finally {
       clearTimeout(proxyTimeout);
       if (externalSignal) {
@@ -125,7 +125,135 @@ export class ParkingService {
       }
     }
 
-    // 2. Direct Overpass API query with strict 6000ms AbortController timeout
+    // 2. Direct Socrata Curbside Meter Query
+    try {
+      const meterController = new AbortController();
+      const meterTimeout = setTimeout(() => meterController.abort(), 5000);
+      let streetBlocks: ParkingFacility[] = [];
+
+      if (city === 'sf') {
+        const resp = await fetch(
+          "https://data.sf.gov/resource/8vzz-qzz9.json?$where=active_meter_flag%20in%20('M',%20'T')%20AND%20latitude%20IS%20NOT%20NULL&$limit=1500",
+          { headers: { Accept: 'application/json' }, signal: meterController.signal }
+        );
+        clearTimeout(meterTimeout);
+        if (resp.ok) {
+          const meters = await resp.json();
+          if (Array.isArray(meters) && meters.length > 0) {
+            const byStreet: Record<string, { lat: number; lon: number; num: number }[]> = {};
+            for (const m of meters) {
+              const lat = parseFloat(m.latitude);
+              const lon = parseFloat(m.longitude);
+              if (isNaN(lat) || isNaN(lon)) continue;
+              const st = (m.street_name || 'Street').trim().toUpperCase();
+              if (!byStreet[st]) byStreet[st] = [];
+              byStreet[st].push({ lat, lon, num: parseInt(m.street_num || '0', 10) });
+            }
+            for (const [st, items] of Object.entries(byStreet)) {
+              items.sort((a, b) => a.num - b.num);
+              const clusters: { items: typeof items; centerLat: number; centerLon: number; nums: number[] }[] = [];
+              for (const it of items) {
+                let matched = clusters.find(
+                  (c) =>
+                    Math.abs(c.centerLat - it.lat) < 0.0006 && Math.abs(c.centerLon - it.lon) < 0.0006
+                );
+                if (matched) {
+                  matched.items.push(it);
+                  matched.centerLat = matched.items.reduce((s, i) => s + i.lat, 0) / matched.items.length;
+                  matched.centerLon = matched.items.reduce((s, i) => s + i.lon, 0) / matched.items.length;
+                  if (it.num > 0) matched.nums.push(it.num);
+                } else {
+                  clusters.push({ items: [it], centerLat: it.lat, centerLon: it.lon, nums: it.num > 0 ? [it.num] : [] });
+                }
+              }
+              for (const cl of clusters) {
+                const formattedStreet = st
+                  .toLowerCase()
+                  .replace(/\b\w/g, (s) => s.toUpperCase());
+                let blockNum = 100;
+                if (cl.nums.length > 0) {
+                  blockNum = Math.floor(cl.nums.reduce((a, b) => a + b, 0) / cl.nums.length / 100) * 100;
+                }
+                const blockStr = `${blockNum === 0 ? '100' : blockNum} Block`;
+                streetBlocks.push({
+                  id: `sfmta-${st.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${blockNum}-${Math.round(cl.centerLat * 10000)}`,
+                  name: `${formattedStreet} • ${blockStr}`,
+                  blockName: `${formattedStreet} • ${blockStr}`,
+                  address: `${blockStr} ${formattedStreet}, San Francisco, CA`,
+                  lat: cl.centerLat,
+                  lon: cl.centerLon,
+                  isStreetParking: true,
+                  type: 'curbside_street_metered',
+                  capacity: String(cl.items.length),
+                  meterCount: cl.items.length,
+                  meterRate: '$3.50/hr',
+                  timeLimit: '2HR',
+                });
+              }
+            }
+          }
+        }
+      } else {
+        // LA
+        const resp = await fetch(
+          'https://data.lacity.org/resource/s49e-q6j2.json?$where=latlng%20IS%20NOT%20NULL&$limit=1500',
+          { headers: { Accept: 'application/json' }, signal: meterController.signal }
+        );
+        clearTimeout(meterTimeout);
+        if (resp.ok) {
+          const spaces = await resp.json();
+          if (Array.isArray(spaces) && spaces.length > 0) {
+            const clusters: Record<string, { blockface: string; raterange?: string; timelimit?: string; lats: number[]; lons: number[]; count: number }> = {};
+            for (const s of spaces) {
+              const lat = parseFloat(s.latlng?.latitude);
+              const lon = parseFloat(s.latlng?.longitude);
+              if (isNaN(lat) || isNaN(lon)) continue;
+              const bf = (s.blockface || 'Block').trim();
+              if (!clusters[bf]) {
+                clusters[bf] = { blockface: bf, raterange: s.raterange, timelimit: s.timelimit, lats: [], lons: [], count: 0 };
+              }
+              clusters[bf].lats.push(lat);
+              clusters[bf].lons.push(lon);
+              clusters[bf].count++;
+            }
+            streetBlocks = Object.values(clusters).map((c, i) => {
+              const match = c.blockface.match(/^(\d+)\s+(.+)$/);
+              let blockStr = '100 Block';
+              let street = 'Curbside';
+              if (match) {
+                blockStr = `${match[1]} Block`;
+                street = match[2]
+                  .replace(/^[NSEW]\s+/i, '')
+                  .toLowerCase()
+                  .replace(/\b\w/g, (s) => s.toUpperCase());
+              }
+              const avgLat = c.lats.reduce((a, b) => a + b, 0) / c.lats.length;
+              const avgLon = c.lons.reduce((a, b) => a + b, 0) / c.lons.length;
+              return {
+                id: `ladot-${i}-${Math.round(avgLat * 10000)}`,
+                name: `${street} • ${blockStr}`,
+                blockName: `${street} • ${blockStr}`,
+                address: `${blockStr} ${street}, Los Angeles, CA`,
+                lat: avgLat,
+                lon: avgLon,
+                isStreetParking: true,
+                type: 'curbside_street_metered',
+                capacity: String(c.count),
+                meterCount: c.count,
+                meterRate: c.raterange || '$2.50/hr',
+                timeLimit: c.timelimit || '2HR',
+              };
+            });
+          }
+        }
+      }
+
+      if (streetBlocks.length > 0) {
+        return [...streetBlocks, ...anchors];
+      }
+    } catch {
+      // Proceed to Overpass / Bundled fallback
+    }
     const bbox = PARKING_BOUNDING_BOXES[city] || PARKING_BOUNDING_BOXES.sf;
     const ql = `[out:json][timeout:5];(node["amenity"="parking"](${bbox});way["amenity"="parking"](${bbox}););out center tags;`;
     const endpoints = [

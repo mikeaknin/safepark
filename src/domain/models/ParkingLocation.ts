@@ -44,4 +44,10 @@ export interface ParkingLocation {
   activeHazards: HazardReport[];
   csi: CompositeSafetyIndex;
   walkingRoutes?: SafeWalkRoute[];
+  isStreetParking?: boolean;
+  blockName?: string;
+  meterRate?: string;
+  timeLimit?: string;
+  smashAndGrabWarning?: string;
+  breakInsPast90Days?: number;
 }

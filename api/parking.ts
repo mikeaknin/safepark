@@ -17,6 +17,11 @@ export interface NormalizedParkingFacility {
   access?: string;
   barrier?: string;
   lit?: string;
+  isStreetParking?: boolean;
+  blockName?: string;
+  meterRate?: string;
+  timeLimit?: string;
+  meterCount?: number;
 }
 
 export const SF_VERIFIED_PARKING: NormalizedParkingFacility[] = [
@@ -168,20 +173,231 @@ function mergeWithVerifiedAnchors(
   return merged;
 }
 
-export async function fetchLiveParkingFacilities(city: 'sf' | 'la'): Promise<NormalizedParkingFacility[]> {
-  const cached = cache[city];
-  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS && cached.data.length > 0) {
-    return cached.data;
-  }
+function toTitleCase(str: string): string {
+  if (!str) return '';
+  return str.toLowerCase().replace(/\b\w/g, (s) => s.toUpperCase());
+}
 
-  const verifiedAnchors = city === 'la' ? LA_VERIFIED_PARKING : SF_VERIFIED_PARKING;
+function haversineDistMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371000;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+/**
+ * On-Street Curbside Parking Feeder:
+ * SF: Query https://data.sf.gov/resource/8vzz-qzz9.json ($where=active_meter_flag in ('M', 'T') AND latitude IS NOT NULL&$limit=1500)
+ *     Cluster individual meters within 60 meters on the same street into single "Street Parking Blocks".
+ * LA: Query https://data.lacity.org/resource/s49e-q6j2.json ($where=latlng IS NOT NULL&$limit=1500)
+ *     Group spaces sharing the same blockface into "Street Parking Blocks".
+ */
+export async function fetchCurbsideMeters(city: 'sf' | 'la'): Promise<NormalizedParkingFacility[]> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 6500);
+
+  try {
+    if (city === 'sf') {
+      const sfUrl =
+        "https://data.sf.gov/resource/8vzz-qzz9.json?$where=active_meter_flag%20in%20('M',%20'T')%20AND%20latitude%20IS%20NOT%20NULL&$limit=1500";
+      const resp = await fetch(sfUrl, {
+        headers: { Accept: 'application/json' },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (!resp.ok) return [];
+      const meters = await resp.json();
+      if (!Array.isArray(meters) || meters.length === 0) return [];
+
+      const byStreet: Record<string, { lat: number; lon: number; num: number }[]> = {};
+      for (const m of meters) {
+        const lat = parseFloat(m.latitude);
+        const lon = parseFloat(m.longitude);
+        if (isNaN(lat) || isNaN(lon)) continue;
+        const st = (m.street_name || 'Street').trim().toUpperCase();
+        if (!byStreet[st]) byStreet[st] = [];
+        byStreet[st].push({
+          lat,
+          lon,
+          num: parseInt(m.street_num || '0', 10),
+        });
+      }
+
+      const streetBlocks: NormalizedParkingFacility[] = [];
+      for (const [street, items] of Object.entries(byStreet)) {
+        items.sort((a, b) => a.num - b.num || a.lat - b.lat);
+        const clusters: {
+          items: { lat: number; lon: number; num: number }[];
+          centerLat: number;
+          centerLon: number;
+          nums: number[];
+        }[] = [];
+
+        for (const item of items) {
+          let matched: (typeof clusters)[0] | null = null;
+          for (const cl of clusters) {
+            const dist = haversineDistMeters(cl.centerLat, cl.centerLon, item.lat, item.lon);
+            if (dist <= 60) {
+              matched = cl;
+              break;
+            }
+          }
+          if (matched) {
+            matched.items.push(item);
+            matched.centerLat =
+              matched.items.reduce((sum, i) => sum + i.lat, 0) / matched.items.length;
+            matched.centerLon =
+              matched.items.reduce((sum, i) => sum + i.lon, 0) / matched.items.length;
+            if (item.num > 0) matched.nums.push(item.num);
+          } else {
+            clusters.push({
+              items: [item],
+              centerLat: item.lat,
+              centerLon: item.lon,
+              nums: item.num > 0 ? [item.num] : [],
+            });
+          }
+        }
+
+        for (const cl of clusters) {
+          const formattedStreet = toTitleCase(street);
+          let blockNum = 100;
+          if (cl.nums.length > 0) {
+            const avgNum = cl.nums.reduce((a, b) => a + b, 0) / cl.nums.length;
+            blockNum = Math.floor(avgNum / 100) * 100;
+          }
+          const blockStr = `${blockNum === 0 ? '100' : blockNum} Block`;
+          const name = `${formattedStreet} • ${blockStr}`;
+          streetBlocks.push({
+            id: `sfmta-curb-${street.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${blockNum}-${Math.round(
+              cl.centerLat * 10000
+            )}`,
+            name,
+            blockName: name,
+            address: `${blockStr} ${formattedStreet}, San Francisco, CA`,
+            lat: cl.centerLat,
+            lon: cl.centerLon,
+            isStreetParking: true,
+            type: 'curbside_street_metered',
+            capacity: String(cl.items.length),
+            meterCount: cl.items.length,
+            meterRate: '$3.50/hr',
+            timeLimit: '2HR',
+            fee: 'yes',
+            access: 'public',
+          });
+        }
+      }
+      return streetBlocks;
+    } else {
+      // LA LADOT
+      const laUrl =
+        'https://data.lacity.org/resource/s49e-q6j2.json?$where=latlng%20IS%20NOT%20NULL&$limit=1500';
+      const resp = await fetch(laUrl, {
+        headers: { Accept: 'application/json' },
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      if (!resp.ok) return [];
+      const spaces = await resp.json();
+      if (!Array.isArray(spaces) || spaces.length === 0) return [];
+
+      const clusters: Record<
+        string,
+        {
+          blockface: string;
+          raterange?: string;
+          timelimit?: string;
+          lats: number[];
+          lons: number[];
+          count: number;
+        }
+      > = {};
+
+      for (const s of spaces) {
+        const lat = parseFloat(s.latlng?.latitude);
+        const lon = parseFloat(s.latlng?.longitude);
+        if (isNaN(lat) || isNaN(lon)) continue;
+        const bf = (s.blockface || 'Block').trim();
+        if (!clusters[bf]) {
+          clusters[bf] = {
+            blockface: bf,
+            raterange: s.raterange,
+            timelimit: s.timelimit,
+            lats: [],
+            lons: [],
+            count: 0,
+          };
+        }
+        clusters[bf].lats.push(lat);
+        clusters[bf].lons.push(lon);
+        clusters[bf].count++;
+      }
+
+      const streetBlocks: NormalizedParkingFacility[] = Object.values(clusters).map((c, i) => {
+        const match = c.blockface.match(/^(\d+)\s+(.+)$/);
+        let name = c.blockface;
+        let formattedStreet = 'Curbside';
+        let blockStr = '100 Block';
+        if (match) {
+          blockStr = `${match[1]} Block`;
+          formattedStreet = toTitleCase(match[2].replace(/^[NSEW]\s+/i, ''));
+          name = `${formattedStreet} • ${blockStr}`;
+        } else {
+          name = toTitleCase(c.blockface);
+        }
+
+        const avgLat = c.lats.reduce((a, b) => a + b, 0) / c.lats.length;
+        const avgLon = c.lons.reduce((a, b) => a + b, 0) / c.lons.length;
+
+        return {
+          id: `ladot-curb-${i}-${Math.round(avgLat * 10000)}`,
+          name,
+          blockName: name,
+          address: `${blockStr} ${formattedStreet}, Los Angeles, CA`,
+          lat: avgLat,
+          lon: avgLon,
+          isStreetParking: true,
+          type: 'curbside_street_metered',
+          capacity: String(c.count),
+          meterCount: c.count,
+          meterRate: c.raterange || '$2.50/hr',
+          timeLimit: c.timelimit || '2HR',
+          fee: 'yes',
+          access: 'public',
+        };
+      });
+
+      return streetBlocks;
+    }
+  } catch {
+    clearTimeout(timeout);
+    return [];
+  }
+}
+
+/**
+ * Off-Street Garages & Lots Feeder:
+ * Merges verified anchor municipal garages with named Overpass garages.
+ */
+export async function fetchOffStreetGarages(city: 'sf' | 'la'): Promise<NormalizedParkingFacility[]> {
+  const verifiedAnchors = (city === 'la' ? LA_VERIFIED_PARKING : SF_VERIFIED_PARKING).map((f) => ({
+    ...f,
+    isStreetParking: false,
+  }));
   const cityName = city === 'la' ? 'Los Angeles' : 'San Francisco';
   const bbox = CITY_BOUNDING_BOXES[city] || CITY_BOUNDING_BOXES.sf;
   const ql = `[out:json][timeout:25];(node["amenity"="parking"](${bbox});way["amenity"="parking"](${bbox}););out center tags;`;
 
   for (const endpoint of OVERPASS_ENDPOINTS) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 7000);
+    const timeout = setTimeout(() => controller.abort(), 6500);
 
     try {
       const resp = await fetch(endpoint, {
@@ -196,22 +412,26 @@ export async function fetchLiveParkingFacilities(city: 'sf' | 'la'): Promise<Nor
       });
       clearTimeout(timeout);
 
-      if (!resp.ok) {
-        continue;
-      }
+      if (!resp.ok) continue;
 
       const json = await resp.json();
-      if (!json || !Array.isArray(json.elements) || json.elements.length === 0) {
-        continue;
-      }
+      if (!json || !Array.isArray(json.elements) || json.elements.length === 0) continue;
 
       const parsedLive = json.elements
-        .map((elem: any) => parseOverpassElement(elem, cityName))
+        .map((elem: any) => {
+          const parsed = parseOverpassElement(elem, cityName);
+          if (parsed) {
+            // Filter out private or employee-only facilities
+            const access = (parsed.access || '').toLowerCase();
+            if (access === 'private' || access === 'permit' || access === 'no') return null;
+            parsed.isStreetParking = false;
+          }
+          return parsed;
+        })
         .filter(Boolean) as NormalizedParkingFacility[];
 
       const merged = mergeWithVerifiedAnchors(verifiedAnchors, parsedLive);
       if (merged.length > 0) {
-        cache[city] = { data: merged, timestamp: Date.now() };
         return merged;
       }
     } catch {
@@ -219,9 +439,33 @@ export async function fetchLiveParkingFacilities(city: 'sf' | 'la'): Promise<Nor
     }
   }
 
-  // Fallback to verified real municipal parking facilities
-  cache[city] = { data: verifiedAnchors, timestamp: Date.now() };
   return verifiedAnchors;
+}
+
+export async function fetchLiveParkingFacilities(city: 'sf' | 'la'): Promise<NormalizedParkingFacility[]> {
+  const cached = cache[city];
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS && cached.data.length > 0) {
+    return cached.data;
+  }
+
+  // Dual-source engine: fetch curbside street meters AND off-street garages in parallel
+  const [curbsideSpots, offStreetGarages] = await Promise.all([
+    fetchCurbsideMeters(city),
+    fetchOffStreetGarages(city),
+  ]);
+
+  // Curbside street spots as primary default focus, followed by off-street facilities
+  const combined = [...curbsideSpots, ...offStreetGarages];
+  const finalResults =
+    combined.length > 0
+      ? combined
+      : (city === 'la' ? LA_VERIFIED_PARKING : SF_VERIFIED_PARKING).map((f) => ({
+          ...f,
+          isStreetParking: false,
+        }));
+
+  cache[city] = { data: finalResults, timestamp: Date.now() };
+  return finalResults;
 }
 
 export default async function handler(req: any, res?: any) {

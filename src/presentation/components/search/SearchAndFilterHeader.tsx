@@ -412,8 +412,71 @@ export const SearchAndFilterHeader: React.FC = () => {
               paddingBottom: '2px',
             }}
           >
-            {/* All Spots Pill */}
+            {/* 1. Street & 2-Hr (Primary Default Focus) */}
             <button
+              id="filter-street-only"
+              onClick={() => {
+                setFilters((prev) => ({ ...prev, parkingTypeFilter: 'street_only' }));
+              }}
+              style={{
+                backgroundColor:
+                  filters.parkingTypeFilter === 'street_only' ? '#047857' : 'rgba(255, 255, 255, 0.95)',
+                color: filters.parkingTypeFilter === 'street_only' ? '#FFFFFF' : '#047857',
+                border: `1.5px solid ${
+                  filters.parkingTypeFilter === 'street_only' ? '#047857' : '#A7F3D0'
+                }`,
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                borderRadius: '9999px',
+                padding: '5px 13px',
+                fontSize: '0.75rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                boxShadow:
+                  filters.parkingTypeFilter === 'street_only'
+                    ? '0 4px 12px rgba(4, 120, 87, 0.28)'
+                    : '0 2px 8px rgba(15, 23, 42, 0.08)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              🚗 Street & 2-Hr
+            </button>
+
+            {/* 2. Garages Only */}
+            <button
+              id="filter-garages-only"
+              onClick={() => {
+                setFilters((prev) => ({ ...prev, parkingTypeFilter: 'garages_only' }));
+              }}
+              style={{
+                backgroundColor:
+                  filters.parkingTypeFilter === 'garages_only' ? '#1D4ED8' : 'rgba(255, 255, 255, 0.95)',
+                color: filters.parkingTypeFilter === 'garages_only' ? '#FFFFFF' : '#1D4ED8',
+                border: `1.5px solid ${
+                  filters.parkingTypeFilter === 'garages_only' ? '#1D4ED8' : '#BFDBFE'
+                }`,
+                backdropFilter: 'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                borderRadius: '9999px',
+                padding: '5px 13px',
+                fontSize: '0.75rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                boxShadow:
+                  filters.parkingTypeFilter === 'garages_only'
+                    ? '0 4px 12px rgba(29, 78, 216, 0.28)'
+                    : '0 2px 8px rgba(15, 23, 42, 0.08)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              🏢 Garages Only
+            </button>
+
+            {/* 3. All Spots */}
+            <button
+              id="filter-all-spots"
               onClick={() => {
                 setFilters((prev) => ({ ...prev, parkingTypeFilter: 'all' }));
               }}
@@ -421,82 +484,25 @@ export const SearchAndFilterHeader: React.FC = () => {
                 backgroundColor:
                   filters.parkingTypeFilter === 'all' ? '#0F172A' : 'rgba(255, 255, 255, 0.95)',
                 color: filters.parkingTypeFilter === 'all' ? '#FFFFFF' : '#475569',
-                border: `1px solid ${
+                border: `1.5px solid ${
                   filters.parkingTypeFilter === 'all' ? '#0F172A' : 'rgba(203, 213, 225, 0.9)'
                 }`,
                 backdropFilter: 'blur(12px)',
                 WebkitBackdropFilter: 'blur(12px)',
                 borderRadius: '9999px',
-                padding: '4px 11px',
-                fontSize: '0.725rem',
-                fontWeight: 700,
+                padding: '5px 13px',
+                fontSize: '0.75rem',
+                fontWeight: 800,
                 cursor: 'pointer',
                 whiteSpace: 'nowrap',
-                boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
+                boxShadow:
+                  filters.parkingTypeFilter === 'all'
+                    ? '0 4px 12px rgba(15, 23, 42, 0.25)'
+                    : '0 2px 8px rgba(15, 23, 42, 0.08)',
                 transition: 'all 0.15s ease',
               }}
             >
               All Spots
-            </button>
-
-            {/* Street & 2-Hr Free Pill */}
-            <button
-              onClick={() => {
-                setFilters((prev) => ({
-                  ...prev,
-                  parkingTypeFilter: prev.parkingTypeFilter === 'street_only' ? 'all' : 'street_only',
-                }));
-              }}
-              style={{
-                backgroundColor:
-                  filters.parkingTypeFilter === 'street_only' ? '#047857' : 'rgba(255, 255, 255, 0.95)',
-                color: filters.parkingTypeFilter === 'street_only' ? '#FFFFFF' : '#047857',
-                border: `1px solid ${
-                  filters.parkingTypeFilter === 'street_only' ? '#047857' : '#A7F3D0'
-                }`,
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
-                borderRadius: '9999px',
-                padding: '4px 11px',
-                fontSize: '0.725rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              ⏱️ Street & 2-Hr
-            </button>
-
-            {/* Garages Only Pill */}
-            <button
-              onClick={() => {
-                setFilters((prev) => ({
-                  ...prev,
-                  parkingTypeFilter: prev.parkingTypeFilter === 'garages_only' ? 'all' : 'garages_only',
-                }));
-              }}
-              style={{
-                backgroundColor:
-                  filters.parkingTypeFilter === 'garages_only' ? '#1D4ED8' : 'rgba(255, 255, 255, 0.95)',
-                color: filters.parkingTypeFilter === 'garages_only' ? '#FFFFFF' : '#1D4ED8',
-                border: `1px solid ${
-                  filters.parkingTypeFilter === 'garages_only' ? '#1D4ED8' : '#BFDBFE'
-                }`,
-                backdropFilter: 'blur(12px)',
-                WebkitBackdropFilter: 'blur(12px)',
-                borderRadius: '9999px',
-                padding: '4px 11px',
-                fontSize: '0.725rem',
-                fontWeight: 700,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08)',
-                transition: 'all 0.15s ease',
-              }}
-            >
-              🏢 Garages Only
             </button>
           </div>
 

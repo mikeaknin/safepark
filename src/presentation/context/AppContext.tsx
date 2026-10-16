@@ -242,14 +242,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   }, [searchQuery]);
 
-  // Filter state
+  // Filter state: Street & 2-Hr active by default
   const defaultFilters: FilterSettings = {
     minCsi: 0,
     maxHourlyRate: 25,
     coveredOrGarageOnly: false,
     gatedAccessOnly: false,
     monitoredCctvOnly: false,
-    parkingTypeFilter: 'all',
+    parkingTypeFilter: 'street_only',
   };
   const [filters, setFilters] = useState<FilterSettings>(defaultFilters);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState<boolean>(false);
@@ -291,17 +291,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (spot.csi.totalScore < currentFilters.minCsi) return false;
       if (spot.hourlyRate > currentFilters.maxHourlyRate) return false;
       if (currentFilters.parkingTypeFilter === 'garages_only' || currentFilters.coveredOrGarageOnly) {
+        if (spot.isStreetParking) return false;
         const isGarage =
           spot.infrastructure.structureType === 'covered_underground_garage' ||
-          spot.infrastructure.structureType === 'multi_level_deck';
+          spot.infrastructure.structureType === 'multi_level_deck' ||
+          spot.infrastructure.structureType === 'gated_surface_lot' ||
+          spot.infrastructure.structureType === 'open_surface_lot';
         if (!isGarage) return false;
       }
       if (currentFilters.parkingTypeFilter === 'street_only') {
         const isStreet =
+          spot.isStreetParking ||
           spot.infrastructure.structureType === 'curbside_street_metered' ||
-          spot.infrastructure.structureType === 'curbside_residential' ||
-          spot.infrastructure.structureType === 'open_surface_lot' ||
-          spot.infrastructure.structureType === 'gated_surface_lot';
+          spot.infrastructure.structureType === 'curbside_residential';
         if (!isStreet) return false;
       }
       if (currentFilters.gatedAccessOnly && !spot.infrastructure.hasControlledAccessBarrier) return false;

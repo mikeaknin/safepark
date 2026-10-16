@@ -54,6 +54,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
   const [deviceCoordinates, setDeviceCoordinates] = useState<{ lat: number; lng: number } | null>(null);
   const [deviceAccuracy, setDeviceAccuracy] = useState<number>(30);
   const [isLocating, setIsLocating] = useState<boolean>(false);
+  const [viewportVersion, setViewportVersion] = useState<number>(0);
 
   // 1. Initialize Real Slippy Leaflet Tile Map with Standard OpenStreetMap Layer & Moveend Pan-to-Scan Listener
   useEffect(() => {
@@ -99,9 +100,10 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     };
     window.addEventListener('resize', handleResize);
 
-    // Dynamic "Pan-to-Scan" Moveend Listener (350ms debounce)
+    // Dynamic "Pan-to-Scan" Moveend & Viewport Density Listener (300ms debounce)
     let moveEndTimeout: any = null;
     const handleMoveEnd = () => {
+      setViewportVersion((v) => v + 1);
       if (isProgrammaticFlightRef.current) {
         return;
       }
@@ -116,12 +118,14 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     };
 
     map.on('moveend', handleMoveEnd);
+    map.on('zoomend', handleMoveEnd);
 
     return () => {
       clearTimeout(timer1);
       clearTimeout(timer2);
       if (moveEndTimeout) clearTimeout(moveEndTimeout);
       map.off('moveend', handleMoveEnd);
+      map.off('zoomend', handleMoveEnd);
       window.removeEventListener('resize', handleResize);
       map.remove();
       mapInstanceRef.current = null;
@@ -262,67 +266,92 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
       L.marker([lat, lng], { icon: destIcon, zIndexOffset: 1000 }).addTo(markersGroupRef.current);
     }
 
-    // B. Render Parking Facility Pins with Visual Type Badges & Curbside Overlays
-    // Apply clean spatial fanning so 3-4 spots near the same intersection do not stack into an unreadable block
-    const positionBuckets = new Map<string, number>();
+    // B. Viewport Density Cap: Dynamically render only the 40 most relevant parking locations inside the active map bounding box
+    const currentBounds = mapInstanceRef.current.getBounds();
+    const mapCenter = mapInstanceRef.current.getCenter();
 
-    locations.forEach((loc) => {
+    // Filter locations to active viewport bounding box (always include selectedLocation)
+    const inBoundsLocations = locations.filter((loc) => {
+      if (selectedLocation?.id === loc.id) return true;
+      return currentBounds.contains([loc.coordinates.lat, loc.coordinates.lng]);
+    });
+
+    // Sort by relevance: currently selected spot first, then proximity to map center
+    inBoundsLocations.sort((a, b) => {
+      if (selectedLocation?.id === a.id) return -1;
+      if (selectedLocation?.id === b.id) return 1;
+      const distA = Math.hypot(a.coordinates.lat - mapCenter.lat, a.coordinates.lng - mapCenter.lng);
+      const distB = Math.hypot(b.coordinates.lat - mapCenter.lat, b.coordinates.lng - mapCenter.lng);
+      return distA - distB;
+    });
+
+    // Strictly cap at top 40 locations to completely eliminate overlapping clutter
+    const visibleLocations = inBoundsLocations.slice(0, 40);
+
+    visibleLocations.forEach((loc) => {
       const isSelected = selectedLocation?.id === loc.id;
       const isParked = parkedLocation?.id === loc.id;
-      const status = getStatusStyle(loc.csi.totalScore);
+      const isStreet = Boolean(
+        loc.isStreetParking ||
+        loc.infrastructure.structureType === 'curbside_street_metered' ||
+        loc.infrastructure.structureType === 'curbside_residential'
+      );
+      const score = loc.csi.totalScore;
 
-      // Bucket by ~15m precision
-      const gridKey = `${loc.coordinates.lat.toFixed(4)},${loc.coordinates.lng.toFixed(4)}`;
-      const indexInBucket = positionBuckets.get(gridKey) || 0;
-      positionBuckets.set(gridKey, indexInBucket + 1);
-
-      // Subtle dynamic offset to fan out overlapping pins neatly
-      let displayLat = loc.coordinates.lat;
-      let displayLng = loc.coordinates.lng;
-      if (indexInBucket > 0) {
-        const angle = (indexInBucket * (2 * Math.PI)) / 4;
-        const radius = 0.00015 * Math.ceil(indexInBucket / 4); // ~15m
-        displayLat += radius * Math.cos(angle);
-        displayLng += radius * Math.sin(angle);
+      // Color-coding rules:
+      // Green: 80-100
+      // Yellow: 60-79
+      // Red: <60
+      let pinColor = '#10B981';
+      let garageBg = '#047857';
+      if (score < 60) {
+        pinColor = '#EF4444';
+        garageBg = '#B91C1C';
+      } else if (score < 80) {
+        pinColor = '#F59E0B';
+        garageBg = '#D97706';
       }
 
-      const is2HrFree = loc.hourlyRate === 0 || loc.infrastructure.structureType === 'curbside_residential';
-      const isMetered = loc.infrastructure.structureType === 'curbside_street_metered';
-      const isGarage = !is2HrFree && !isMetered;
+      let parkingIcon: L.DivIcon;
 
-      let typeTag = '🏢 GARAGE';
-      let typeColor = '#7E22CE';
-      let typeBg = '#FAF5FF';
-      let curbColor = '#8B5CF6';
-      let rateDisplay = `$${loc.hourlyRate.toFixed(0)}/hr`;
+      if (isStreet) {
+        // Curbside Street Spots: Compact 28px circular score pins showing street CSI score with a small curb/car icon
+        parkingIcon = L.divIcon({
+          className: `safepark-pin-${loc.id}`,
+          html: `
+            <div style="position: relative; width: 28px; height: 28px; border-radius: 50%; background-color: ${pinColor}; border: 2px solid #FFFFFF; box-shadow: ${
+            isSelected
+              ? '0 0 0 3.5px #2563EB, 0 4px 14px rgba(0,0,0,0.45)'
+              : '0 2px 8px rgba(0,0,0,0.22)'
+          }; display: flex; align-items: center; justify-content: center; cursor: pointer; transform: translate(-50%, -50%) ${
+            isSelected ? 'scale(1.22)' : 'scale(1)'
+          }; transition: transform 0.15s ease; pointer-events: auto;">
+              ${
+                isParked
+                  ? `<div style="position: absolute; top: -14px; background: #15803D; color: #FFF; font-size: 7.5px; font-weight: 900; padding: 1px 4px; border-radius: 4px; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,0.3);">PARKED</div>`
+                  : ''
+              }
+              <span style="color: #FFFFFF; font-size: 11px; font-weight: 900; letter-spacing: -0.5px; line-height: 1;">${score}</span>
+              <div style="position: absolute; bottom: -4px; right: -4px; width: 13px; height: 13px; border-radius: 50%; background: #0F172A; border: 1.5px solid #FFFFFF; display: flex; align-items: center; justify-content: center; font-size: 7.5px; line-height: 1;" title="Curbside Street Spot">
+                🚗
+              </div>
+            </div>
+          `,
+          iconSize: [0, 0],
+          iconAnchor: [0, 0],
+        });
 
-      if (is2HrFree) {
-        typeTag = '⏱️ 2-HR FREE';
-        typeColor = '#047857';
-        typeBg = '#ECFDF5';
-        curbColor = '#10B981';
-        rateDisplay = 'Free';
-      } else if (isMetered) {
-        typeTag = '🅿️ METER';
-        typeColor = '#1D4ED8';
-        typeBg = '#EFF6FF';
-        curbColor = '#3B82F6';
-        rateDisplay = `$${loc.hourlyRate.toFixed(2)}/hr`;
-      }
-
-      // 1. Draw Visual Street Curbside Highlight / Garage Footprint on Map Canvas
-      if (is2HrFree || isMetered) {
-        // Draw dashed curb line along street
+        // Draw clean dashed curb line along street
         const curbPolyline = L.polyline(
           [
-            [loc.coordinates.lat - 0.0003, loc.coordinates.lng - 0.0003],
-            [loc.coordinates.lat + 0.0003, loc.coordinates.lng + 0.0003],
+            [loc.coordinates.lat - 0.00025, loc.coordinates.lng - 0.00025],
+            [loc.coordinates.lat + 0.00025, loc.coordinates.lng + 0.00025],
           ],
           {
-            color: curbColor,
-            weight: isSelected ? 6 : 4,
-            opacity: isSelected ? 0.95 : 0.7,
-            dashArray: '6, 6',
+            color: pinColor,
+            weight: isSelected ? 5 : 3,
+            opacity: isSelected ? 0.95 : 0.6,
+            dashArray: '4, 4',
             lineCap: 'round',
           }
         );
@@ -332,12 +361,39 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         });
         curbPolyline.addTo(curbSegmentsGroupRef.current!);
       } else {
+        // Garages & Lots: Distinct 34px shield or building icon pins displaying garage CSI score with a "P" badge
+        parkingIcon = L.divIcon({
+          className: `safepark-pin-${loc.id}`,
+          html: `
+            <div style="position: relative; width: 34px; height: 34px; border-radius: 9px; background-color: ${garageBg}; border: 2.5px solid #FFFFFF; box-shadow: ${
+            isSelected
+              ? '0 0 0 3.5px #2563EB, 0 6px 16px rgba(0,0,0,0.45)'
+              : '0 3px 10px rgba(0,0,0,0.28)'
+          }; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; transform: translate(-50%, -50%) ${
+            isSelected ? 'scale(1.18)' : 'scale(1)'
+          }; transition: transform 0.15s ease; pointer-events: auto;">
+              ${
+                isParked
+                  ? `<div style="position: absolute; top: -14px; background: #15803D; color: #FFF; font-size: 7.5px; font-weight: 900; padding: 1px 4px; border-radius: 4px; white-space: nowrap; box-shadow: 0 1px 4px rgba(0,0,0,0.3);">PARKED</div>`
+                  : ''
+              }
+              <!-- "P" Badge -->
+              <div style="position: absolute; top: -5px; left: -5px; width: 15px; height: 15px; border-radius: 4px; background: #1E40AF; border: 1.5px solid #FFFFFF; color: #FFFFFF; font-size: 9.5px; font-weight: 900; display: flex; align-items: center; justify-content: center; line-height: 1;">
+                P
+              </div>
+              <span style="color: #FFFFFF; font-size: 12px; font-weight: 900; letter-spacing: -0.5px; line-height: 1; margin-top: 2px;">${score}</span>
+            </div>
+          `,
+          iconSize: [0, 0],
+          iconAnchor: [0, 0],
+        });
+
         // Draw garage secure boundary outline
         const garageCircle = L.circle([loc.coordinates.lat, loc.coordinates.lng], {
-          radius: 28,
+          radius: 26,
           color: '#8B5CF6',
           fillColor: '#C4B5FD',
-          fillOpacity: isSelected ? 0.25 : 0.12,
+          fillOpacity: isSelected ? 0.25 : 0.10,
           weight: isSelected ? 2.5 : 1.5,
           interactive: true,
         });
@@ -348,69 +404,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         garageCircle.addTo(curbSegmentsGroupRef.current!);
       }
 
-      // 2. Build High-Clarity Multi-Attribute Map Pin
-      // Color-coding rules:
-      // - 80-100: Green (Low Incident Zone)
-      // - 60-79: Yellow (Moderate Risk)
-      // - Under 60: Red (High Break-In Frequency)
-      let pinBg = '#FFFFFF';
-      let pinText = '#15803D';
-      let pinBadgeBg = '#DCFCE7';
-      let pinBorder = isSelected ? '#2563EB' : '#86EFAC';
-      let riskTag = 'SAFE';
-
-      if (loc.csi.totalScore < 60) {
-        pinText = '#DC2626';
-        pinBadgeBg = '#FEE2E2';
-        pinBorder = isSelected ? '#2563EB' : '#FCA5A5';
-        riskTag = 'RISK';
-      } else if (loc.csi.totalScore < 80) {
-        pinText = '#CA8A04';
-        pinBadgeBg = '#FEF9C3';
-        pinBorder = isSelected ? '#2563EB' : '#FDE047';
-        riskTag = 'MOD';
-      }
-
-      const parkingIcon = L.divIcon({
-        className: `safepark-pin-${loc.id}`,
-        html: `
-          <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%) ${isSelected ? 'scale(1.12)' : 'scale(1)'}; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: auto;">
-            ${
-              isParked
-                ? `<div style="background-color: #15803D; color: #FFFFFF; font-size: 0.6rem; font-weight: 800; padding: 1px 6px; border-radius: 9999px; margin-bottom: 2px; box-shadow: 0 2px 6px rgba(21,128,61,0.4); text-transform: uppercase;">Active Spot</div>`
-                : ''
-            }
-            <div style="background-color: ${pinBg}; border: ${
-          isSelected ? '2.5px solid #2563EB' : `2px solid ${pinBorder}`
-        }; border-radius: 12px; padding: 4px 8px; box-shadow: ${
-          isSelected
-            ? '0 0 0 4px rgba(37,99,235,0.35), 0 10px 24px rgba(15,23,42,0.3)'
-            : '0 3px 12px rgba(15,23,42,0.18)'
-        }; display: flex; flex-direction: column; gap: 3px; min-width: 110px; max-width: 160px;">
-              <!-- Top Row: Facility Real Name -->
-              <div style="font-size: 0.675rem; font-weight: 800; color: #0F172A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left;" title="${loc.name}">
-                ${loc.name}
-              </div>
-              <!-- Bottom Row: Real Calculated Numeric Score & Status & Rate -->
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 0.725rem; font-weight: 900; color: ${pinText}; border-top: 1px solid #F1F5F9; padding-top: 2px;">
-                <span style="display: flex; align-items: center; gap: 2px;">
-                  <span>🛡️</span>
-                  <span>${loc.csi.totalScore}</span>
-                </span>
-                <span style="color: #64748B; font-size: 0.65rem; font-weight: 700;">${rateDisplay}</span>
-                <span style="font-size: 0.6rem; font-weight: 800; background-color: ${pinBadgeBg}; padding: 1px 4px; border-radius: 4px;">${riskTag}</span>
-              </div>
-            </div>
-            <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid ${
-              isSelected ? '#2563EB' : pinBorder
-            }; margin-top: -1px;"></div>
-          </div>
-        `,
-        iconSize: [0, 0],
-        iconAnchor: [0, 0],
-      });
-
-      const marker = L.marker([displayLat, displayLng], {
+      const marker = L.marker([loc.coordinates.lat, loc.coordinates.lng], {
         icon: parkingIcon,
         zIndexOffset: isSelected ? 2500 : isParked ? 1500 : 500,
         interactive: true,
@@ -460,7 +454,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
 
         carMarker.addTo(markersGroupRef.current!);
       }
-    }, [locations, selectedLocation, selectedDestination, parkedLocation, activeParkedSession, setSelectedLocation]);
+    }, [locations, selectedLocation, selectedDestination, parkedLocation, activeParkedSession, setSelectedLocation, viewportVersion]);
 
   // 6. True Pedestrian Street-Snapped Walking Routing (OSRM Foot Engine)
   useEffect(() => {
