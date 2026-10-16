@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import { useApp } from '../../context/AppContext';
 import { useGeocodingAutocomplete } from '../../hooks/useGeocodingAutocomplete';
 import { GeocodedLocation } from '../../../domain/models/GeocodedLocation';
+import { GeocodingService, NeighborhoodItem } from '../../../services/geocodingService';
 import { SAFE_PARK_TOKENS } from '../../../theme/tokens';
 import {
   Search,
@@ -29,6 +30,8 @@ export const SearchAndFilterHeader: React.FC = () => {
     totalFacilitiesCount,
     selectedDestination,
     setSelectedDestination,
+    scanLocationsAt,
+    locations,
     showToast,
     filters,
     setFilters,
@@ -87,6 +90,7 @@ export const SearchAndFilterHeader: React.FC = () => {
         address: loc.formattedAddress,
         coordinates: loc.coordinates,
       });
+      scanLocationsAt({ lat: loc.coordinates.lat, lng: loc.coordinates.lng }, loc.name);
       setIsOpen(false);
     },
     {
@@ -95,6 +99,50 @@ export const SearchAndFilterHeader: React.FC = () => {
       initialQuery: selectedDestination?.name || '',
     }
   );
+
+  const handleSelectNeighborhood = (nh: NeighborhoodItem) => {
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(10);
+      } catch {}
+    }
+    const dest = {
+      id: nh.id,
+      name: nh.name,
+      address: nh.description,
+      coordinates: { lat: nh.lat, lng: nh.lng },
+    };
+    setSelectedDestination(dest);
+    scanLocationsAt({ lat: nh.lat, lng: nh.lng }, nh.name);
+    setQuery(nh.name);
+    setIsOpen(false);
+    saveRecentSearch({
+      id: nh.id,
+      name: nh.name,
+      formattedAddress: nh.description,
+      coordinates: { lat: nh.lat, lng: nh.lng },
+      placeType: 'neighborhood',
+      confidence: 1.0,
+      source: 'fallback',
+      city: selectedCity === 'sf' ? 'San Francisco' : 'Los Angeles',
+      state: 'CA',
+    });
+  };
+
+  // Instant zero-dependency local neighborhood search (<5ms)
+  const matchingNeighborhoods: NeighborhoodItem[] = query.trim().length > 0
+    ? GeocodingService.searchNeighborhoods(query, selectedCity)
+    : [];
+
+  // Dynamic Header Counter Sync
+  const activeCount = locations.length > 0 ? locations.length : totalFacilitiesCount;
+  const counterLabel = isLiveLoading
+    ? 'SYNCING FEEDS...'
+    : filters.parkingTypeFilter === 'street_only'
+    ? `${activeCount} STREET BLOCKS • ${totalCrimesCount.toLocaleString()} CRIMES`
+    : filters.parkingTypeFilter === 'garages_only'
+    ? `${activeCount} GARAGES • ${totalCrimesCount.toLocaleString()} CRIMES`
+    : `${activeCount} TOTAL SPOTS • ${totalCrimesCount.toLocaleString()} CRIMES`;
 
   // Reset search bar input when toggling cities
   useEffect(() => {
@@ -184,7 +232,7 @@ export const SearchAndFilterHeader: React.FC = () => {
                 SafePark
               </span>
               <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                {isLiveLoading ? 'SYNCING FEEDS...' : `${totalFacilitiesCount} LOTS • ${totalCrimesCount.toLocaleString()} CRIMES`}
+                {counterLabel}
               </span>
             </div>
           </div>
@@ -386,8 +434,10 @@ export const SearchAndFilterHeader: React.FC = () => {
             {/* Clear Button */}
             {query && (
               <button
+                id="search-clear-button"
                 onClick={() => {
                   clearQuery();
+                  setSelectedDestination(null);
                   setIsOpen(false);
                 }}
                 aria-label="Clear search input"
@@ -544,8 +594,8 @@ export const SearchAndFilterHeader: React.FC = () => {
                 overflowY: 'auto',
               }}
             >
-              {/* 1. Live Autocomplete Suggestions (when query exists) */}
-              {query.trim().length >= 2 && suggestions.length > 0 && (
+              {/* 1. Instant Local Neighborhood Matches (<5ms) */}
+              {query.trim().length > 0 && matchingNeighborhoods.length > 0 && (
                 <>
                   <div
                     style={{
@@ -560,114 +610,225 @@ export const SearchAndFilterHeader: React.FC = () => {
                       alignItems: 'center',
                     }}
                   >
-                    <span>San Francisco Locations</span>
-                    <span style={{ fontSize: '0.65rem', color: '#94A3B8' }}>Bounded OSM</span>
+                    <span>{selectedCity === 'sf' ? 'San Francisco Neighborhoods' : 'Los Angeles Neighborhoods'}</span>
+                    <span style={{ fontSize: '0.65rem', color: '#7E22CE', fontWeight: 800 }}>Instant Index</span>
                   </div>
 
-                  {suggestions.map((loc) => {
-                    const badge = getPlaceBadge(loc);
-                    return (
+                  {matchingNeighborhoods.map((nh) => (
+                    <div
+                      key={nh.id}
+                      onClick={() => handleSelectNeighborhood(nh)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '12px',
+                        padding: '10px 16px',
+                        borderTop: '1px solid #F1F5F9',
+                        cursor: 'pointer',
+                        backgroundColor: selectedDestination?.name === nh.name ? '#FAF5FF' : 'transparent',
+                        minHeight: '52px',
+                        transition: 'background-color 0.15s ease',
+                      }}
+                      onMouseEnter={(e) => {
+                        (e.currentTarget as HTMLElement).style.backgroundColor = '#FAF5FF';
+                      }}
+                      onMouseLeave={(e) => {
+                        (e.currentTarget as HTMLElement).style.backgroundColor =
+                          selectedDestination?.name === nh.name ? '#FAF5FF' : 'transparent';
+                      }}
+                    >
                       <div
-                        key={loc.id}
-                        onClick={() => {
-                          selectSuggestion(loc);
-                          setIsOpen(false);
-                        }}
                         style={{
+                          width: '34px',
+                          height: '34px',
+                          borderRadius: '10px',
+                          backgroundColor: '#FAF5FF',
+                          border: '1px solid #E9D5FF',
                           display: 'flex',
                           alignItems: 'center',
-                          gap: '12px',
-                          padding: '10px 16px',
-                          borderTop: '1px solid #F1F5F9',
-                          cursor: 'pointer',
-                          backgroundColor: selectedDestination?.name === loc.name ? '#EFF6FF' : 'transparent',
-                          minHeight: '52px',
-                          transition: 'background-color 0.15s ease',
-                        }}
-                        onMouseEnter={(e) => {
-                          (e.currentTarget as HTMLElement).style.backgroundColor = '#F8FAFC';
-                        }}
-                        onMouseLeave={(e) => {
-                          (e.currentTarget as HTMLElement).style.backgroundColor =
-                            selectedDestination?.name === loc.name ? '#EFF6FF' : 'transparent';
+                          justifyContent: 'center',
+                          flexShrink: 0,
                         }}
                       >
-                        <div
-                          style={{
-                            width: '34px',
-                            height: '34px',
-                            borderRadius: '10px',
-                            backgroundColor: badge.bg,
-                            border: `1px solid ${badge.border}`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                          }}
-                        >
-                          <MapPin size={17} color={badge.color} />
-                        </div>
+                        <MapPin size={17} color="#7E22CE" />
+                      </div>
 
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span
-                              style={{
-                                fontSize: '0.9rem',
-                                color: '#0F172A',
-                                fontWeight: 700,
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                              }}
-                            >
-                              {loc.name}
-                            </span>
-                            {loc.neighborhood && (
-                              <span
-                                style={{
-                                  fontSize: '0.725rem',
-                                  color: '#2563EB',
-                                  fontWeight: 600,
-                                  whiteSpace: 'nowrap',
-                                }}
-                              >
-                                • {loc.neighborhood}
-                              </span>
-                            )}
-                            <span
-                              style={{
-                                fontSize: '0.625rem',
-                                fontWeight: 700,
-                                color: badge.color,
-                                backgroundColor: badge.bg,
-                                border: `1px solid ${badge.border}`,
-                                padding: '1px 6px',
-                                borderRadius: '4px',
-                                marginLeft: 'auto',
-                                flexShrink: 0,
-                              }}
-                            >
-                              {badge.label}
-                            </span>
-                          </div>
-                          <p
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span
                             style={{
-                              fontSize: '0.75rem',
-                              color: '#64748B',
-                              marginTop: '2px',
+                              fontSize: '0.9rem',
+                              color: '#0F172A',
+                              fontWeight: 800,
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                             }}
                           >
-                            {loc.formattedAddress}
-                          </p>
+                            {nh.name}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: '0.625rem',
+                              fontWeight: 700,
+                              color: '#7E22CE',
+                              backgroundColor: '#FAF5FF',
+                              border: '1px solid #E9D5FF',
+                              padding: '1px 6px',
+                              borderRadius: '4px',
+                              marginLeft: 'auto',
+                              flexShrink: 0,
+                            }}
+                          >
+                            District
+                          </span>
                         </div>
+                        <p
+                          style={{
+                            fontSize: '0.75rem',
+                            color: '#64748B',
+                            marginTop: '2px',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                          }}
+                        >
+                          {nh.description}
+                        </p>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </>
               )}
+
+              {/* 2. Live Autocomplete Suggestions (OSM/Landmarks) */}
+              {query.trim().length >= 2 && suggestions.filter((s) => !matchingNeighborhoods.some((n) => n.name.toLowerCase() === s.name.toLowerCase())).length > 0 && (
+                <>
+                  <div
+                    style={{
+                      padding: '10px 16px 6px 16px',
+                      fontSize: '0.7rem',
+                      color: '#64748B',
+                      textTransform: 'uppercase',
+                      fontWeight: 800,
+                      letterSpacing: '0.04em',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                    }}
+                  >
+                    <span>{selectedCity === 'sf' ? 'San Francisco Places' : 'Los Angeles Places'}</span>
+                    <span style={{ fontSize: '0.65rem', color: '#94A3B8' }}>Landmarks</span>
+                  </div>
+
+                  {suggestions
+                    .filter((s) => !matchingNeighborhoods.some((n) => n.name.toLowerCase() === s.name.toLowerCase()))
+                    .map((loc) => {
+                      const badge = getPlaceBadge(loc);
+                      return (
+                        <div
+                          key={loc.id}
+                          onClick={() => {
+                            selectSuggestion(loc);
+                            setIsOpen(false);
+                          }}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '10px 16px',
+                            borderTop: '1px solid #F1F5F9',
+                            cursor: 'pointer',
+                            backgroundColor: selectedDestination?.name === loc.name ? '#EFF6FF' : 'transparent',
+                            minHeight: '52px',
+                            transition: 'background-color 0.15s ease',
+                          }}
+                          onMouseEnter={(e) => {
+                            (e.currentTarget as HTMLElement).style.backgroundColor = '#F8FAFC';
+                          }}
+                          onMouseLeave={(e) => {
+                            (e.currentTarget as HTMLElement).style.backgroundColor =
+                              selectedDestination?.name === loc.name ? '#EFF6FF' : 'transparent';
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: '34px',
+                              height: '34px',
+                              borderRadius: '10px',
+                              backgroundColor: badge.bg,
+                              border: `1px solid ${badge.border}`,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              flexShrink: 0,
+                            }}
+                          >
+                            <MapPin size={17} color={badge.color} />
+                          </div>
+
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span
+                                style={{
+                                  fontSize: '0.9rem',
+                                  color: '#0F172A',
+                                  fontWeight: 700,
+                                  whiteSpace: 'nowrap',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                }}
+                              >
+                                {loc.name}
+                              </span>
+                              {loc.neighborhood && (
+                                <span
+                                  style={{
+                                    fontSize: '0.725rem',
+                                    color: '#2563EB',
+                                    fontWeight: 600,
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                >
+                                  • {loc.neighborhood}
+                                </span>
+                              )}
+                              <span
+                                style={{
+                                  fontSize: '0.625rem',
+                                  fontWeight: 700,
+                                  color: badge.color,
+                                  backgroundColor: badge.bg,
+                                  border: `1px solid ${badge.border}`,
+                                  padding: '1px 6px',
+                                  borderRadius: '4px',
+                                  marginLeft: 'auto',
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {badge.label}
+                              </span>
+                            </div>
+                            <p
+                              style={{
+                                fontSize: '0.75rem',
+                                color: '#64748B',
+                                marginTop: '2px',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                            >
+                              {loc.formattedAddress}
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                </>
+              )}
+
+
 
               {/* 2. Recent Destinations (when query is empty and history exists) */}
               {!query.trim() && recentSearches.length > 0 && (

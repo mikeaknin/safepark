@@ -19,6 +19,15 @@ interface MyCarViewProps {
   onNavigateToExplore: () => void;
 }
 
+const DURATION_CHIPS: Array<{ label: string; minutes: number }> = [
+  { label: '15m', minutes: 15 },
+  { label: '30m', minutes: 30 },
+  { label: '1h', minutes: 60 },
+  { label: '2h', minutes: 120 },
+  { label: '4h', minutes: 240 },
+  { label: 'All Day', minutes: 720 },
+];
+
 export const MyCarView: React.FC<MyCarViewProps> = ({ onNavigateToExplore }) => {
   const { clearParkedSpot, activeParkedSession } = useApp();
   const {
@@ -31,6 +40,7 @@ export const MyCarView: React.FC<MyCarViewProps> = ({ onNavigateToExplore }) => 
     isExpired,
     isWarning,
     endParkingSession,
+    updateDurationMinutes,
   } = useVehicle();
 
   // Unified active vehicle info
@@ -180,6 +190,55 @@ export const MyCarView: React.FC<MyCarViewProps> = ({ onNavigateToExplore }) => 
         {/* ACTIVE SESSION OR EMPTY STATE */}
         {vehicle ? (
           <div className="space-y-4">
+            {/* HIGH-PRIORITY METER EXPIRATION ALERT BANNER */}
+            {isExpired ? (
+              <div
+                role="alert"
+                className="bg-rose-50 border-2 border-rose-500 rounded-2xl p-4 flex items-start gap-3.5 shadow-md animate-pulse"
+              >
+                <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 text-xl font-black">
+                  🚨
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-black text-rose-900 uppercase tracking-tight flex items-center gap-1.5">
+                    <span>Meter Expired</span>
+                    <span className="bg-rose-600 text-white text-[10px] px-1.5 py-0.5 rounded font-extrabold">
+                      CRITICAL ALERT
+                    </span>
+                  </div>
+                  <div className="text-sm font-extrabold text-rose-800 mt-0.5">
+                    Your vehicle at {vehicle.name} has exceeded the meter limit.
+                  </div>
+                  <p className="text-xs text-rose-700 mt-1 leading-relaxed">
+                    Return to your car immediately to avoid an $85+ municipal citation or towing.
+                  </p>
+                </div>
+              </div>
+            ) : isWarning ? (
+              <div
+                role="alert"
+                className="bg-amber-50 border-2 border-amber-400 rounded-2xl p-4 flex items-start gap-3.5 shadow-md"
+              >
+                <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 text-xl font-black">
+                  ⚠️
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-xs font-black text-amber-950 uppercase tracking-tight flex items-center gap-1.5">
+                    <span>Meter Expiring Soon ({remainingMinutes}m remaining)</span>
+                    <span className="bg-amber-400 text-amber-950 text-[10px] px-1.5 py-0.5 rounded font-extrabold">
+                      15-MIN WARNING
+                    </span>
+                  </div>
+                  <div className="text-sm font-bold text-amber-900 mt-0.5">
+                    Your vehicle at {vehicle.name} will exceed the meter limit shortly.
+                  </div>
+                  <p className="text-xs text-amber-800 mt-1 leading-relaxed">
+                    Return to your car to avoid a parking ticket, or extend your meter limit below.
+                  </p>
+                </div>
+              </div>
+            ) : null}
+
             {/* LIVE CIRCULAR COUNTDOWN PROGRESS RING CARD */}
             <div className="bg-white rounded-2xl p-6 border border-slate-200/90 shadow-sm flex flex-col items-center text-center">
               <div className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-4 flex items-center gap-1.5">
@@ -246,6 +305,31 @@ export const MyCarView: React.FC<MyCarViewProps> = ({ onNavigateToExplore }) => 
                     Parked at {new Date(vehicle.parkedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Active tracking
                   </span>
                 )}
+              </div>
+
+              {/* Quick Duration Extension Chips */}
+              <div className="mt-4 pt-3.5 border-t border-slate-100 w-full">
+                <div className="text-[11px] font-extrabold text-slate-400 uppercase tracking-wider mb-2.5">
+                  Adjust Meter Duration Limit
+                </div>
+                <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                  {DURATION_CHIPS.map((chip) => {
+                    const isSelected = (vehicle.meterDurationMinutes || 120) === chip.minutes;
+                    return (
+                      <button
+                        key={chip.minutes}
+                        onClick={() => updateDurationMinutes(chip.minutes)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-blue-600 text-white shadow-sm scale-105'
+                            : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-200/80'
+                        }`}
+                      >
+                        {chip.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 

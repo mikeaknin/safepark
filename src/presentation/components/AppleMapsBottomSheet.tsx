@@ -30,6 +30,15 @@ interface AppleMapsBottomSheetProps {
   onOpenDirections?: (loc: ParkingLocation) => void;
 }
 
+const DURATION_CHIPS: Array<{ label: string; minutes: number }> = [
+  { label: '15m', minutes: 15 },
+  { label: '30m', minutes: 30 },
+  { label: '1h', minutes: 60 },
+  { label: '2h (Default)', minutes: 120 },
+  { label: '4h', minutes: 240 },
+  { label: 'All Day', minutes: 720 },
+];
+
 export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
   onInspectCsi,
   onSafeWalk,
@@ -50,7 +59,17 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
     retryLiveLoad,
   } = useApp();
 
-  const { parkVehicle, endParkingSession } = useVehicle();
+  const { parkVehicle, endParkingSession, updateDurationMinutes, activeVehicle } = useVehicle();
+
+  const [selectedDurationMinutes, setSelectedDurationMinutes] = useState<number>(() => {
+    return activeVehicle?.meterDurationMinutes || 120;
+  });
+
+  useEffect(() => {
+    if (activeVehicle?.meterDurationMinutes) {
+      setSelectedDurationMinutes(activeVehicle.meterDurationMinutes);
+    }
+  }, [activeVehicle?.meterDurationMinutes]);
 
   const [snapPoint, setSnapPoint] = useState<SnapPoint>('peek');
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -76,7 +95,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
     const vh = window.innerHeight || 800;
     switch (snap) {
       case 'peek':
-        return 120; // 120px fixed Peek height
+        return 150; // 150px Peek height to fit duration chips & actions
       case 'mid':
         return Math.round(vh * 0.50); // 50vh Mid height
       case 'expanded':
@@ -299,6 +318,51 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
               </h3>
             </div>
 
+            {/* Quick Duration Selector Chips in Peek Mode */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '5px',
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
+                padding: '1px 0',
+              }}
+            >
+              <span style={{ fontSize: '0.625rem', fontWeight: 800, color: '#64748B', whiteSpace: 'nowrap' }}>
+                METER:
+              </span>
+              {DURATION_CHIPS.map((chip) => {
+                const isSelected = selectedDurationMinutes === chip.minutes;
+                return (
+                  <button
+                    key={chip.minutes}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedDurationMinutes(chip.minutes);
+                      if (parkedLocation?.id === topRankedSpot.id || activeParkedSession?.locationId === topRankedSpot.id) {
+                        updateDurationMinutes(chip.minutes);
+                      }
+                    }}
+                    style={{
+                      padding: '2px 7px',
+                      borderRadius: '6px',
+                      fontSize: '0.65rem',
+                      fontWeight: 800,
+                      whiteSpace: 'nowrap',
+                      cursor: 'pointer',
+                      border: isSelected ? '1.5px solid #2563EB' : '1px solid #CBD5E1',
+                      backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
+                      color: isSelected ? '#1D4ED8' : '#475569',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Badges, Curbside Telemetry & Quick Action Bar */}
             <div
               style={{
@@ -478,8 +542,8 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                           blockType: topRankedSpot.infrastructure?.structureType || (topRankedSpot.isStreetParking ? 'curbside_street_metered' : 'covered_underground_garage'),
                           address: topRankedSpot.address,
                           csiScore: topRankedSpot.csi?.totalScore,
-                        }, 120);
-                        handleParkHere(topRankedSpot);
+                        }, selectedDurationMinutes);
+                        handleParkHere(topRankedSpot, undefined, selectedDurationMinutes);
                       }}
                       aria-label={`Mark parked at ${topRankedSpot.name}`}
                       style={{
@@ -522,6 +586,72 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
             backgroundColor: '#F8FAFC',
           }}
         >
+          {/* Quick Meter Duration Limit Bar */}
+          <div
+            style={{
+              backgroundColor: '#FFFFFF',
+              borderRadius: '16px',
+              border: '1px solid #E2E8F0',
+              padding: '12px 14px',
+              boxShadow: '0 2px 8px rgba(15, 23, 42, 0.04)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <span style={{ fontSize: '0.725rem', fontWeight: 800, color: '#0F172A', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                ⏱️ Meter Limit Duration
+              </span>
+              <span style={{ fontSize: '0.725rem', fontWeight: 800, color: '#2563EB' }}>
+                {selectedDurationMinutes >= 60
+                  ? `${selectedDurationMinutes / 60}h Limit`
+                  : `${selectedDurationMinutes}m Limit`}
+              </span>
+            </div>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '6px',
+                overflowX: 'auto',
+                scrollbarWidth: 'none',
+                paddingBottom: '2px',
+              }}
+            >
+              {DURATION_CHIPS.map((chip) => {
+                const isSelected = selectedDurationMinutes === chip.minutes;
+                return (
+                  <button
+                    key={chip.minutes}
+                    onClick={() => {
+                      setSelectedDurationMinutes(chip.minutes);
+                      if (activeParkedSession) {
+                        updateDurationMinutes(chip.minutes);
+                      }
+                    }}
+                    style={{
+                      flex: '1 0 auto',
+                      padding: '6px 11px',
+                      borderRadius: '8px',
+                      fontSize: '0.725rem',
+                      fontWeight: 800,
+                      whiteSpace: 'nowrap',
+                      cursor: 'pointer',
+                      border: isSelected ? '1.5px solid #2563EB' : '1px solid #CBD5E1',
+                      backgroundColor: isSelected ? '#2563EB' : '#FFFFFF',
+                      color: isSelected ? '#FFFFFF' : '#334155',
+                      boxShadow: isSelected ? '0 2px 8px rgba(37, 99, 235, 0.25)' : 'none',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {chip.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           {/* Active Parked Vehicle Session Card */}
           {activeParkedSession && (
             <ActiveParkedSpotCard
@@ -657,8 +787,8 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                     blockType: targetLoc.infrastructure?.structureType || (targetLoc.isStreetParking ? 'curbside_street_metered' : 'covered_underground_garage'),
                     address: targetLoc.address,
                     csiScore: targetLoc.csi?.totalScore,
-                  }, 120);
-                  handleParkHere(targetLoc);
+                  }, selectedDurationMinutes);
+                  handleParkHere(targetLoc, undefined, selectedDurationMinutes);
                 }}
                 onLeaveSpot={() => {
                   if (typeof window !== 'undefined' && 'vibrate' in navigator) {

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 
 export interface ActiveVehicleState {
   spotId: string;
@@ -37,6 +37,7 @@ export interface VehicleContextType {
   ) => void;
   endParkingSession: () => void;
   updateNotes: (notes: { level?: string; stallNumber?: string; note?: string }) => void;
+  updateDurationMinutes: (minutes: number) => void;
   remainingMinutes: number;
   remainingSeconds: number;
   totalDurationMinutes: number;
@@ -147,6 +148,73 @@ export const VehicleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => clearInterval(interval);
   }, [activeVehicle]);
 
+  const alertTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const trigger15MinAlert = (locationName: string) => {
+    const title = '⚠️ Meter Expiring in 15 Minutes!';
+    const options = {
+      body: `Your vehicle at ${locationName} will exceed the meter limit shortly. Return to your car to avoid a parking ticket.`,
+      icon: '/apple-touch-icon.svg',
+      badge: '/favicon.svg',
+      tag: 'safepark-meter-alert',
+      renotify: true,
+      requireInteraction: true,
+      data: { url: '/?tab=my_car' },
+    };
+
+    if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') {
+      if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.ready
+          .then((reg) => {
+            reg.showNotification(title, options).catch(() => {
+              new Notification(title, options);
+            });
+          })
+          .catch(() => {
+            new Notification(title, options);
+          });
+      } else {
+        new Notification(title, options);
+      }
+    }
+  };
+
+  const scheduleAlert = useCallback((parkedAt: number, durationMins: number, locationName: string) => {
+    if (alertTimerRef.current) {
+      clearTimeout(alertTimerRef.current);
+      alertTimerRef.current = null;
+    }
+
+    const alertTargetTime = parkedAt + (durationMins - 15) * 60 * 1000;
+    const now = Date.now();
+    const delayMs = alertTargetTime - now;
+
+    if (delayMs > 0) {
+      alertTimerRef.current = setTimeout(() => {
+        trigger15MinAlert(locationName);
+      }, delayMs);
+    } else {
+      const totalExpiresAt = parkedAt + durationMins * 60 * 1000;
+      if (now < totalExpiresAt) {
+        alertTimerRef.current = setTimeout(() => {
+          trigger15MinAlert(locationName);
+        }, 1000);
+      }
+    }
+  }, []);
+
+  // Rehydrate notification alert on initial render if active vehicle exists
+  useEffect(() => {
+    if (activeVehicle) {
+      scheduleAlert(activeVehicle.parkedAt, activeVehicle.meterDurationMinutes, activeVehicle.name);
+    }
+    return () => {
+      if (alertTimerRef.current) {
+        clearTimeout(alertTimerRef.current);
+      }
+    };
+  }, []);
+
   const parkVehicle = useCallback(
     (
       spot: {
@@ -168,6 +236,13 @@ export const VehicleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         try {
           navigator.vibrate(15);
         } catch {}
+      }
+
+      // Request native Notification permission when user parks
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission === 'default') {
+          Notification.requestPermission().catch(() => {});
+        }
       }
 
       const blockType = spot.blockType || spot.structureType || 'curbside_street_metered';
@@ -192,6 +267,7 @@ export const VehicleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       };
 
       setActiveVehicle(newVehicle);
+      scheduleAlert(newVehicle.parkedAt, newVehicle.meterDurationMinutes, newVehicle.name);
 
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(newVehicle));
@@ -214,7 +290,39 @@ export const VehicleProvider: React.FC<{ children: React.ReactNode }> = ({ child
         );
       } catch {}
     },
-    []
+    [scheduleAlert]
+  );
+
+  const updateDurationMinutes = useCallback(
+    (minutes: number) => {
+      if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+        try {
+          navigator.vibrate(10);
+        } catch {}
+      }
+
+      setActiveVehicle((prev) => {
+        if (!prev) return null;
+        const updated: ActiveVehicleState = {
+          ...prev,
+          meterDurationMinutes: minutes,
+        };
+
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+          const legacy = localStorage.getItem(LEGACY_STORAGE_KEY);
+          if (legacy) {
+            const parsed = JSON.parse(legacy);
+            parsed.expirationTimestamp = updated.parkedAt + minutes * 60 * 1000;
+            localStorage.setItem(LEGACY_STORAGE_KEY, JSON.stringify(parsed));
+          }
+        } catch {}
+
+        scheduleAlert(updated.parkedAt, updated.meterDurationMinutes, updated.name);
+        return updated;
+      });
+    },
+    [scheduleAlert]
   );
 
   const endParkingSession = useCallback(() => {
@@ -223,6 +331,11 @@ export const VehicleProvider: React.FC<{ children: React.ReactNode }> = ({ child
       try {
         navigator.vibrate(10);
       } catch {}
+    }
+
+    if (alertTimerRef.current) {
+      clearTimeout(alertTimerRef.current);
+      alertTimerRef.current = null;
     }
 
     setActiveVehicle(null);
@@ -248,6 +361,7 @@ export const VehicleProvider: React.FC<{ children: React.ReactNode }> = ({ child
     parkVehicle,
     endParkingSession,
     updateNotes,
+    updateDurationMinutes,
     remainingMinutes,
     remainingSeconds,
     totalDurationMinutes: activeVehicle?.meterDurationMinutes || 120,
