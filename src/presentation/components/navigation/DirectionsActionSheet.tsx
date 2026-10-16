@@ -29,24 +29,17 @@ export const DirectionsActionSheet: React.FC<DirectionsActionSheetProps> = ({
   const { lat, lng } = location.coordinates;
   const status = getStatusStyle(location.csi.totalScore);
 
-  const appleMapsUrl = `maps://?daddr=${lat},${lng}&dirflg=d`;
-  const appleMapsWebFallback = `https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`;
-  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+  const appleMapsUrl = `https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`;
+  const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`;
   const wazeUrl = `https://waze.com/ul?ll=${lat},${lng}&navigate=yes`;
 
-  const handleOpenNav = (url: string, fallbackUrl?: string) => {
-    try {
-      window.location.href = url;
-      if (fallbackUrl) {
-        setTimeout(() => {
-          window.open(fallbackUrl, '_blank');
-        }, 500);
-      }
-    } catch {
-      if (fallbackUrl) {
-        window.open(fallbackUrl, '_blank');
-      }
+  const handleOpenNav = (url: string) => {
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(10);
+      } catch {}
     }
+    window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleCopy = () => {
@@ -143,7 +136,7 @@ export const DirectionsActionSheet: React.FC<DirectionsActionSheetProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '14px' }}>
           {/* Apple Maps */}
           <button
-            onClick={() => handleOpenNav(appleMapsUrl, appleMapsWebFallback)}
+            onClick={() => handleOpenNav(appleMapsUrl)}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -154,6 +147,7 @@ export const DirectionsActionSheet: React.FC<DirectionsActionSheetProps> = ({
               padding: '12px 16px',
               cursor: 'pointer',
               transition: 'background-color 0.15s ease',
+              touchAction: 'manipulation',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -183,7 +177,7 @@ export const DirectionsActionSheet: React.FC<DirectionsActionSheetProps> = ({
 
           {/* Google Maps */}
           <button
-            onClick={() => handleOpenNav(googleMapsUrl, googleMapsUrl)}
+            onClick={() => handleOpenNav(googleMapsUrl)}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -194,6 +188,7 @@ export const DirectionsActionSheet: React.FC<DirectionsActionSheetProps> = ({
               padding: '12px 16px',
               cursor: 'pointer',
               transition: 'background-color 0.15s ease',
+              touchAction: 'manipulation',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -221,7 +216,7 @@ export const DirectionsActionSheet: React.FC<DirectionsActionSheetProps> = ({
 
           {/* Waze */}
           <button
-            onClick={() => handleOpenNav(wazeUrl, googleMapsUrl)}
+            onClick={() => handleOpenNav(wazeUrl)}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -232,6 +227,7 @@ export const DirectionsActionSheet: React.FC<DirectionsActionSheetProps> = ({
               padding: '12px 16px',
               cursor: 'pointer',
               transition: 'background-color 0.15s ease',
+              touchAction: 'manipulation',
             }}
           >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

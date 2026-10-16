@@ -15,7 +15,9 @@ import {
   LiveParkingService,
   SupportedCity,
   CITY_CONFIGS,
+  LiveCityDataResult,
 } from '../../services/liveParkingService';
+import { CacheService } from '../../services/cacheService';
 
 export type ActiveAppView = 'driver' | 'my_car' | 'safe_garages' | 'profile' | 'carplay' | 'b2b_portal' | 'enterprise_api' | 'user_profile' | 'admin_ops';
 export type MotionState = 'driving' | 'parked' | 'walking';
@@ -187,12 +189,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   })();
 
   // Multi-City State: default San Francisco or from URL param
+  const initialCachedData = useMemo(() => {
+    return CacheService.getInstantSync<LiveCityDataResult>(`city_parking_${initialCity}`);
+  }, [initialCity]);
+
   const [selectedCity, setSelectedCity] = useState<SupportedCity>(initialCity);
-  const [isLiveLoading, setIsLiveLoading] = useState<boolean>(true);
+  const [isLiveLoading, setIsLiveLoading] = useState<boolean>(() => !initialCachedData);
   const [liveLoadError, setLiveLoadError] = useState<string | null>(null);
-  const [rawScoredLocations, setRawScoredLocations] = useState<ParkingLocation[]>([]);
-  const [totalCrimesCount, setTotalCrimesCount] = useState<number>(0);
-  const [totalFacilitiesCount, setTotalFacilitiesCount] = useState<number>(0);
+  const [rawScoredLocations, setRawScoredLocations] = useState<ParkingLocation[]>(() => initialCachedData?.scoredLocations || []);
+  const [totalCrimesCount, setTotalCrimesCount] = useState<number>(() => initialCachedData?.crimes?.length || 0);
+  const [totalFacilitiesCount, setTotalFacilitiesCount] = useState<number>(() => initialCachedData?.facilities?.length || initialCachedData?.scoredLocations?.length || 0);
 
   // Top-Level View & Onboarding state
   const [currentView, setCurrentView] = useState<ActiveAppView>('driver');
@@ -314,9 +320,43 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     return filtered.sort((a, b) => b.csi.totalScore - a.csi.totalScore);
   }, []);
 
-  // Primary Live Data Loader for City
+  // Primary Live Data Loader for City with <50ms instant cache render and background revalidation
   const loadLiveCityData = useCallback(async (city: SupportedCity) => {
-    setIsLiveLoading(true);
+    // 1. Instant Cache Retrieval (<50ms)
+    const instantCached = CacheService.getInstantSync<LiveCityDataResult>(`city_parking_${city}`);
+    let hasLoadedFromCache = false;
+
+    if (instantCached && instantCached.scoredLocations && instantCached.scoredLocations.length > 0) {
+      setRawScoredLocations(instantCached.scoredLocations);
+      setTotalFacilitiesCount(instantCached.facilities?.length || instantCached.scoredLocations.length);
+      setTotalCrimesCount(instantCached.crimes?.length || 0);
+      const filtered = applyFilters(instantCached.scoredLocations, filters);
+      setLocations(filtered);
+      if (filtered.length > 0) {
+        setSelectedLocation((prev) => (prev ? (filtered.find((f) => f.id === prev.id) || filtered[0]) : filtered[0]));
+      }
+      setIsLiveLoading(false);
+      hasLoadedFromCache = true;
+    } else {
+      // Check async IndexedDB storage
+      const asyncCached = await CacheService.getCachedCityParking<LiveCityDataResult>(city);
+      if (asyncCached && asyncCached.scoredLocations && asyncCached.scoredLocations.length > 0) {
+        setRawScoredLocations(asyncCached.scoredLocations);
+        setTotalFacilitiesCount(asyncCached.facilities?.length || asyncCached.scoredLocations.length);
+        setTotalCrimesCount(asyncCached.crimes?.length || 0);
+        const filtered = applyFilters(asyncCached.scoredLocations, filters);
+        setLocations(filtered);
+        if (filtered.length > 0) {
+          setSelectedLocation((prev) => (prev ? (filtered.find((f) => f.id === prev.id) || filtered[0]) : filtered[0]));
+        }
+        setIsLiveLoading(false);
+        hasLoadedFromCache = true;
+      } else {
+        setIsLiveLoading(true);
+      }
+    }
+
+    // 2. Background Network Revalidation
     setLiveLoadError(null);
     try {
       const result = await LiveParkingService.loadCityLiveParking(city);
@@ -324,25 +364,26 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setTotalFacilitiesCount(result.facilities.length);
       setTotalCrimesCount(result.crimes.length);
 
+      await CacheService.cacheCityParking(city, result);
       OfflineCacheService.cacheParkingLocations(result.scoredLocations);
 
       const filtered = applyFilters(result.scoredLocations, filters);
       setLocations(filtered);
       if (filtered.length > 0) {
-        setSelectedLocation(filtered[0]);
-      } else {
-        setSelectedLocation(null);
+        setSelectedLocation((prev) => (prev ? (filtered.find((f) => f.id === prev.id) || filtered[0]) : filtered[0]));
       }
-
       showToast(`🟢 Loaded ${result.facilities.length} live parking lots & ${result.crimes.length} crime records in ${CITY_CONFIGS[city].name}`);
     } catch (err: any) {
-      console.error('Failed to load live city data:', err);
-      setLiveLoadError(err?.message || 'Municipal feed timeout or network error');
-      showToast(`⚠️ Could not reach municipal feed for ${CITY_CONFIGS[city].name}. Tap Retry.`);
+      console.warn('Network revalidation failed, retained offline cache:', err);
+      // If we don't even have cached data, set error; otherwise remain smoothly interactive
+      if (!hasLoadedFromCache && rawScoredLocations.length === 0) {
+        setLiveLoadError(err?.message || 'Municipal feed timeout or network error');
+        showToast(`⚠️ Could not reach municipal feed for ${CITY_CONFIGS[city].name}. Tap Retry.`);
+      }
     } finally {
       setIsLiveLoading(false);
     }
-  }, [applyFilters, filters]);
+  }, [applyFilters, filters, rawScoredLocations.length]);
 
   // Initial load
   useEffect(() => {
@@ -427,6 +468,32 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const isFree = loc.hourlyRate === 0;
     const isMeter = loc.infrastructure.structureType === 'curbside_street_metered';
     const spotType = isFree ? 'free_curbside' : isMeter ? 'metered' : 'garage';
+    const blockType = loc.infrastructure?.structureType || (loc.isStreetParking ? 'curbside_street_metered' : 'covered_underground_garage');
+
+    // Safe haptic feedback check
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(15);
+      } catch {}
+    }
+
+    const vehicleState = {
+      spotId: loc.id,
+      name: loc.name,
+      lat: loc.coordinates.lat,
+      lon: loc.coordinates.lng,
+      parkedAt: Date.now(),
+      meterDurationMinutes: durationMinutes,
+      blockType,
+      address: loc.address,
+      csiScore: loc.csi?.totalScore || 85,
+      streetSweepingNotice: loc.isStreetParking ? 'Tue 2:00 AM - 6:00 AM' : undefined,
+    };
+
+    try {
+      localStorage.setItem('safepark_vehicle_state', JSON.stringify(vehicleState));
+      window.dispatchEvent(new Event('storage'));
+    } catch {}
 
     const session: SavedParkingSession = {
       id: `session_${Date.now()}`,
@@ -467,15 +534,22 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const handleLeaveParkedSpot = () => {
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(10);
+      } catch {}
+    }
     setActiveParkedSession(null);
     try {
+      localStorage.removeItem('safepark_vehicle_state');
       localStorage.removeItem('safepark_active_session_v1');
+      window.dispatchEvent(new Event('storage'));
     } catch {}
     setParkedLocation(null);
     setMotionState('driving');
     setBluetoothConnected(true);
     OfflineCacheService.cacheActiveSession(null);
-    showToast('🚗 Resumed driving mode. Bluetooth audio reconnected.');
+    showToast('🚗 Parking session ended cleanly.');
   };
 
   const clearParkedSpot = () => {

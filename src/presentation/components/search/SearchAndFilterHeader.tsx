@@ -149,7 +149,7 @@ export const SearchAndFilterHeader: React.FC = () => {
         zIndex: 30,
         paddingLeft: '14px',
         paddingRight: '14px',
-        paddingTop: 'calc(env(safe-area-inset-top, 0px) + 12px)',
+        paddingTop: 'max(12px, env(safe-area-inset-top, 0px))',
         pointerEvents: 'none',
       }}
     >
@@ -204,7 +204,12 @@ export const SearchAndFilterHeader: React.FC = () => {
             <button
               role="tab"
               aria-selected={selectedCity === 'sf'}
-              onClick={() => switchCity('sf')}
+              onClick={() => {
+                if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                  try { navigator.vibrate(10); } catch {}
+                }
+                switchCity('sf');
+              }}
               style={{
                 padding: '6px 12px',
                 borderRadius: '9px',
@@ -223,7 +228,12 @@ export const SearchAndFilterHeader: React.FC = () => {
             <button
               role="tab"
               aria-selected={selectedCity === 'la'}
-              onClick={() => switchCity('la')}
+              onClick={() => {
+                if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                  try { navigator.vibrate(10); } catch {}
+                }
+                switchCity('la');
+              }}
               style={{
                 padding: '6px 12px',
                 borderRadius: '9px',
@@ -416,6 +426,9 @@ export const SearchAndFilterHeader: React.FC = () => {
             <button
               id="filter-street-only"
               onClick={() => {
+                if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                  try { navigator.vibrate(10); } catch {}
+                }
                 setFilters((prev) => ({ ...prev, parkingTypeFilter: 'street_only' }));
               }}
               style={{
@@ -447,6 +460,9 @@ export const SearchAndFilterHeader: React.FC = () => {
             <button
               id="filter-garages-only"
               onClick={() => {
+                if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                  try { navigator.vibrate(10); } catch {}
+                }
                 setFilters((prev) => ({ ...prev, parkingTypeFilter: 'garages_only' }));
               }}
               style={{
@@ -478,6 +494,9 @@ export const SearchAndFilterHeader: React.FC = () => {
             <button
               id="filter-all-spots"
               onClick={() => {
+                if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                  try { navigator.vibrate(10); } catch {}
+                }
                 setFilters((prev) => ({ ...prev, parkingTypeFilter: 'all' }));
               }}
               style={{

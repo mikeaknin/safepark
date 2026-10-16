@@ -2,11 +2,13 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { useApp } from '../../context/AppContext';
+import { useVehicle } from '../../../context/VehicleContext';
 import { ParkingLocation } from '../../../domain/models/ParkingLocation';
 import { getStatusStyle, SAFE_PARK_TOKENS } from '../../../theme/tokens';
 import { PedestrianRoutingAdapter } from '../../../data/adapters/PedestrianRoutingAdapter';
 import {
   LocateFixed,
+  Crosshair,
   Sun,
   Footprints,
   Compass,
@@ -23,6 +25,8 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
 }) => {
   const {
     selectedCity,
+    setSelectedCity,
+    switchCity,
     currentView,
     locations,
     selectedLocation,
@@ -38,6 +42,8 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     showToast,
     scanLocationsAt,
   } = useApp();
+
+  const { activeVehicle, remainingTimeFormatted } = useVehicle();
 
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
@@ -55,6 +61,27 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
   const [deviceAccuracy, setDeviceAccuracy] = useState<number>(30);
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [viewportVersion, setViewportVersion] = useState<number>(0);
+
+  const triggerLightHaptic = useCallback(() => {
+    if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate(10);
+      } catch {}
+    }
+  }, []);
+
+  const haversineMeters = useCallback((lat1: number, lon1: number, lat2: number, lon2: number): number => {
+    const R = 6371000;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }, []);
 
   // 1. Initialize Real Slippy Leaflet Tile Map with Standard OpenStreetMap Layer & Moveend Pan-to-Scan Listener
   useEffect(() => {
@@ -357,6 +384,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         );
         curbPolyline.on('click', (e) => {
           L.DomEvent.stopPropagation(e);
+          triggerLightHaptic();
           setSelectedLocation(loc);
         });
         curbPolyline.addTo(curbSegmentsGroupRef.current!);
@@ -399,6 +427,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         });
         garageCircle.on('click', (e) => {
           L.DomEvent.stopPropagation(e);
+          triggerLightHaptic();
           setSelectedLocation(loc);
         });
         garageCircle.addTo(curbSegmentsGroupRef.current!);
@@ -412,6 +441,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
 
       marker.on('click', (e) => {
         L.DomEvent.stopPropagation(e);
+        triggerLightHaptic();
         setSelectedLocation(loc);
       });
 
@@ -446,6 +476,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
 
         carMarker.on('click', (e) => {
           L.DomEvent.stopPropagation(e);
+          triggerLightHaptic();
           const matched = locations.find((l) => l.id === activeParkedSession.locationId);
           if (matched) {
             setSelectedLocation(matched);
@@ -580,26 +611,41 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     });
   }, [showLightingHeatmap, locations]);
 
-  // 8. "Locate Me" Handler: GPS Search & Re-center
-  const handleLocateMe = useCallback(() => {
+  // 8. "Safe Radar" One-Tap GPS Locator
+  const handleSafeRadar = useCallback(() => {
     setIsLocating(true);
+    triggerLightHaptic();
 
     if (!navigator.geolocation) {
-      showToast('⚠️ Geolocation is not supported by your browser.');
+      showToast('Location access disabled - centering downtown');
+      const defaultCoords = selectedCity === 'sf' ? [37.7749, -122.4194] : [34.0522, -118.2437];
+      isProgrammaticFlightRef.current = true;
+      mapInstanceRef.current?.flyTo(defaultCoords as [number, number], 16, { animate: true, duration: 1.0 });
+      setTimeout(() => { isProgrammaticFlightRef.current = false; }, 1200);
       setIsLocating(false);
       return;
     }
 
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        const coords = { lat, lng };
         setDeviceCoordinates(coords);
         setDeviceAccuracy(pos.coords.accuracy || 20);
         setIsLocating(false);
 
+        // Metropolitan Detection: If user's latitude > 36.5 -> SF; if < 35.5 -> LA
+        if (lat > 36.5 && selectedCity !== 'sf') {
+          switchCity('sf');
+        } else if (lat < 35.5 && selectedCity !== 'la') {
+          switchCity('la');
+        }
+
+        // Camera Animation: Fly smoothly to user coordinates
         isProgrammaticFlightRef.current = true;
         if (mapInstanceRef.current) {
-          mapInstanceRef.current.flyTo([coords.lat, coords.lng], 16, {
+          mapInstanceRef.current.flyTo([lat, lng], 17, {
             animate: true,
             duration: 1.2,
           });
@@ -608,30 +654,66 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
           isProgrammaticFlightRef.current = false;
         }, 1500);
 
-        // Auto-load nearby spots around current location
-        setSelectedDestination({
-          id: 'gps-current-location',
-          name: 'Current Location',
-          address: 'San Francisco, CA',
-          coordinates: coords,
-        });
+        // Render pulsating blue location ring on userLocationGroupRef
+        if (userLocationGroupRef.current) {
+          userLocationGroupRef.current.clearLayers();
+          const pulseIcon = L.divIcon({
+            className: 'safepark-user-radar-beacon',
+            html: `
+              <div style="position: relative; width: 22px; height: 22px; transform: translate(-50%, -50%); pointer-events: none;">
+                <div style="width: 22px; height: 22px; border-radius: 50%; background-color: #2563EB; border: 3px solid #FFFFFF; box-shadow: 0 2px 10px rgba(37,99,235,0.6);"></div>
+                <div style="position: absolute; inset: -14px; border-radius: 50%; border: 2.5px solid #3B82F6; animation: safepark-radar-pulse 2s cubic-bezier(0, 0, 0.2, 1) infinite; pointer-events: none;"></div>
+              </div>
+            `,
+            iconSize: [0, 0],
+            iconAnchor: [0, 0],
+          });
+          L.marker([lat, lng], { icon: pulseIcon, zIndexOffset: 4000 }).addTo(userLocationGroupRef.current);
+        }
 
-        showToast('📍 Centered on your current GPS location.');
+        // Safe-Spot Highlight: Calculate Haversine distance to all visible parking spots,
+        // automatically select highest-scoring curbside block or garage within 300 meters,
+        // and open its bottom sheet drawer.
+        const spotsWithDistance = locations.map((loc) => ({
+          loc,
+          dist: haversineMeters(lat, lng, loc.coordinates.lat, loc.coordinates.lng),
+        }));
+
+        const within300 = spotsWithDistance.filter((s) => s.dist <= 300);
+        let targetSpot: ParkingLocation | null = null;
+
+        if (within300.length > 0) {
+          within300.sort((a, b) => b.loc.csi.totalScore - a.loc.csi.totalScore);
+          targetSpot = within300[0].loc;
+        } else if (spotsWithDistance.length > 0) {
+          spotsWithDistance.sort((a, b) => a.dist - b.dist);
+          targetSpot = spotsWithDistance[0].loc;
+        }
+
+        if (targetSpot) {
+          setSelectedLocation(targetSpot);
+          showToast(`🎯 Safe Radar: Selected safest spot (${targetSpot.name})`);
+        } else {
+          showToast('📍 Radar centered on your GPS position.');
+        }
       },
       (err) => {
         setIsLocating(false);
-        showToast('⚠️ GPS location access was denied. Showing downtown SF.');
+        showToast('Location access disabled - centering downtown');
+        const defaultCoords = selectedCity === 'sf' ? [37.7749, -122.4194] : [34.0522, -118.2437];
         isProgrammaticFlightRef.current = true;
-        if (mapInstanceRef.current) {
-          mapInstanceRef.current.flyTo([37.7842, -122.4015], 16, { animate: true, duration: 1.0 });
-        }
+        mapInstanceRef.current?.flyTo(defaultCoords as [number, number], 16, { animate: true, duration: 1.0 });
         setTimeout(() => {
           isProgrammaticFlightRef.current = false;
         }, 1500);
       },
-      { enableHighAccuracy: true, timeout: 8000 }
+      {
+        enableHighAccuracy: true,
+        timeout: 5000,
+        maximumAge: 60000,
+      }
     );
-  }, [setSelectedDestination, showToast]);
+  }, [locations, selectedCity, switchCity, setSelectedLocation, showToast, triggerLightHaptic, haversineMeters]);
 
   return (
     <div
@@ -675,11 +757,11 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
           pointerEvents: 'auto',
         }}
       >
-        {/* Locate Me / GPS Button */}
+        {/* Safe Radar / Crosshair GPS Locator Button */}
         <button
-          onClick={handleLocateMe}
-          aria-label="Locate Me (Current GPS Position)"
-          title="Locate Me & Find Nearby Parking"
+          onClick={handleSafeRadar}
+          aria-label="Safe Radar GPS Locator"
+          title="Safe Radar (Scan nearest & safest spots)"
           style={{
             width: '44px',
             height: '44px',
@@ -695,9 +777,10 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
             color: '#2563EB',
             cursor: 'pointer',
             transition: 'all 0.15s ease',
+            touchAction: 'manipulation',
           }}
         >
-          <LocateFixed size={21} style={{ animation: isLocating ? 'spin 1s linear infinite' : 'none' }} />
+          <Crosshair size={21} style={{ animation: isLocating ? 'spin 1s linear infinite' : 'none' }} />
         </button>
 
         {/* Lighting Grid Heatmap Toggle */}
@@ -823,78 +906,84 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         </div>
       )}
 
-      {/* Floating Top Parked Vehicle Banner ("Find My Car" Radar Pill) */}
-      {activeParkedSession && (!activeRoute || activeRoute.mode !== 'safe_walk_return') && (
-        <div
-          onClick={() => {
-            isProgrammaticFlightRef.current = true;
-            mapInstanceRef.current?.flyTo(
-              [activeParkedSession.coordinates.lat, activeParkedSession.coordinates.lng],
-              17,
-              { animate: true, duration: 1.2 }
-            );
-            const matched = locations.find((l) => l.id === activeParkedSession.locationId);
-            if (matched) setSelectedLocation(matched);
-          }}
-          role="button"
-          tabIndex={0}
-          aria-label={`View parked vehicle at ${activeParkedSession.spotName}`}
-          style={{
-            position: 'fixed',
-            top: 'calc(env(safe-area-inset-top, 0px) + 98px)',
-            left: '16px',
-            right: '68px',
-            zIndex: 25,
-            backgroundColor: '#1E293B',
-            color: '#FFFFFF',
-            borderRadius: '14px',
-            padding: '8px 12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '8px',
-            boxShadow: '0 4px 20px rgba(15, 23, 42, 0.35)',
-            border: '1.5px solid rgba(255, 255, 255, 0.15)',
-            cursor: 'pointer',
-            backdropFilter: 'blur(16px)',
-            WebkitBackdropFilter: 'blur(16px)',
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
-            <span style={{ fontSize: '1.1rem' }}>🚗</span>
-            <div style={{ minWidth: 0, flex: 1 }}>
-              <div
-                style={{
-                  fontSize: '0.775rem',
-                  fontWeight: 800,
-                  color: '#F8FAFC',
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                }}
-              >
-                Parked: {activeParkedSession.spotName}
-              </div>
-              <div style={{ fontSize: '0.675rem', color: '#94A3B8', fontWeight: 600 }}>
-                Tap to re-center • Return walk ready
-              </div>
-            </div>
-          </div>
-          <span
+      {/* Floating Top Parked Vehicle Status Badge */}
+      {(activeVehicle || activeParkedSession) && (!activeRoute || activeRoute.mode !== 'safe_walk_return') && (() => {
+        const name = activeVehicle?.name || activeParkedSession?.spotName || 'My Vehicle';
+        const lat = activeVehicle?.lat || activeParkedSession?.coordinates.lat || 0;
+        const lon = activeVehicle?.lon || activeParkedSession?.coordinates.lng || 0;
+        const spotId = activeVehicle?.spotId || activeParkedSession?.locationId;
+        const timeLeft = remainingTimeFormatted || 'Return timer active';
+
+        return (
+          <div
+            onClick={() => {
+              triggerLightHaptic();
+              isProgrammaticFlightRef.current = true;
+              mapInstanceRef.current?.flyTo([lat, lon], 17, { animate: true, duration: 1.2 });
+              const matched = locations.find((l) => l.id === spotId);
+              if (matched) setSelectedLocation(matched);
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label={`Parked: ${name} • ${timeLeft} left`}
             style={{
-              backgroundColor: '#2563EB',
+              position: 'fixed',
+              top: 'calc(env(safe-area-inset-top, 0px) + 98px)',
+              left: '16px',
+              right: '68px',
+              zIndex: 25,
+              backgroundColor: '#0F172A',
               color: '#FFFFFF',
-              padding: '3px 8px',
-              borderRadius: '8px',
-              fontSize: '0.675rem',
-              fontWeight: 800,
-              flexShrink: 0,
+              borderRadius: '14px',
+              padding: '8px 12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px',
+              boxShadow: '0 4px 20px rgba(15, 23, 42, 0.45)',
+              border: '1.5px solid rgba(255, 255, 255, 0.15)',
+              cursor: 'pointer',
+              backdropFilter: 'blur(16px)',
+              WebkitBackdropFilter: 'blur(16px)',
+              touchAction: 'manipulation',
             }}
           >
-            Find My Car
-          </span>
-        </div>
-      )}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0, flex: 1 }}>
+              <span style={{ fontSize: '1.1rem' }}>🚗</span>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div
+                  style={{
+                    fontSize: '0.775rem',
+                    fontWeight: 800,
+                    color: '#F8FAFC',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Parked: {name} • {timeLeft} left
+                </div>
+                <div style={{ fontSize: '0.675rem', color: '#94A3B8', fontWeight: 600 }}>
+                  Tap to re-center • 2-Hr meter countdown active
+                </div>
+              </div>
+            </div>
+            <span
+              style={{
+                backgroundColor: '#2563EB',
+                color: '#FFFFFF',
+                padding: '3px 8px',
+                borderRadius: '8px',
+                fontSize: '0.675rem',
+                fontWeight: 800,
+                flexShrink: 0,
+              }}
+            >
+              Find My Car
+            </span>
+          </div>
+        );
+      })()}
     </div>
   );
 };

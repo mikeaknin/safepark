@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useApp } from '../context/AppContext';
+import { useVehicle } from '../../context/VehicleContext';
 import { ParkingLocation } from '../../domain/models/ParkingLocation';
 import { ParkingFacilityCard } from './ParkingFacilityCard';
 import { ActiveParkedSpotCard } from './ActiveParkedSpotCard';
@@ -48,6 +49,8 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
     liveLoadError,
     retryLiveLoad,
   } = useApp();
+
+  const { parkVehicle, endParkingSession } = useVehicle();
 
   const [snapPoint, setSnapPoint] = useState<SnapPoint>('peek');
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -399,6 +402,10 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                          try { navigator.vibrate(10); } catch {}
+                        }
+                        endParkingSession();
                         clearParkedSpot();
                       }}
                       aria-label="I Left This Spot"
@@ -423,17 +430,24 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                   </>
                 ) : (
                   <>
-                    {/* Get Directions (Google Maps / Apple Maps direct coordinates) */}
-                    <a
-                      href={`https://www.google.com/maps/dir/?api=1&destination=${topRankedSpot.coordinates.lat},${topRankedSpot.coordinates.lng}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      onClick={(e) => e.stopPropagation()}
-                      aria-label={`Get directions to ${topRankedSpot.name} on Google Maps`}
+                    {/* Universal Navigation Action Sheet */}
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                          try { navigator.vibrate(10); } catch {}
+                        }
+                        if (onOpenDirections) {
+                          onOpenDirections(topRankedSpot);
+                        } else {
+                          window.open(`https://www.google.com/maps/dir/?api=1&destination=${topRankedSpot.coordinates.lat},${topRankedSpot.coordinates.lng}`, '_blank');
+                        }
+                      }}
+                      aria-label={`Get directions to ${topRankedSpot.name}`}
                       style={{
                         backgroundColor: '#2563EB',
                         color: '#FFFFFF',
-                        textDecoration: 'none',
+                        border: 'none',
                         borderRadius: '8px',
                         padding: '6px 12px',
                         cursor: 'pointer',
@@ -448,11 +462,23 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                     >
                       <Navigation size={12} />
                       <span>Directions</span>
-                    </a>
+                    </button>
 
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                          try { navigator.vibrate(15); } catch {}
+                        }
+                        parkVehicle({
+                          id: topRankedSpot.id,
+                          name: topRankedSpot.isStreetParking ? (topRankedSpot.blockName || topRankedSpot.name) : topRankedSpot.name,
+                          lat: topRankedSpot.coordinates.lat,
+                          lon: topRankedSpot.coordinates.lng,
+                          blockType: topRankedSpot.infrastructure?.structureType || (topRankedSpot.isStreetParking ? 'curbside_street_metered' : 'covered_underground_garage'),
+                          address: topRankedSpot.address,
+                          csiScore: topRankedSpot.csi?.totalScore,
+                        }, 120);
                         handleParkHere(topRankedSpot);
                       }}
                       aria-label={`Mark parked at ${topRankedSpot.name}`}
@@ -619,8 +645,28 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 }}
                 onInspectCsi={onInspectCsi}
                 onSafeWalk={onSafeWalk}
-                onParkHere={handleParkHere}
-                onLeaveSpot={clearParkedSpot}
+                onParkHere={(targetLoc) => {
+                  if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                    try { navigator.vibrate(15); } catch {}
+                  }
+                  parkVehicle({
+                    id: targetLoc.id,
+                    name: targetLoc.isStreetParking ? (targetLoc.blockName || targetLoc.name) : targetLoc.name,
+                    lat: targetLoc.coordinates.lat,
+                    lon: targetLoc.coordinates.lng,
+                    blockType: targetLoc.infrastructure?.structureType || (targetLoc.isStreetParking ? 'curbside_street_metered' : 'covered_underground_garage'),
+                    address: targetLoc.address,
+                    csiScore: targetLoc.csi?.totalScore,
+                  }, 120);
+                  handleParkHere(targetLoc);
+                }}
+                onLeaveSpot={() => {
+                  if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                    try { navigator.vibrate(10); } catch {}
+                  }
+                  endParkingSession();
+                  clearParkedSpot();
+                }}
                 onReportHazard={onReportHazard}
                 onOpenDirections={onOpenDirections}
               />

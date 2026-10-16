@@ -56,11 +56,11 @@ export const TabBarNavigation: React.FC = () => {
         justifyContent: 'space-around',
         alignItems: 'center',
         paddingTop: '6px',
-        paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+        paddingBottom: 'max(16px, env(safe-area-inset-bottom, 0px))',
         paddingLeft: '12px',
         paddingRight: '12px',
         boxShadow: '0 -4px 20px rgba(15, 23, 42, 0.08)',
-        height: '64px',
+        minHeight: '68px',
       }}
     >
       {tabs.map((tab) => {
@@ -71,7 +71,12 @@ export const TabBarNavigation: React.FC = () => {
             data-testid={tab.testId}
             aria-label={tab.label}
             aria-current={active ? 'page' : undefined}
-            onClick={() => setCurrentView(tab.id)}
+            onClick={() => {
+              if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                try { navigator.vibrate(10); } catch {}
+              }
+              setCurrentView(tab.id);
+            }}
             style={{
               display: 'flex',
               flexDirection: 'column',

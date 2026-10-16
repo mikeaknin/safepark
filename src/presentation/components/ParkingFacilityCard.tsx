@@ -464,18 +464,25 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
           </>
         ) : (
           <>
-            {/* Get Directions (Google Maps / Apple Maps direct coordinates) */}
-            <a
-              href={`https://www.google.com/maps/dir/?api=1&destination=${location.coordinates.lat},${location.coordinates.lng}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(e) => e.stopPropagation()}
-              aria-label={`Get directions to ${location.name} in Google Maps`}
+            {/* Get Directions (Universal Navigation Action Sheet: Apple Maps, Google Maps, Waze) */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (typeof window !== 'undefined' && 'vibrate' in navigator) {
+                  try { navigator.vibrate(10); } catch {}
+                }
+                if (onOpenDirections) {
+                  onOpenDirections(location);
+                } else {
+                  window.open(`https://www.google.com/maps/dir/?api=1&destination=${location.coordinates.lat},${location.coordinates.lng}`, '_blank');
+                }
+              }}
+              aria-label={`Get directions to ${location.name}`}
               style={{
                 flex: '1 1 130px',
                 backgroundColor: '#2563EB',
                 color: '#FFFFFF',
-                textDecoration: 'none',
+                border: 'none',
                 borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
                 padding: '8px 14px',
                 cursor: 'pointer',
@@ -492,7 +499,7 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
             >
               <Navigation size={15} />
               <span>Get Directions</span>
-            </a>
+            </button>
 
             {onParkHere && (
               <button

@@ -39,8 +39,43 @@
 /* Custom Marker Styling */
 .safepark-destination-marker-wrapper,
 .safepark-user-beacon,
+.safepark-user-radar-beacon,
 .safepark-walker-marker,
 .safepark-vehicle-pin {
   background: transparent !important;
   border: none !important;
 }
+
+/* Eliminate 300ms tap delay on mobile and optimize touch response */
+button,
+a,
+[role="button"],
+[role="tab"],
+.leaflet-marker-icon,
+.leaflet-interactive {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Radar Pulsating Animation for GPS User Beacon */
+@keyframes safepark-radar-pulse {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.6);
+    opacity: 0.35;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+/* Safe Area Inset Helpers */
+:root {
+  --safe-top: max(12px, env(safe-area-inset-top, 0px));
+  --safe-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+}
+
