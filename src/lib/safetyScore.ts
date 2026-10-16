@@ -38,7 +38,13 @@ export interface CrimeIncident {
 }
 
 export type SafetyRiskColor = 'green' | 'yellow' | 'red';
-export type SafetyRiskLevel = 'Low Incident Zone' | 'Moderate Risk' | 'High Break-In Frequency';
+export type SafetyRiskLevel =
+  | 'Low Incident Zone'
+  | 'Moderate Risk'
+  | 'High Break-In Frequency'
+  | 'Low Street Break-In Risk'
+  | 'Caution - Moderate Break-Ins Reported'
+  | 'High Smash-and-Grab Frequency';
 
 export interface SafetyScoreResult {
   facilityId: string | number;
@@ -60,6 +66,7 @@ export interface SafetyScoreResult {
   // Master Composite Safety Index (0-100)
   score: number;
   color: SafetyRiskColor;
+  hexColor: string;
   riskLevel: SafetyRiskLevel;
 
   // 3 Distinct Sub-ratings
@@ -99,10 +106,8 @@ export function haversineDistanceMeters(lat1: number, lon1: number, lat2: number
 
 /**
  * Deterministically computes the four scores for a parking facility:
- * A. Break-In Risk Score (0-100)
- * B. Facility Security Score (0-100)
- * C. Lighting & Visibility Score (0-100)
- * D. Composite Safety Index (Master Score 0-100)
+ * A. Curbside Street Parking Break-In Score (0-100)
+ * B. Garage Composite Safety Index (CSI 0-100)
  */
 export function calculateSafetyScore(
   facility: ParkingFacility,
@@ -125,7 +130,7 @@ export function calculateSafetyScore(
       continue;
     }
 
-    // Fast rectangular coordinate pre-filter before calling trigonometric functions
+    // Fast rectangular coordinate pre-filter: skip any incident where Math.abs(lat1 - lat2) > 0.005 or Math.abs(lon1 - lon2) > 0.006
     const dLat = Math.abs(facility.lat - incident.lat);
     const dLon = Math.abs(facility.lon - incident.lon);
     if (dLat > 0.005 || dLon > 0.006) {
@@ -165,36 +170,50 @@ export function calculateSafetyScore(
   let lightingScore = 80;
   let lightingLabel = 'Ambient Street Lighting';
   let displayText = '';
+  let color: SafetyRiskColor = 'green';
+  let riskLevel: SafetyRiskLevel = 'Low Incident Zone';
 
   const smashCount = incidentsWithin150m;
-  const smashAndGrabWarning = `${smashCount} break-in${smashCount === 1 ? '' : 's'} reported on this block in past 90 days`;
+  const smashAndGrabWarning = `${smashCount} break-in${smashCount === 1 ? '' : 's'} reported within 150m in past 90 days`;
 
   if (isStreet) {
-    // Street Parking Score: Focused on smash-and-grab risk.
-    // Count police vehicle break-ins within 150m of the block over the past 90 days.
-    // Deduct 5 points per incident within 100m; 2.5 points between 100m and 200m. Floor at 10.
-    const rawStreetScore = 100 - (incidentsWithin100m * 5) - (incidents100to200m * 2.5);
+    // A. Curbside Street Parking Break-In Score:
+    // Evaluates immediate smash-and-grab density. Count vehicle crimes within 200m using the Haversine equation:
+    // Score = Math.max(10, 100 - (6 * crimes_within_100m) - (3 * crimes_between_100m_and_200m))
+    const rawStreetScore = 100 - (6 * incidentsWithin100m) - (3 * incidents100to200m);
     masterScore = Math.max(10, Math.min(100, Math.round(rawStreetScore)));
     breakInScore = masterScore;
 
-    if (breakInScore < 60) {
-      breakInLabel = 'High Break-in Frequency';
-    } else if (breakInScore < 80) {
-      breakInLabel = 'Moderate Risk';
+    // 80 to 100: Low Street Break-In Risk (Green #16A34A)
+    // 60 to 79: Caution - Moderate Break-Ins Reported (Yellow #CA8A04)
+    // Under 60: High Smash-and-Grab Frequency (Red #DC2626)
+    if (masterScore >= 80) {
+      color = 'green';
+      breakInLabel = 'Low Street Break-In Risk';
+      riskLevel = 'Low Street Break-In Risk';
+    } else if (masterScore >= 60) {
+      color = 'yellow';
+      breakInLabel = 'Caution - Moderate Break-Ins Reported';
+      riskLevel = 'Caution - Moderate Break-Ins Reported';
     } else {
-      breakInLabel = 'Low Break-in Risk';
+      color = 'red';
+      breakInLabel = 'High Smash-and-Grab Frequency';
+      riskLevel = 'High Smash-and-Grab Frequency';
     }
 
     facilitySecurityScore = 35;
-    facilitySecurityLabel = 'Curbside Street Block';
+    facilitySecurityLabel = 'Curbside Street Parking';
     lightingScore = 70;
     lightingLabel = 'Ambient Street Lighting';
     displayText = smashAndGrabWarning;
   } else {
-    // Garage / Lot Score: Maintain 3-factor CSI (Break-In Risk 50%, Structure/Gate Security 35%, Lighting 15%)
-    // A. Break-In Risk Score (0-100)
-    const rawBreakInScore = 100 - incidentsWithin250m * 4 - incidents250to500m * 2;
-    breakInScore = Math.max(10, Math.min(100, Math.round(rawBreakInScore)));
+    // B. Garage Composite Safety Index (CSI):
+    // Multi-factor weighted scorecard: Score = Math.round(0.50 * CrimeScore + 0.35 * FacilityScore + 0.15 * LightingScore)
+
+    // CrimeScore: 100 - (4 * crimes_<250m) - (2 * crimes_250-500m), floor 10.
+    const rawCrimeScore = 100 - incidentsWithin250m * 4 - incidents250to500m * 2;
+    const crimeScore = Math.max(10, Math.min(100, Math.round(rawCrimeScore)));
+    breakInScore = crimeScore;
 
     if (breakInScore < 60) {
       breakInLabel = 'High Break-in Frequency';
@@ -204,17 +223,17 @@ export function calculateSafetyScore(
       breakInLabel = 'Low Break-in Risk';
     }
 
-    // B. Facility Security Score (0-100)
-    let facilitySecurity = 50;
+    // FacilityScore: Base 50; +30 for underground/multi-storey; +15 for covered; +15 for gated/monitored/fee; -10 for open unmonitored lots. Clamp 15 to 98.
+    let facilityScore = 50;
     const pType = (facility.type || facility.tags?.parking || '').toLowerCase();
     const isUnderground = pType.includes('underground');
     const isMultiStorey = pType.includes('multi-storey') || pType.includes('deck');
     const isCovered = pType.includes('covered') || facility.tags?.covered === 'yes' || facility.covered === 'yes';
 
     if (isUnderground || isMultiStorey) {
-      facilitySecurity += 30;
+      facilityScore += 30;
     } else if (isCovered) {
-      facilitySecurity += 15;
+      facilityScore += 15;
     }
 
     const tags = facility.tags || {};
@@ -232,9 +251,9 @@ export function calculateSafetyScore(
     const isOpenSurfaceUnrestricted = !isUnderground && !isMultiStorey && !isCovered && !isGatedOrMonitored;
 
     if (isGatedOrMonitored) {
-      facilitySecurity += 15;
+      facilityScore += 15;
     } else if (isOpenSurfaceUnrestricted) {
-      facilitySecurity -= 10;
+      facilityScore -= 10;
     }
 
     const capNum = typeof facility.capacity === 'number'
@@ -242,10 +261,10 @@ export function calculateSafetyScore(
       : parseInt(String(facility.capacity || tags.capacity || '0'), 10);
 
     if (!isNaN(capNum) && capNum > 0) {
-      facilitySecurity += 5;
+      facilityScore += 5;
     }
 
-    facilitySecurityScore = Math.max(15, Math.min(98, Math.round(facilitySecurity)));
+    facilitySecurityScore = Math.max(15, Math.min(98, Math.round(facilityScore)));
 
     facilitySecurityLabel = 'Open Unrestricted Surface';
     if (isUnderground) {
@@ -258,31 +277,21 @@ export function calculateSafetyScore(
       facilitySecurityLabel = 'Controlled Access Surface Lot';
     }
 
-    // C. Lighting & Visibility Score (0-100)
+    // LightingScore: 85 for enclosed underground garages 24/7; open lots receive 90 during the day, dropping to 55 at night (or 75 if tagged lit=yes).
     const now = evaluationDate || new Date();
     const currentHours = now.getHours() + now.getMinutes() / 60;
-    const isAfterDusk = currentHours >= 18.5 || currentHours < 6.5;
+    const isNight = currentHours >= 18.5 || currentHours < 6.5;
 
-    lightingScore = 90;
-    lightingLabel = 'Day-lit Open Deck';
     const litTag = (facility.lit || tags.lit || '').toLowerCase();
     const isEnclosed = isUnderground || isCovered;
 
-    if (!isAfterDusk) {
-      if (isEnclosed) {
-        lightingScore = 85;
-        lightingLabel = '24/7 Enclosed Lighting';
-      } else if (isMultiStorey) {
-        lightingScore = 85;
-        lightingLabel = 'Day-lit Open Deck';
-      } else {
+    if (isEnclosed) {
+      lightingScore = 85;
+      lightingLabel = '24/7 Enclosed Lighting';
+    } else {
+      if (!isNight) {
         lightingScore = 90;
         lightingLabel = 'Day-lit Open Deck';
-      }
-    } else {
-      if (isEnclosed) {
-        lightingScore = 85;
-        lightingLabel = '24/7 Enclosed Lighting';
       } else {
         if (litTag === 'yes') {
           lightingScore = 75;
@@ -297,22 +306,25 @@ export function calculateSafetyScore(
       }
     }
 
-    // D. Composite Safety Index (CSI - Master Score 0-100)
-    const weightedCsi = breakInScore * 0.50 + facilitySecurityScore * 0.35 + lightingScore * 0.15;
-    masterScore = Math.max(10, Math.min(100, Math.round(weightedCsi)));
+    // Garage Composite Safety Index (CSI):
+    // Score = Math.round(0.50 * CrimeScore + 0.35 * FacilityScore + 0.15 * LightingScore)
+    const weightedCsi = Math.round(0.50 * crimeScore + 0.35 * facilitySecurityScore + 0.15 * lightingScore);
+    masterScore = Math.max(10, Math.min(100, weightedCsi));
     displayText = `${total500m} vehicle incident${total500m === 1 ? '' : 's'} within 500m in past 90 days`;
+
+    if (masterScore < 60) {
+      color = 'red';
+      riskLevel = 'High Break-In Frequency';
+    } else if (masterScore < 80) {
+      color = 'yellow';
+      riskLevel = 'Moderate Risk';
+    } else {
+      color = 'green';
+      riskLevel = 'Low Incident Zone';
+    }
   }
 
-  let color: SafetyRiskColor = 'green';
-  let riskLevel: SafetyRiskLevel = 'Low Incident Zone';
-
-  if (masterScore < 60) {
-    color = 'red';
-    riskLevel = 'High Break-In Frequency';
-  } else if (masterScore < 80) {
-    color = 'yellow';
-    riskLevel = 'Moderate Risk';
-  }
+  const hexColor = color === 'green' ? '#16A34A' : color === 'yellow' ? '#CA8A04' : '#DC2626';
 
   return {
     facilityId: facility.id,
@@ -332,6 +344,7 @@ export function calculateSafetyScore(
     smashAndGrabWarning,
     score: masterScore,
     color,
+    hexColor,
     riskLevel,
     breakInScore,
     breakInLabel,

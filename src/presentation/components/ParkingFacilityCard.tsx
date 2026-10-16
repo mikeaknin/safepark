@@ -201,14 +201,16 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
                 fontWeight: 800,
               }}
             >
-              🚗 Curbside Metered
+              🚗 Curbside Parking
             </span>
             <span>•</span>
             <span style={{ fontWeight: 800, color: '#2563EB' }}>
               {location.meterRate || `$${location.hourlyRate.toFixed(2)}/hr`}
             </span>
             <span>•</span>
-            <span style={{ fontWeight: 600 }}>{location.timeLimit || '2-Hr Limit'}</span>
+            <span style={{ fontWeight: 600 }}>
+              {location.timeLimit ? (location.timeLimit.toLowerCase().includes('max') ? location.timeLimit : `${location.timeLimit} Max`) : '2-Hr Max'}
+            </span>
           </>
         ) : (
           <>
@@ -267,7 +269,7 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
             <AlertTriangle size={18} color={isRed ? '#DC2626' : isYellow ? '#CA8A04' : '#15803D'} />
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: '0.8rem', fontWeight: 800, color: isRed ? '#991B1B' : isYellow ? '#854D0E' : '#166534' }}>
-                {location.smashAndGrabWarning || `${smashAndGrabCount} break-in${smashAndGrabCount === 1 ? '' : 's'} reported on this block in past 90 days`}
+                {location.smashAndGrabWarning || `${smashAndGrabCount} break-in${smashAndGrabCount === 1 ? '' : 's'} reported within 150m in past 90 days`}
               </div>
               <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '2px' }}>
                 Curbside spots have open street exposure without attendant or security gate.
@@ -279,7 +281,7 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 4px', fontSize: '0.775rem' }}>
             <span style={{ color: '#64748B', fontWeight: 600 }}>Curb Meter Policy:</span>
             <span style={{ fontWeight: 800, color: '#0F172A' }}>
-              {location.meterRate || `$${location.hourlyRate.toFixed(2)}/hr`} • {location.timeLimit || '2-Hr Time Limit'}
+              {location.meterRate || `$${location.hourlyRate.toFixed(2)}/hr`} • {location.timeLimit ? (location.timeLimit.toLowerCase().includes('max') ? location.timeLimit : `${location.timeLimit} Max`) : '2-Hr Max'}
             </span>
           </div>
         </div>

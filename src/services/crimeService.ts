@@ -62,18 +62,32 @@ export class CrimeService {
 
     try {
       if (city === 'sf') {
-        const url = new URL('https://data.sfgov.org/resource/wg3w-h783.json');
-        url.searchParams.set('$select', 'incident_datetime, incident_category, incident_subcategory, latitude, longitude');
+        const url = new URL('https://data.sf.gov/resource/wg3w-h783.json');
+        url.searchParams.set('$select', 'incident_datetime,incident_category,incident_subcategory,latitude,longitude');
         url.searchParams.set(
           '$where',
-          `incident_date >= '${ninetyDaysAgo}' AND incident_category in ('Larceny Theft', 'Motor Vehicle Theft', 'Burglary') AND latitude IS NOT NULL`
+          `incident_date >= '${ninetyDaysAgo}T00:00:00.000' AND incident_category in ('Larceny Theft', 'Motor Vehicle Theft', 'Burglary') AND latitude IS NOT NULL`
         );
         url.searchParams.set('$limit', '1500');
 
-        const resp = await fetch(url.toString(), {
+        let resp = await fetch(url.toString(), {
           headers: { Accept: 'application/json' },
           signal,
         });
+
+        if (!resp.ok) {
+          const fallbackUrl = new URL('https://data.sfgov.org/resource/wg3w-h783.json');
+          fallbackUrl.searchParams.set('$select', 'incident_datetime,incident_category,incident_subcategory,latitude,longitude');
+          fallbackUrl.searchParams.set(
+            '$where',
+            `incident_date >= '${ninetyDaysAgo}T00:00:00.000' AND incident_category in ('Larceny Theft', 'Motor Vehicle Theft', 'Burglary') AND latitude IS NOT NULL`
+          );
+          fallbackUrl.searchParams.set('$limit', '1500');
+          resp = await fetch(fallbackUrl.toString(), {
+            headers: { Accept: 'application/json' },
+            signal,
+          });
+        }
 
         if (resp.ok) {
           const raw = await resp.json();
@@ -97,10 +111,10 @@ export class CrimeService {
         }
       } else {
         const url = new URL('https://data.lacity.org/resource/2nrs-mtv8.json');
-        url.searchParams.set('$select', 'dr_no, date_occ, crm_cd_desc, lat, lon');
+        url.searchParams.set('$select', 'dr_no,date_occ,crm_cd_desc,lat,lon');
         url.searchParams.set(
           '$where',
-          `date_occ >= '${ninetyDaysAgo}' AND (crm_cd_desc like '%THEFT FROM MOTOR VEHICLE%' or crm_cd_desc like '%BURGLARY FROM VEHICLE%' or crm_cd_desc like '%VEHICLE, STOLEN%') AND lat > 0`
+          `date_occ >= '${ninetyDaysAgo}T00:00:00.000' AND (crm_cd_desc like '%THEFT FROM MOTOR VEHICLE%' or crm_cd_desc like '%BURGLARY FROM VEHICLE%' or crm_cd_desc like '%VEHICLE, STOLEN%') AND lat > 0`
         );
         url.searchParams.set('$limit', '1500');
 

@@ -250,12 +250,19 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
 
       {/* Peek Mode (120px fixed height): Dedicated Full-Width Title Row & Unclipped Action Bar */}
       {snapPoint === 'peek' && topRankedSpot && activeSpotStatus && (() => {
-        const isMeter = topRankedSpot.infrastructure.structureType === 'curbside_street_metered';
-        const is2Hr = topRankedSpot.hourlyRate === 0 || topRankedSpot.infrastructure.structureType === 'curbside_residential';
-        const tagText = isMeter ? '🅿️ Meter' : is2Hr ? '⏱️ 2-Hr Free' : '🏢 Garage';
-        const tagBg = isMeter ? '#EFF6FF' : is2Hr ? '#ECFDF5' : '#FAF5FF';
-        const tagColor = isMeter ? '#1D4ED8' : is2Hr ? '#047857' : '#7E22CE';
-        const tagBorder = isMeter ? '#BFDBFE' : is2Hr ? '#A7F3D0' : '#E9D5FF';
+        const isStreet = Boolean(
+          topRankedSpot.isStreetParking ||
+          topRankedSpot.infrastructure.structureType === 'curbside_street_metered' ||
+          topRankedSpot.infrastructure.structureType === 'curbside_residential'
+        );
+        const tagText = isStreet ? '🚗 Curbside Parking' : '🏢 Garage';
+        const tagBg = isStreet ? '#ECFDF5' : '#FAF5FF';
+        const tagColor = isStreet ? '#047857' : '#7E22CE';
+        const tagBorder = isStreet ? '#A7F3D0' : '#E9D5FF';
+
+        const curbLimit = topRankedSpot.timeLimit
+          ? (topRankedSpot.timeLimit.toLowerCase().includes('max') ? topRankedSpot.timeLimit : `${topRankedSpot.timeLimit} Max`)
+          : '2-Hr Max';
 
         return (
           <div
@@ -283,9 +290,9 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                   margin: 0,
                   lineHeight: 1.25,
                 }}
-                title={topRankedSpot.name}
+                title={isStreet ? (topRankedSpot.blockName || topRankedSpot.name) : topRankedSpot.name}
               >
-                {topRankedSpot.name}
+                {isStreet ? (topRankedSpot.blockName || topRankedSpot.name) : topRankedSpot.name}
               </h3>
             </div>
 
@@ -340,14 +347,18 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                     whiteSpace: 'nowrap',
                   }}
                 >
-                  🛡️ CSI {topRankedSpot.csi.totalScore}
+                  🛡️ {topRankedSpot.csi.totalScore}
                 </span>
 
-                <span style={{ fontWeight: 800, color: topRankedSpot.hourlyRate === 0 ? '#15803D' : '#2563EB', fontSize: '0.75rem' }}>
-                  {topRankedSpot.hourlyRate === 0 ? 'Free' : `$${topRankedSpot.hourlyRate.toFixed(2)}/hr`}
+                <span style={{ fontWeight: 800, color: '#2563EB', fontSize: '0.75rem' }}>
+                  {isStreet
+                    ? `${topRankedSpot.meterRate || '$3.50/hr'} • ${curbLimit}`
+                    : topRankedSpot.hourlyRate === 0
+                    ? 'Free'
+                    : `$${topRankedSpot.hourlyRate.toFixed(2)}/hr`}
                 </span>
 
-                {currentLitRoute && (
+                {currentLitRoute && !isStreet && (
                   <span style={{ color: '#15803D', fontWeight: 700, fontSize: '0.725rem' }}>
                     • {currentLitRoute.estimatedWalkingMinutes}m walk
                   </span>

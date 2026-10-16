@@ -1,8 +1,5 @@
-/**
- * Vercel Serverless Function: /api/parking?city=[sf|la]
- * Queries OpenStreetMap Overpass API with a 7000ms timeout and merges live results
- * with verified named municipal garages.
- */
+import sfStreetBackup from '../src/data/sf_street_backup.json';
+import laStreetBackup from '../src/data/la_street_backup.json';
 
 export interface NormalizedParkingFacility {
   id: string;
@@ -95,8 +92,26 @@ function parseOverpassElement(elem: any, cityName: string): NormalizedParkingFac
   if (typeof lat !== 'number' || typeof lon !== 'number') return null;
 
   const tags = elem.tags || {};
-  let name = tags.name;
 
+  // Strict Filtering: Exclude any facility tagged with access=private, access=customers, or capacity < 15.
+  const access = (tags.access || '').toLowerCase();
+  if (access === 'private' || access === 'customers' || access === 'permit' || access === 'no') {
+    return null;
+  }
+
+  if (tags.capacity) {
+    const cap = parseInt(String(tags.capacity), 10);
+    if (!isNaN(cap) && cap < 15) {
+      return null;
+    }
+  }
+
+  // Drop any element without a valid name or street address.
+  if (!tags.name && !tags['addr:street']) {
+    return null;
+  }
+
+  let name = tags.name;
   if (!name) {
     if (tags.operator) {
       const streetOrNum = tags['addr:street'] || tags['addr:housenumber'] || 'Facility';
@@ -104,9 +119,6 @@ function parseOverpassElement(elem: any, cityName: string): NormalizedParkingFac
     } else if (tags['addr:street']) {
       const houseNumber = tags['addr:housenumber'] ? `${tags['addr:housenumber']} ` : '';
       name = `${houseNumber}${tags['addr:street']} Parking`.trim();
-    } else {
-      // Drop any Overpass node that has NO name, NO operator, and NO street address.
-      return null;
     }
   }
 
@@ -131,12 +143,14 @@ function parseOverpassElement(elem: any, cityName: string): NormalizedParkingFac
     access: tags.access,
     barrier: tags.barrier,
     lit: tags.lit,
+    isStreetParking: false,
   };
 }
 
 /**
  * Merges live Overpass results with verified anchor garages, guaranteeing
  * prominent named city garages are always visible without duplicates.
+ * Deduplicates Overpass results against anchor garages using an 80m spatial proximity window.
  */
 function mergeWithVerifiedAnchors(
   anchors: NormalizedParkingFacility[],
@@ -162,7 +176,7 @@ function mergeWithVerifiedAnchors(
       if (anchor.id === live.id) return true;
       if (anchor.name.toLowerCase() === live.name.toLowerCase()) return true;
       const d = getDistanceMeters(anchor.lat, anchor.lon, live.lat, live.lon);
-      return d < 70;
+      return d < 80;
     });
 
     if (!isDuplicate) {
@@ -193,39 +207,59 @@ function haversineDistMeters(lat1: number, lon1: number, lat2: number, lon2: num
 
 /**
  * On-Street Curbside Parking Feeder:
- * SF: Query https://data.sf.gov/resource/8vzz-qzz9.json ($where=active_meter_flag in ('M', 'T') AND latitude IS NOT NULL&$limit=1500)
- *     Cluster individual meters within 60 meters on the same street into single "Street Parking Blocks".
- * LA: Query https://data.lacity.org/resource/s49e-q6j2.json ($where=latlng IS NOT NULL&$limit=1500)
- *     Group spaces sharing the same blockface into "Street Parking Blocks".
+ * SF (SFMTA Meter Inventory):
+ *   Primary URL: https://data.sf.gov/resource/8vzz-qzz9.json
+ *   SODA Query: $select=post_id,street_name,street_num,active_meter_flag,on_offstreet_type,latitude,longitude&$where=active_meter_flag in ('M', 'T') AND on_offstreet_type = 'ON' AND latitude IS NOT NULL&$limit=2000
+ *   Clustering Logic: Group individual meters along the same street_name located within 60 meters of each other into a single "Street Parking Block". Coordinate is spatial centroid.
+ * LA (LADOT Metered Inventory):
+ *   Primary URL: https://data.lacity.org/resource/s49e-q6j2.json
+ *   SODA Query: $select=spaceid,blockface,ratetype,raterange,timelimit,lat,lon&$where=lat > 0&$limit=2000
+ *   Clustering Logic: Group spaces sharing the same blockface into a single "Street Parking Block". Assign midpoint coordinate.
+ * Resilient Static Fallback: Pre-bundled sf_street_backup.json and la_street_backup.json.
  */
 export async function fetchCurbsideMeters(city: 'sf' | 'la'): Promise<NormalizedParkingFacility[]> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 6500);
 
+  const getStreetFallback = (): NormalizedParkingFacility[] => {
+    const list = city === 'sf' ? sfStreetBackup : laStreetBackup;
+    return (list as any[]).map((item) => ({
+      ...item,
+      isStreetParking: true,
+      type: 'curbside_street_metered',
+      access: 'public',
+      fee: 'yes',
+    }));
+  };
+
   try {
     if (city === 'sf') {
-      const sfUrl =
-        "https://data.sf.gov/resource/8vzz-qzz9.json?$where=active_meter_flag%20in%20('M',%20'T')%20AND%20latitude%20IS%20NOT%20NULL&$limit=1500";
-      const resp = await fetch(sfUrl, {
+      const sfUrl = new URL('https://data.sf.gov/resource/8vzz-qzz9.json');
+      sfUrl.searchParams.set('$select', 'post_id,street_name,street_num,active_meter_flag,on_offstreet_type,latitude,longitude');
+      sfUrl.searchParams.set('$where', "active_meter_flag in ('M', 'T') AND on_offstreet_type = 'ON' AND latitude IS NOT NULL");
+      sfUrl.searchParams.set('$limit', '2000');
+
+      const resp = await fetch(sfUrl.toString(), {
         headers: { Accept: 'application/json' },
         signal: controller.signal,
       });
       clearTimeout(timeout);
-      if (!resp.ok) return [];
+      if (!resp.ok) return getStreetFallback();
       const meters = await resp.json();
-      if (!Array.isArray(meters) || meters.length === 0) return [];
+      if (!Array.isArray(meters) || meters.length === 0) return getStreetFallback();
 
-      const byStreet: Record<string, { lat: number; lon: number; num: number }[]> = {};
+      const byStreet: Record<string, { lat: number; lon: number; num: number; id: string }[]> = {};
       for (const m of meters) {
         const lat = parseFloat(m.latitude);
         const lon = parseFloat(m.longitude);
-        if (isNaN(lat) || isNaN(lon)) continue;
+        if (isNaN(lat) || isNaN(lon) || lat === 0 || lon === 0) continue;
         const st = (m.street_name || 'Street').trim().toUpperCase();
         if (!byStreet[st]) byStreet[st] = [];
         byStreet[st].push({
           lat,
           lon,
           num: parseInt(m.street_num || '0', 10),
+          id: m.post_id || '',
         });
       }
 
@@ -233,7 +267,7 @@ export async function fetchCurbsideMeters(city: 'sf' | 'la'): Promise<Normalized
       for (const [street, items] of Object.entries(byStreet)) {
         items.sort((a, b) => a.num - b.num || a.lat - b.lat);
         const clusters: {
-          items: { lat: number; lon: number; num: number }[];
+          items: typeof items;
           centerLat: number;
           centerLon: number;
           nums: number[];
@@ -294,19 +328,31 @@ export async function fetchCurbsideMeters(city: 'sf' | 'la'): Promise<Normalized
           });
         }
       }
-      return streetBlocks;
+      return streetBlocks.length > 0 ? streetBlocks : getStreetFallback();
     } else {
       // LA LADOT
-      const laUrl =
-        'https://data.lacity.org/resource/s49e-q6j2.json?$where=latlng%20IS%20NOT%20NULL&$limit=1500';
-      const resp = await fetch(laUrl, {
-        headers: { Accept: 'application/json' },
-        signal: controller.signal,
-      });
+      let spaces: any[] = [];
+      const laUrl = new URL('https://data.lacity.org/resource/s49e-q6j2.json');
+      laUrl.searchParams.set('$where', 'latlng IS NOT NULL');
+      laUrl.searchParams.set('$limit', '2000');
+
+      try {
+        const resp = await fetch(laUrl.toString(), {
+          headers: { Accept: 'application/json' },
+          signal: controller.signal,
+        });
+        if (resp.ok) {
+          const json = await resp.json();
+          if (Array.isArray(json) && json.length > 0) {
+            spaces = json;
+          }
+        }
+      } catch {
+        // Fallback below
+      }
       clearTimeout(timeout);
-      if (!resp.ok) return [];
-      const spaces = await resp.json();
-      if (!Array.isArray(spaces) || spaces.length === 0) return [];
+
+      if (spaces.length === 0) return getStreetFallback();
 
       const clusters: Record<
         string,
@@ -321,9 +367,9 @@ export async function fetchCurbsideMeters(city: 'sf' | 'la'): Promise<Normalized
       > = {};
 
       for (const s of spaces) {
-        const lat = parseFloat(s.latlng?.latitude);
-        const lon = parseFloat(s.latlng?.longitude);
-        if (isNaN(lat) || isNaN(lon)) continue;
+        const lat = parseFloat(s.lat ?? s.latlng?.latitude);
+        const lon = parseFloat(s.lon ?? s.latlng?.longitude);
+        if (isNaN(lat) || isNaN(lon) || lat <= 0) continue;
         const bf = (s.blockface || 'Block').trim();
         if (!clusters[bf]) {
           clusters[bf] = {
@@ -374,17 +420,18 @@ export async function fetchCurbsideMeters(city: 'sf' | 'la'): Promise<Normalized
         };
       });
 
-      return streetBlocks;
+      return streetBlocks.length > 0 ? streetBlocks : getStreetFallback();
     }
   } catch {
     clearTimeout(timeout);
-    return [];
+    return getStreetFallback();
   }
 }
 
 /**
  * Off-Street Garages & Lots Feeder:
  * Merges verified anchor municipal garages with named Overpass garages.
+ * Uses strict 6000ms AbortController timeout.
  */
 export async function fetchOffStreetGarages(city: 'sf' | 'la'): Promise<NormalizedParkingFacility[]> {
   const verifiedAnchors = (city === 'la' ? LA_VERIFIED_PARKING : SF_VERIFIED_PARKING).map((f) => ({
@@ -397,7 +444,7 @@ export async function fetchOffStreetGarages(city: 'sf' | 'la'): Promise<Normaliz
 
   for (const endpoint of OVERPASS_ENDPOINTS) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 6500);
+    const timeout = setTimeout(() => controller.abort(), 6000);
 
     try {
       const resp = await fetch(endpoint, {
@@ -418,16 +465,7 @@ export async function fetchOffStreetGarages(city: 'sf' | 'la'): Promise<Normaliz
       if (!json || !Array.isArray(json.elements) || json.elements.length === 0) continue;
 
       const parsedLive = json.elements
-        .map((elem: any) => {
-          const parsed = parseOverpassElement(elem, cityName);
-          if (parsed) {
-            // Filter out private or employee-only facilities
-            const access = (parsed.access || '').toLowerCase();
-            if (access === 'private' || access === 'permit' || access === 'no') return null;
-            parsed.isStreetParking = false;
-          }
-          return parsed;
-        })
+        .map((elem: any) => parseOverpassElement(elem, cityName))
         .filter(Boolean) as NormalizedParkingFacility[];
 
       const merged = mergeWithVerifiedAnchors(verifiedAnchors, parsedLive);

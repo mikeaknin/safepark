@@ -28,11 +28,12 @@ export async function fetchLiveCrimes(city: 'sf' | 'la'): Promise<NormalizedCrim
   const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   if (city === 'sf') {
-    const url = new URL('https://data.sfgov.org/resource/wg3w-h783.json');
-    url.searchParams.set('$select', 'incident_datetime, incident_category, incident_subcategory, latitude, longitude');
+    // Primary URL data.sf.gov avoids meta-refresh redirects from data.sfgov.org
+    const url = new URL('https://data.sf.gov/resource/wg3w-h783.json');
+    url.searchParams.set('$select', 'incident_datetime,incident_category,incident_subcategory,latitude,longitude');
     url.searchParams.set(
       '$where',
-      `incident_date >= '${ninetyDaysAgo}' AND incident_category in ('Larceny Theft', 'Motor Vehicle Theft', 'Burglary') AND latitude IS NOT NULL`
+      `incident_date >= '${ninetyDaysAgo}T00:00:00.000' AND incident_category in ('Larceny Theft', 'Motor Vehicle Theft', 'Burglary') AND latitude IS NOT NULL`
     );
     url.searchParams.set('$limit', '1500');
 
@@ -40,13 +41,31 @@ export async function fetchLiveCrimes(city: 'sf' | 'la'): Promise<NormalizedCrim
     const timeout = setTimeout(() => controller.abort(), 8000);
 
     try {
-      const resp = await fetch(url.toString(), {
+      let resp = await fetch(url.toString(), {
         headers: {
           Accept: 'application/json',
           'User-Agent': 'SafePark/1.0 (https://safepark-pearl.vercel.app)',
         },
         signal: controller.signal,
       });
+
+      if (!resp.ok) {
+        // Fallback to data.sfgov.org if data.sf.gov is unreachable
+        const fallbackUrl = new URL('https://data.sfgov.org/resource/wg3w-h783.json');
+        fallbackUrl.searchParams.set('$select', 'incident_datetime,incident_category,incident_subcategory,latitude,longitude');
+        fallbackUrl.searchParams.set(
+          '$where',
+          `incident_date >= '${ninetyDaysAgo}T00:00:00.000' AND incident_category in ('Larceny Theft', 'Motor Vehicle Theft', 'Burglary') AND latitude IS NOT NULL`
+        );
+        fallbackUrl.searchParams.set('$limit', '1500');
+        resp = await fetch(fallbackUrl.toString(), {
+          headers: {
+            Accept: 'application/json',
+            'User-Agent': 'SafePark/1.0 (https://safepark-pearl.vercel.app)',
+          },
+          signal: controller.signal,
+        });
+      }
       clearTimeout(timeout);
 
       if (!resp.ok) {
@@ -85,10 +104,10 @@ export async function fetchLiveCrimes(city: 'sf' | 'la'): Promise<NormalizedCrim
     }
   } else if (city === 'la') {
     const url = new URL('https://data.lacity.org/resource/2nrs-mtv8.json');
-    url.searchParams.set('$select', 'dr_no, date_occ, crm_cd_desc, lat, lon');
+    url.searchParams.set('$select', 'dr_no,date_occ,crm_cd_desc,lat,lon');
     url.searchParams.set(
       '$where',
-      `date_occ >= '${ninetyDaysAgo}' AND (crm_cd_desc like '%THEFT FROM MOTOR VEHICLE%' or crm_cd_desc like '%BURGLARY FROM VEHICLE%' or crm_cd_desc like '%VEHICLE, STOLEN%') AND lat > 0`
+      `date_occ >= '${ninetyDaysAgo}T00:00:00.000' AND (crm_cd_desc like '%THEFT FROM MOTOR VEHICLE%' or crm_cd_desc like '%BURGLARY FROM VEHICLE%' or crm_cd_desc like '%VEHICLE, STOLEN%') AND lat > 0`
     );
     url.searchParams.set('$limit', '1500');
 
@@ -111,7 +130,7 @@ export async function fetchLiveCrimes(city: 'sf' | 'la'): Promise<NormalizedCrim
       // fallback to the most recent 1500 records ordered by date_occ DESC
       if (!Array.isArray(raw) || raw.length === 0) {
         const fallbackUrl = new URL('https://data.lacity.org/resource/2nrs-mtv8.json');
-        fallbackUrl.searchParams.set('$select', 'dr_no, date_occ, crm_cd_desc, lat, lon');
+        fallbackUrl.searchParams.set('$select', 'dr_no,date_occ,crm_cd_desc,lat,lon');
         fallbackUrl.searchParams.set(
           '$where',
           `(crm_cd_desc like '%THEFT FROM MOTOR VEHICLE%' or crm_cd_desc like '%BURGLARY FROM VEHICLE%' or crm_cd_desc like '%VEHICLE, STOLEN%') AND lat > 0`

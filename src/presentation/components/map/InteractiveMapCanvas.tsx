@@ -285,8 +285,8 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
       return distA - distB;
     });
 
-    // Strictly cap at top 40 locations to completely eliminate overlapping clutter
-    const visibleLocations = inBoundsLocations.slice(0, 40);
+    // Strictly cap at top 50 locations to guarantee smooth 60 FPS performance on mobile
+    const visibleLocations = inBoundsLocations.slice(0, 50);
 
     visibleLocations.forEach((loc) => {
       const isSelected = selectedLocation?.id === loc.id;
@@ -299,23 +299,23 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
       const score = loc.csi.totalScore;
 
       // Color-coding rules:
-      // Green: 80-100
-      // Yellow: 60-79
-      // Red: <60
-      let pinColor = '#10B981';
-      let garageBg = '#047857';
+      // Green: 80 to 100 (#16A34A)
+      // Yellow: 60 to 79 (#CA8A04)
+      // Red: Under 60 (#DC2626)
+      let pinColor = '#16A34A';
+      let garageBg = '#15803D';
       if (score < 60) {
-        pinColor = '#EF4444';
-        garageBg = '#B91C1C';
+        pinColor = '#DC2626';
+        garageBg = '#991B1B';
       } else if (score < 80) {
-        pinColor = '#F59E0B';
-        garageBg = '#D97706';
+        pinColor = '#CA8A04';
+        garageBg = '#A16207';
       }
 
       let parkingIcon: L.DivIcon;
 
       if (isStreet) {
-        // Curbside Street Spots: Compact 28px circular score pins showing street CSI score with a small curb/car icon
+        // Curbside Street Spots: Compact 28px circular score pins showing street score with a small curb/car icon
         parkingIcon = L.divIcon({
           className: `safepark-pin-${loc.id}`,
           html: `
@@ -361,11 +361,11 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
         });
         curbPolyline.addTo(curbSegmentsGroupRef.current!);
       } else {
-        // Garages & Lots: Distinct 34px shield or building icon pins displaying garage CSI score with a "P" badge
+        // Garages & Lots: Distinct 34px shield marker displaying garage score with a prominent "P" badge
         parkingIcon = L.divIcon({
           className: `safepark-pin-${loc.id}`,
           html: `
-            <div style="position: relative; width: 34px; height: 34px; border-radius: 9px; background-color: ${garageBg}; border: 2.5px solid #FFFFFF; box-shadow: ${
+            <div style="position: relative; width: 34px; height: 34px; border-radius: 6px 6px 14px 14px; background-color: ${garageBg}; border: 2.5px solid #FFFFFF; box-shadow: ${
             isSelected
               ? '0 0 0 3.5px #2563EB, 0 6px 16px rgba(0,0,0,0.45)'
               : '0 3px 10px rgba(0,0,0,0.28)'
@@ -378,7 +378,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
                   : ''
               }
               <!-- "P" Badge -->
-              <div style="position: absolute; top: -5px; left: -5px; width: 15px; height: 15px; border-radius: 4px; background: #1E40AF; border: 1.5px solid #FFFFFF; color: #FFFFFF; font-size: 9.5px; font-weight: 900; display: flex; align-items: center; justify-content: center; line-height: 1;">
+              <div style="position: absolute; top: -5px; left: -5px; width: 15px; height: 15px; border-radius: 4px; background: #1D4ED8; border: 1.5px solid #FFFFFF; color: #FFFFFF; font-size: 9.5px; font-weight: 900; display: flex; align-items: center; justify-content: center; line-height: 1; box-shadow: 0 1px 4px rgba(0,0,0,0.3);">
                 P
               </div>
               <span style="color: #FFFFFF; font-size: 12px; font-weight: 900; letter-spacing: -0.5px; line-height: 1; margin-top: 2px;">${score}</span>
