@@ -1,6 +1,7 @@
 /**
  * SafePark Real Safety Index Calculation Engine
- * Deterministic scoring based on live municipal crime incident feeds.
+ * Deterministic multi-factor scoring based on live municipal crime incident feeds
+ * and OpenStreetMap facility telemetry.
  */
 
 import { useMemo } from 'react';
@@ -12,6 +13,12 @@ export interface ParkingFacility {
   lon: number;
   type?: string;
   capacity?: string | number;
+  tags?: Record<string, any>;
+  fee?: string;
+  access?: string;
+  barrier?: string;
+  lit?: string;
+  covered?: string;
 }
 
 export interface CrimeIncident {
@@ -33,13 +40,27 @@ export interface SafetyScoreResult {
   lon: number;
   type: string;
   capacity: string;
-  score: number; // 10 to 100
+
+  // Master Composite Safety Index (0-100)
+  score: number;
   color: SafetyRiskColor;
   riskLevel: SafetyRiskLevel;
+
+  // 3 Distinct Sub-ratings
+  breakInScore: number;
+  breakInLabel: string;
+
+  facilitySecurityScore: number;
+  facilitySecurityLabel: string;
+
+  lightingScore: number;
+  lightingLabel: string;
+
+  // Incident counts
   incidentCount500m: number;
   incidentsWithin250m: number;
   incidents250to500m: number;
-  displayText: string; // "X vehicle incidents within 500m in past 90 days"
+  displayText: string;
 }
 
 /**
@@ -58,23 +79,16 @@ export function haversineDistanceMeters(lat1: number, lon1: number, lat2: number
 }
 
 /**
- * Deterministically computes the safety score (10 - 100) for a single parking facility
- * based on reported incidents within 500m in the past 90 days.
- *
- * Scoring Rules:
- * - Base Score = 100
- * - Deduct 4 points for each vehicle burglary/theft within 250m.
- * - Deduct 2 points for each vehicle burglary/theft between 250m and 500m.
- * - Minimum score floor is 10.
- *
- * Color Rules:
- * - 80-100: Green (Low Incident Zone)
- * - 60-79: Yellow (Moderate Risk)
- * - Under 60: Red (High Break-In Frequency)
+ * Deterministically computes the four scores for a parking facility:
+ * A. Break-In Risk Score (0-100)
+ * B. Facility Security Score (0-100)
+ * C. Lighting & Visibility Score (0-100)
+ * D. Composite Safety Index (Master Score 0-100)
  */
 export function calculateSafetyScore(
   facility: ParkingFacility,
-  incidents: CrimeIncident[]
+  incidents: CrimeIncident[],
+  evaluationDate?: Date
 ): SafetyScoreResult {
   let incidentsWithin250m = 0;
   let incidents250to500m = 0;
@@ -89,9 +103,7 @@ export function calculateSafetyScore(
       continue;
     }
 
-    // Fast rectangular coordinate pre-filter before calling trigonometric Math.sin/Math.atan2.
-    // Skips any crime incident where abs(lat1 - lat2) > 0.005 or abs(lon1 - lon2) > 0.006.
-    // Eliminates 98%+ of distance math instantly on the main CPU thread.
+    // Fast rectangular coordinate pre-filter before calling trigonometric functions
     const dLat = Math.abs(facility.lat - incident.lat);
     const dLon = Math.abs(facility.lon - incident.lon);
     if (dLat > 0.005 || dLon > 0.006) {
@@ -108,18 +120,133 @@ export function calculateSafetyScore(
 
   const total500m = incidentsWithin250m + incidents250to500m;
 
-  // Deduct 4 points for each vehicle burglary/theft within 250m
-  // Deduct 2 points for each vehicle burglary/theft between 250m and 500m
-  const rawScore = 100 - incidentsWithin250m * 4 - incidents250to500m * 2;
-  const score = Math.max(10, Math.min(100, Math.round(rawScore)));
+  // A. Break-In Risk Score (0-100)
+  // Formula: 100 minus (4 points per incident within 250m) minus (2 points per incident between 250m and 500m). Floor at 10.
+  const rawBreakInScore = 100 - incidentsWithin250m * 4 - incidents250to500m * 2;
+  const breakInScore = Math.max(10, Math.min(100, Math.round(rawBreakInScore)));
+
+  let breakInLabel = 'Low Break-in Risk';
+  if (breakInScore < 60) {
+    breakInLabel = 'High Break-in Frequency';
+  } else if (breakInScore < 80) {
+    breakInLabel = 'Moderate Risk';
+  }
+
+  // B. Facility Security Score (0-100)
+  // Base score: 50.
+  // Structure Type: +30 points for underground or multi-level garages; +15 for covered; +0 for open surface lots.
+  // Access Control: +15 points if monitored/paid/gated; -10 points if open surface with unrestricted access.
+  // Capacity Telemetry: +5 points if formal capacity is tracked (tags.capacity > 0). Clamp between 15 and 98.
+  let facilitySecurity = 50;
+  const pType = (facility.type || facility.tags?.parking || '').toLowerCase();
+  const isUnderground = pType.includes('underground');
+  const isMultiStorey = pType.includes('multi-storey') || pType.includes('deck');
+  const isCovered = pType.includes('covered') || facility.tags?.covered === 'yes' || facility.covered === 'yes';
+
+  if (isUnderground || isMultiStorey) {
+    facilitySecurity += 30;
+  } else if (isCovered) {
+    facilitySecurity += 15;
+  }
+
+  const tags = facility.tags || {};
+  const fee = facility.fee || tags.fee;
+  const access = facility.access || tags.access;
+  const barrier = facility.barrier || tags.barrier;
+
+  const isGatedOrMonitored =
+    fee === 'yes' ||
+    access === 'customers' ||
+    Boolean(barrier && barrier !== 'no') ||
+    tags.supervised === 'yes' ||
+    isUnderground; // Underground garages inherently have access control barriers
+
+  const isOpenSurfaceUnrestricted = !isUnderground && !isMultiStorey && !isCovered && !isGatedOrMonitored;
+
+  if (isGatedOrMonitored) {
+    facilitySecurity += 15;
+  } else if (isOpenSurfaceUnrestricted) {
+    facilitySecurity -= 10;
+  }
+
+  const capNum = typeof facility.capacity === 'number'
+    ? facility.capacity
+    : parseInt(String(facility.capacity || tags.capacity || '0'), 10);
+
+  if (!isNaN(capNum) && capNum > 0) {
+    facilitySecurity += 5;
+  }
+
+  const facilitySecurityScore = Math.max(15, Math.min(98, Math.round(facilitySecurity)));
+
+  let facilitySecurityLabel = 'Open Unrestricted Surface';
+  if (isUnderground) {
+    facilitySecurityLabel = isGatedOrMonitored ? 'Gated Underground Garage' : 'Underground/Covered Structure';
+  } else if (isMultiStorey) {
+    facilitySecurityLabel = isGatedOrMonitored ? 'Monitored Multi-Level Deck' : 'Multi-Level Deck';
+  } else if (isCovered) {
+    facilitySecurityLabel = 'Underground/Covered Structure';
+  } else if (isGatedOrMonitored) {
+    facilitySecurityLabel = 'Controlled Access Surface Lot';
+  }
+
+  // C. Lighting & Visibility Score (0-100)
+  // Base daytime score: 90 for open lots, 85 for well-lit decks.
+  // After dusk (based on local time > 18:30 or < 06:30):
+  // Underground / covered structures retain an 85 (artificial lighting independent of sun).
+  // Open surface lots drop to 55 unless tagged with lit === 'yes' (drops to 40 if unmonitored).
+  const now = evaluationDate || new Date();
+  const currentHours = now.getHours() + now.getMinutes() / 60;
+  const isAfterDusk = currentHours >= 18.5 || currentHours < 6.5;
+
+  let lightingScore = 90;
+  let lightingLabel = 'Day-lit Open Deck';
+  const litTag = (facility.lit || tags.lit || '').toLowerCase();
+  const isEnclosed = isUnderground || isCovered;
+
+  if (!isAfterDusk) {
+    // Daytime
+    if (isEnclosed) {
+      lightingScore = 85;
+      lightingLabel = '24/7 Enclosed Lighting';
+    } else if (isMultiStorey) {
+      lightingScore = 85;
+      lightingLabel = 'Day-lit Open Deck';
+    } else {
+      lightingScore = 90;
+      lightingLabel = 'Day-lit Open Deck';
+    }
+  } else {
+    // After dusk
+    if (isEnclosed) {
+      lightingScore = 85;
+      lightingLabel = '24/7 Enclosed Lighting';
+    } else {
+      if (litTag === 'yes') {
+        lightingScore = 75;
+        lightingLabel = 'Illuminated Night Surface';
+      } else if (isGatedOrMonitored) {
+        lightingScore = 55;
+        lightingLabel = 'Ambient Street Light';
+      } else {
+        lightingScore = 40;
+        lightingLabel = 'Low Night Visibility';
+      }
+    }
+  }
+
+  // D. Composite Safety Index (CSI - Master Score 0-100)
+  // Weighted calculation: (Break-In Risk Score * 0.50) + (Facility Security Score * 0.35) + (Lighting & Visibility Score * 0.15)
+  const weightedCsi = breakInScore * 0.50 + facilitySecurityScore * 0.35 + lightingScore * 0.15;
+  const masterScore = Math.max(10, Math.min(100, Math.round(weightedCsi)));
 
   let color: SafetyRiskColor = 'green';
   let riskLevel: SafetyRiskLevel = 'Low Incident Zone';
 
-  if (score < 60) {
+  if (masterScore < 60) {
     color = 'red';
     riskLevel = 'High Break-In Frequency';
-  } else if (score < 80) {
+  } else if (masterScore < 80) {
     color = 'yellow';
     riskLevel = 'Moderate Risk';
   }
@@ -133,9 +260,15 @@ export function calculateSafetyScore(
     lon: facility.lon,
     type: facility.type || 'surface',
     capacity: String(facility.capacity || 'Unknown'),
-    score,
+    score: masterScore,
     color,
     riskLevel,
+    breakInScore,
+    breakInLabel,
+    facilitySecurityScore,
+    facilitySecurityLabel,
+    lightingScore,
+    lightingLabel,
     incidentCount500m: total500m,
     incidentsWithin250m,
     incidents250to500m,
@@ -148,15 +281,14 @@ export function calculateSafetyScore(
  */
 export function scoreAllFacilities(
   facilities: ParkingFacility[],
-  incidents: CrimeIncident[]
+  incidents: CrimeIncident[],
+  evaluationDate?: Date
 ): SafetyScoreResult[] {
-  return facilities.map((fac) => calculateSafetyScore(fac, incidents));
+  return facilities.map((fac) => calculateSafetyScore(fac, incidents, evaluationDate));
 }
 
 /**
  * React hook to move safety score calculations off the main render loop.
- * Memoizes scoring across facilities and incidents so map panning, zooming,
- * and bottom sheet dragging/animations do not trigger recalculations.
  */
 export function useSafetyScoredFacilities(
   facilities: ParkingFacility[],

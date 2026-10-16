@@ -64,6 +64,27 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
   const within250 = (location.csi.components.crimeScore?.factorDetails?.within250m as number) ?? (location.crimeData?.incidentsLast30Days ?? 0);
   const between250and500 = (location.csi.components.crimeScore?.factorDetails?.between250and500m as number) ?? Math.max(0, incidentCount - within250);
 
+  const breakInScore = location.csi.components.crimeScore?.rawScore ?? 100;
+  const breakInLabel =
+    (location.csi.components.crimeScore?.factorDetails?.label as string) ??
+    (breakInScore >= 80 ? 'Low Break-in Risk' : breakInScore >= 60 ? 'Moderate Risk' : 'High Break-in Frequency');
+
+  const facilitySecurityScore = location.csi.components.infrastructureScore?.rawScore ?? 75;
+  const facilitySecurityLabel =
+    location.csi.components.infrastructureScore?.description ??
+    (location.infrastructure.structureType.includes('underground')
+      ? 'Gated Underground Garage'
+      : location.infrastructure.structureType.includes('deck')
+      ? 'Multi-Level Deck'
+      : 'Open Surface Lot');
+
+  const lightingScore = location.csi.components.lightingScore?.rawScore ?? 85;
+  const lightingLabel =
+    location.csi.components.lightingScore?.description ??
+    (location.infrastructure.structureType.includes('underground')
+      ? '24/7 Enclosed Lighting'
+      : 'Ambient Street Light');
+
   return (
     <article
       aria-label={`${location.name}, Safety Score ${location.csi.totalScore}`}
@@ -181,17 +202,20 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
         )}
       </div>
 
-      {/* Real Safety Score & Incident Breakdown */}
+      {/* Deterministic Multi-Factor CSI Scorecard */}
       <div
         style={{
-          backgroundColor: isGreen ? '#F0FDF4' : isYellow ? '#FEFCE8' : '#FEF2F2',
-          border: `1.5px solid ${isGreen ? '#BBF7D0' : isYellow ? '#FEF08A' : '#FECACA'}`,
-          borderRadius: '12px',
-          padding: '10px 12px',
-          marginBottom: '12px',
+          backgroundColor: '#F8FAFC',
+          borderRadius: '14px',
+          border: '1px solid #E2E8F0',
+          padding: '12px 14px',
+          marginBottom: '14px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '12px',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #E2E8F0', paddingBottom: '8px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <span
               style={{
@@ -202,87 +226,93 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
                 backgroundColor: isGreen ? '#16A34A' : isYellow ? '#CA8A04' : '#DC2626',
               }}
             />
-            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: isGreen ? '#15803D' : isYellow ? '#854D0E' : '#991B1B' }}>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: isGreen ? '#15803D' : isYellow ? '#854D0E' : '#991B1B', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               {isGreen ? 'Low Incident Zone' : isYellow ? 'Moderate Risk' : 'High Break-In Frequency'}
             </span>
           </div>
           <span style={{ fontSize: '0.85rem', fontWeight: 900, color: isGreen ? '#15803D' : isYellow ? '#854D0E' : '#991B1B' }}>
-            {score}/100 Score
+            {score}/100 Master CSI
           </span>
         </div>
 
-        <div style={{ fontSize: '0.775rem', fontWeight: 700, color: '#1E293B' }}>
-          🚨 {incidentCount} vehicle incident{incidentCount === 1 ? '' : 's'} within 500m in past 90 days
+        {/* 1. Vehicle Break-in Risk Progress Bar */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <span style={{ fontSize: '0.775rem', fontWeight: 800, color: '#1E293B' }}>
+              Vehicle Break-in Risk
+            </span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: breakInScore >= 80 ? '#15803D' : breakInScore >= 60 ? '#854D0E' : '#B91C1C' }}>
+              {breakInScore}/100 • {breakInLabel}
+            </span>
+          </div>
+          <div style={{ width: '100%', height: '7px', backgroundColor: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
+            <div
+              style={{
+                width: `${breakInScore}%`,
+                height: '100%',
+                backgroundColor: breakInScore >= 80 ? '#16A34A' : breakInScore >= 60 ? '#CA8A04' : '#DC2626',
+                borderRadius: '4px',
+                transition: 'width 0.3s ease',
+              }}
+            />
+          </div>
+          <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '3px' }}>
+            {incidentCount} incident{incidentCount === 1 ? '' : 's'} within 500m in past 90 days
+          </div>
         </div>
-        <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '3px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-          <span>• {within250} within 250m (-4 pts each)</span>
-          <span>• {between250and500} between 250m–500m (-2 pts each)</span>
+
+        {/* 2. Facility Security Progress Bar */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <span style={{ fontSize: '0.775rem', fontWeight: 800, color: '#1E293B' }}>
+              Facility Security
+            </span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: facilitySecurityScore >= 80 ? '#15803D' : facilitySecurityScore >= 60 ? '#854D0E' : '#B91C1C' }}>
+              {facilitySecurityScore}/100 • {facilitySecurityLabel}
+            </span>
+          </div>
+          <div style={{ width: '100%', height: '7px', backgroundColor: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
+            <div
+              style={{
+                width: `${facilitySecurityScore}%`,
+                height: '100%',
+                backgroundColor: facilitySecurityScore >= 80 ? '#16A34A' : facilitySecurityScore >= 60 ? '#CA8A04' : '#DC2626',
+                borderRadius: '4px',
+                transition: 'width 0.3s ease',
+              }}
+            />
+          </div>
+          <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '3px' }}>
+            Structure: {facilitySecurityLabel}
+          </div>
+        </div>
+
+        {/* 3. Lighting & Visibility Progress Bar */}
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <span style={{ fontSize: '0.775rem', fontWeight: 800, color: '#1E293B' }}>
+              Lighting & Visibility
+            </span>
+            <span style={{ fontSize: '0.75rem', fontWeight: 800, color: lightingScore >= 80 ? '#15803D' : lightingScore >= 60 ? '#854D0E' : '#B91C1C' }}>
+              {lightingScore}/100 • {lightingLabel}
+            </span>
+          </div>
+          <div style={{ width: '100%', height: '7px', backgroundColor: '#E2E8F0', borderRadius: '4px', overflow: 'hidden' }}>
+            <div
+              style={{
+                width: `${lightingScore}%`,
+                height: '100%',
+                backgroundColor: lightingScore >= 80 ? '#16A34A' : lightingScore >= 60 ? '#CA8A04' : '#DC2626',
+                borderRadius: '4px',
+                transition: 'width 0.3s ease',
+              }}
+            />
+          </div>
+          <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '3px' }}>
+            Environment: {lightingLabel}
+          </div>
         </div>
       </div>
-
-      {/* Curbside Municipal Rules & Sweeping Banner (For Street/Curbside Spots) */}
-      {(location.hourlyRate === 0 || location.infrastructure.structureType.includes('curbside')) && (
-        <div
-          style={{
-            backgroundColor: location.hourlyRate === 0 ? '#ECFDF5' : '#EFF6FF',
-            border: `1px solid ${location.hourlyRate === 0 ? '#A7F3D0' : '#BFDBFE'}`,
-            borderRadius: '8px',
-            padding: '6px 10px',
-            fontSize: '0.725rem',
-            color: location.hourlyRate === 0 ? '#065F46' : '#1E40AF',
-            marginBottom: '12px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: '8px',
-            flexWrap: 'wrap',
-          }}
-        >
-          <span style={{ fontWeight: 700 }}>
-            {location.hourlyRate === 0 ? '⏱️ 2-Hour Limit (8 AM – 6 PM)' : '🅿️ Metered Curbside (4-Hr Max)'}
-          </span>
-          <span style={{ fontSize: '0.675rem', opacity: 0.9 }}>
-            🧹 Sweeping: 1st & 3rd Tue 9–11 AM
-          </span>
-        </div>
-      )}
-
-      {/* Granular Sub-Score Gauges */}
-      {(showFullDetails || isSelected) && location.csi.components && (
-        <div
-          style={{
-            backgroundColor: '#F8FAFC',
-            borderRadius: '12px',
-            padding: '10px 12px',
-            marginBottom: '14px',
-            border: '1px solid #E2E8F0',
-          }}
-        >
-          <div style={{ fontSize: '0.7rem', fontWeight: 800, color: '#64748B', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            CSI Sub-Score Breakdown
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px', textAlign: 'center' }}>
-            <div>
-              <div style={{ fontSize: '0.675rem', color: '#64748B', fontWeight: 600 }}>Crime Index</div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: location.csi.components.crimeScore?.rawScore >= 75 ? '#15803D' : '#B45309' }}>
-                {Math.round(location.csi.components.crimeScore?.rawScore || 0)}/100
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.675rem', color: '#64748B', fontWeight: 600 }}>Lighting Grid</div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: location.csi.components.lightingScore?.rawScore >= 75 ? '#15803D' : '#B45309' }}>
-                {Math.round(location.csi.components.lightingScore?.rawScore || 0)}/100
-              </div>
-            </div>
-            <div>
-              <div style={{ fontSize: '0.675rem', color: '#64748B', fontWeight: 600 }}>Physical Sec</div>
-              <div style={{ fontSize: '0.95rem', fontWeight: 800, color: location.csi.components.infrastructureScore?.rawScore >= 75 ? '#15803D' : '#B45309' }}>
-                {Math.round(location.csi.components.infrastructureScore?.rawScore || 0)}/100
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* 2-Stage Action Buttons Row */}
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' }}>

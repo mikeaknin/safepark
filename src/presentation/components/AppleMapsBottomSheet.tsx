@@ -591,14 +591,18 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
             </div>
           )}
 
-          {!isLiveLoading &&
-            locations.map((loc) => (
+          {!isLiveLoading && (() => {
+            const displayList = selectedLocation
+              ? [selectedLocation, ...locations.filter((l) => l.id !== selectedLocation.id)]
+              : locations;
+
+            return displayList.map((loc) => (
               <ParkingFacilityCard
                 key={loc.id}
                 location={loc}
                 isSelected={selectedLocation?.id === loc.id}
                 isParkedHere={parkedLocation?.id === loc.id || activeParkedSession?.locationId === loc.id}
-                showFullDetails={snapPoint === 'expanded'}
+                showFullDetails={snapPoint === 'expanded' || selectedLocation?.id === loc.id}
                 onSelect={(l) => {
                   setSelectedLocation(l);
                 }}
@@ -609,7 +613,8 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                 onReportHazard={onReportHazard}
                 onOpenDirections={onOpenDirections}
               />
-            ))}
+            ));
+          })()}
         </div>
       )}
     </section>
