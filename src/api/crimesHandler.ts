@@ -19,9 +19,7 @@ const cache: {
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 export function getDateMinusDays(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().split('T')[0];
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 }
 
 export async function fetchLiveCrimes(city: 'sf' | 'la'): Promise<NormalizedCrimeIncident[]> {
@@ -30,14 +28,14 @@ export async function fetchLiveCrimes(city: 'sf' | 'la'): Promise<NormalizedCrim
     return cached.data;
   }
 
-  const date90 = getDateMinusDays(90);
+  const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   if (city === 'sf') {
     const url = new URL('https://data.sfgov.org/resource/wg3w-h783.json');
     url.searchParams.set('$select', 'incident_datetime, incident_category, incident_subcategory, latitude, longitude');
     url.searchParams.set(
       '$where',
-      `incident_date >= '${date90}' AND incident_category in ('Larceny Theft', 'Motor Vehicle Theft', 'Burglary') AND latitude IS NOT NULL`
+      `incident_date >= '${ninetyDaysAgo}' AND incident_category in ('Larceny Theft', 'Motor Vehicle Theft', 'Burglary') AND latitude IS NOT NULL`
     );
     url.searchParams.set('$limit', '1500');
 
@@ -71,7 +69,7 @@ export async function fetchLiveCrimes(city: 'sf' | 'la'): Promise<NormalizedCrim
           if (isNaN(lat) || isNaN(lon) || lat === 0 || lon === 0) return null;
           return {
             id: r.row_id || `sf-crime-${idx}-${lat.toFixed(5)}_${lon.toFixed(5)}`,
-            datetime: r.incident_datetime || date90,
+            datetime: r.incident_datetime || ninetyDaysAgo,
             category: r.incident_category || 'Larceny Theft',
             subcategory: r.incident_subcategory || '',
             lat,
@@ -95,7 +93,7 @@ export async function fetchLiveCrimes(city: 'sf' | 'la'): Promise<NormalizedCrim
     url.searchParams.set('$select', 'dr_no, date_occ, crm_cd_desc, lat, lon');
     url.searchParams.set(
       '$where',
-      `date_occ >= '${date90}' AND (crm_cd_desc like '%THEFT FROM MOTOR VEHICLE%' or crm_cd_desc like '%BURGLARY FROM VEHICLE%' or crm_cd_desc like '%VEHICLE, STOLEN%') AND lat > 0`
+      `date_occ >= '${ninetyDaysAgo}' AND (crm_cd_desc like '%THEFT FROM MOTOR VEHICLE%' or crm_cd_desc like '%BURGLARY FROM VEHICLE%' or crm_cd_desc like '%VEHICLE, STOLEN%') AND lat > 0`
     );
     url.searchParams.set('$limit', '1500');
 
@@ -156,7 +154,7 @@ export async function fetchLiveCrimes(city: 'sf' | 'la'): Promise<NormalizedCrim
           if (isNaN(lat) || isNaN(lon) || lat <= 0 || lon >= 0) return null;
           return {
             id: r.dr_no || `la-crime-${lat.toFixed(5)}_${lon.toFixed(5)}`,
-            datetime: r.date_occ || date90,
+            datetime: r.date_occ || ninetyDaysAgo,
             category: 'Motor Vehicle Theft/Burglary',
             subcategory: r.crm_cd_desc || 'Theft from Motor Vehicle',
             lat,

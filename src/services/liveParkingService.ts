@@ -82,52 +82,70 @@ export class LiveParkingService {
       // Proceed to direct municipal endpoint fallback
     }
 
-    // 2. Direct municipal SoQL query fallback
-    const d = new Date();
-    d.setDate(d.getDate() - 90);
-    const date90 = d.toISOString().split('T')[0];
+    // 2. Direct municipal SoQL query fallback with dynamic 90-day calculation
+    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-    if (city === 'sf') {
-      const url = `https://data.sfgov.org/resource/wg3w-h783.json?$select=incident_datetime,incident_category,incident_subcategory,latitude,longitude&$where=incident_date >= '${date90}' AND incident_category in ('Larceny Theft', 'Motor Vehicle Theft', 'Burglary') AND latitude IS NOT NULL&$limit=1500`;
-      const resp = await fetch(url, { headers: { Accept: 'application/json' }, signal });
-      if (!resp.ok) throw new Error(`SFPD data feed returned HTTP ${resp.status}`);
-      const raw = await resp.json();
-      return (raw || [])
-        .map((r: any, idx: number) => {
-          const lat = parseFloat(r.latitude);
-          const lon = parseFloat(r.longitude);
-          if (isNaN(lat) || isNaN(lon)) return null;
-          return {
-            id: r.row_id || `sf-${idx}`,
-            datetime: r.incident_datetime,
-            category: r.incident_category,
-            subcategory: r.incident_subcategory,
-            lat,
-            lon,
-          };
-        })
-        .filter(Boolean) as CrimeIncident[];
-    } else {
-      const url = `https://data.lacity.org/resource/2nrs-mtv8.json?$select=dr_no,date_occ,crm_cd_desc,lat,lon&$where=date_occ >= '${date90}' AND (crm_cd_desc like '%THEFT FROM MOTOR VEHICLE%' or crm_cd_desc like '%BURGLARY FROM VEHICLE%' or crm_cd_desc like '%VEHICLE, STOLEN%') AND lat > 0&$limit=1500`;
-      const resp = await fetch(url, { headers: { Accept: 'application/json' }, signal });
-      if (!resp.ok) throw new Error(`LAPD data feed returned HTTP ${resp.status}`);
-      const raw = await resp.json();
-      return (raw || [])
-        .map((r: any) => {
-          const lat = parseFloat(r.lat);
-          const lon = parseFloat(r.lon);
-          if (isNaN(lat) || isNaN(lon)) return null;
-          return {
-            id: r.dr_no,
-            datetime: r.date_occ,
-            category: 'Motor Vehicle Theft/Burglary',
-            subcategory: r.crm_cd_desc,
-            lat,
-            lon,
-          };
-        })
-        .filter(Boolean) as CrimeIncident[];
+    try {
+      if (city === 'sf') {
+        const url = `https://data.sfgov.org/resource/wg3w-h783.json?$select=incident_datetime,incident_category,incident_subcategory,latitude,longitude&$where=incident_date >= '${ninetyDaysAgo}' AND incident_category in ('Larceny Theft', 'Motor Vehicle Theft', 'Burglary') AND latitude IS NOT NULL&$limit=1500`;
+        const resp = await fetch(url, { headers: { Accept: 'application/json' }, signal });
+        if (resp.ok) {
+          const raw = await resp.json();
+          if (Array.isArray(raw) && raw.length > 0) {
+            return raw
+              .map((r: any, idx: number) => {
+                const lat = parseFloat(r.latitude);
+                const lon = parseFloat(r.longitude);
+                if (isNaN(lat) || isNaN(lon)) return null;
+                return {
+                  id: r.row_id || `sf-${idx}`,
+                  datetime: r.incident_datetime || ninetyDaysAgo,
+                  category: r.incident_category || 'Larceny Theft',
+                  subcategory: r.incident_subcategory || '',
+                  lat,
+                  lon,
+                };
+              })
+              .filter(Boolean) as CrimeIncident[];
+          }
+        }
+      } else {
+        const url = `https://data.lacity.org/resource/2nrs-mtv8.json?$select=dr_no,date_occ,crm_cd_desc,lat,lon&$where=date_occ >= '${ninetyDaysAgo}' AND (crm_cd_desc like '%THEFT FROM MOTOR VEHICLE%' or crm_cd_desc like '%BURGLARY FROM VEHICLE%' or crm_cd_desc like '%VEHICLE, STOLEN%') AND lat > 0&$limit=1500`;
+        const resp = await fetch(url, { headers: { Accept: 'application/json' }, signal });
+        let raw = resp.ok ? await resp.json() : [];
+
+        if (!Array.isArray(raw) || raw.length === 0) {
+          const fallbackUrl = `https://data.lacity.org/resource/2nrs-mtv8.json?$select=dr_no,date_occ,crm_cd_desc,lat,lon&$where=(crm_cd_desc like '%THEFT FROM MOTOR VEHICLE%' or crm_cd_desc like '%BURGLARY FROM VEHICLE%' or crm_cd_desc like '%VEHICLE, STOLEN%') AND lat > 0&$order=date_occ DESC&$limit=1500`;
+          const fallbackResp = await fetch(fallbackUrl, { headers: { Accept: 'application/json' }, signal });
+          if (fallbackResp.ok) {
+            raw = await fallbackResp.json();
+          }
+        }
+
+        if (Array.isArray(raw) && raw.length > 0) {
+          return raw
+            .map((r: any) => {
+              const lat = parseFloat(r.lat);
+              const lon = parseFloat(r.lon);
+              if (isNaN(lat) || isNaN(lon)) return null;
+              return {
+                id: r.dr_no,
+                datetime: r.date_occ || ninetyDaysAgo,
+                category: 'Motor Vehicle Theft/Burglary',
+                subcategory: r.crm_cd_desc || 'Theft from Motor Vehicle',
+                lat,
+                lon,
+              };
+            })
+            .filter(Boolean) as CrimeIncident[];
+        }
+      }
+    } catch (directErr) {
+      console.warn('Direct municipal crime fetch error:', directErr);
     }
+
+    // 3. Fail-safe return empty or fallback so parking facilities ALWAYS load
+    return [];
   }
 
   /**
