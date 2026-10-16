@@ -96,6 +96,17 @@ export const SearchAndFilterHeader: React.FC = () => {
     }
   );
 
+  // Reset search bar input when toggling cities
+  useEffect(() => {
+    clearQuery();
+    setIsOpen(false);
+  }, [selectedCity]);
+
+  const searchPlaceholder =
+    selectedCity === 'sf'
+      ? 'Search Downtown San Francisco, Mission, SOMA...'
+      : 'Search Downtown Los Angeles, Venice, Hollywood...';
+
   // Close dropdown on outside click or touch
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent | TouchEvent) => {
@@ -173,7 +184,7 @@ export const SearchAndFilterHeader: React.FC = () => {
                 SafePark
               </span>
               <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                {isLiveLoading ? 'Syncing Feeds...' : `${totalFacilitiesCount} Lots • ${totalCrimesCount} Crimes`}
+                {isLiveLoading ? 'SYNCING FEEDS...' : `${totalFacilitiesCount} LOTS • ${totalCrimesCount.toLocaleString()} CRIMES`}
               </span>
             </div>
           </div>
@@ -255,8 +266,8 @@ export const SearchAndFilterHeader: React.FC = () => {
           </div>
         )}
 
-        {/* Municipal Feed Timeout Empty State Alert */}
-        {liveLoadError && (
+        {/* Municipal Feed Timeout Empty State Alert - auto-dismisses when crime or parking data resolves */}
+        {liveLoadError && totalFacilitiesCount === 0 && totalCrimesCount === 0 && !isLiveLoading && (
           <div
             role="alert"
             style={{
@@ -347,7 +358,7 @@ export const SearchAndFilterHeader: React.FC = () => {
                 setIsOpen(true);
               }}
               onFocus={() => setIsOpen(true)}
-              placeholder="Search SF address, neighborhood, or spot..."
+              placeholder={searchPlaceholder}
               aria-label="Search destination for safe parking"
               style={{
                 background: 'transparent',

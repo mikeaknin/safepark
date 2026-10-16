@@ -14,8 +14,8 @@ import { ParkingLocation, SafeWalkRoute } from '../domain/models/ParkingLocation
 import { ParkingStructureType, SurveillanceTier } from '../domain/models/Infrastructure';
 import { RiskLevel } from '../theme/tokens';
 
-import sfParkingBackup from '../../data/sf_parking_backup.json';
-import laParkingBackup from '../../data/la_parking_backup.json';
+import { CrimeService } from './crimeService';
+import { ParkingService } from './parkingService';
 
 export type SupportedCity = 'sf' | 'la';
 
@@ -63,177 +63,18 @@ function mapStructureType(osmType?: string): ParkingStructureType {
 export class LiveParkingService {
   /**
    * Fetches live crimes either via backend proxy `/api/crimes?city=${city}`
-   * or direct municipal SoQL endpoint as fallback.
+   * or direct municipal Socrata endpoint as fallback.
    */
   public static async fetchCrimes(city: SupportedCity, signal?: AbortSignal): Promise<CrimeIncident[]> {
-    // 1. Try local/Vercel proxy route first
-    try {
-      const resp = await fetch(`/api/crimes?city=${city}`, {
-        headers: { Accept: 'application/json' },
-        signal,
-      });
-      if (resp.ok) {
-        const json = await resp.json();
-        if (Array.isArray(json.data) && json.data.length > 0) {
-          return json.data;
-        }
-      }
-    } catch {
-      // Proceed to direct municipal endpoint fallback
-    }
-
-    // 2. Direct municipal SoQL query fallback with dynamic 90-day calculation
-    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-
-    try {
-      if (city === 'sf') {
-        const url = `https://data.sfgov.org/resource/wg3w-h783.json?$select=incident_datetime,incident_category,incident_subcategory,latitude,longitude&$where=incident_date >= '${ninetyDaysAgo}' AND incident_category in ('Larceny Theft', 'Motor Vehicle Theft', 'Burglary') AND latitude IS NOT NULL&$limit=1500`;
-        const resp = await fetch(url, { headers: { Accept: 'application/json' }, signal });
-        if (resp.ok) {
-          const raw = await resp.json();
-          if (Array.isArray(raw) && raw.length > 0) {
-            return raw
-              .map((r: any, idx: number) => {
-                const lat = parseFloat(r.latitude);
-                const lon = parseFloat(r.longitude);
-                if (isNaN(lat) || isNaN(lon)) return null;
-                return {
-                  id: r.row_id || `sf-${idx}`,
-                  datetime: r.incident_datetime || ninetyDaysAgo,
-                  category: r.incident_category || 'Larceny Theft',
-                  subcategory: r.incident_subcategory || '',
-                  lat,
-                  lon,
-                };
-              })
-              .filter(Boolean) as CrimeIncident[];
-          }
-        }
-      } else {
-        const url = `https://data.lacity.org/resource/2nrs-mtv8.json?$select=dr_no,date_occ,crm_cd_desc,lat,lon&$where=date_occ >= '${ninetyDaysAgo}' AND (crm_cd_desc like '%THEFT FROM MOTOR VEHICLE%' or crm_cd_desc like '%BURGLARY FROM VEHICLE%' or crm_cd_desc like '%VEHICLE, STOLEN%') AND lat > 0&$limit=1500`;
-        const resp = await fetch(url, { headers: { Accept: 'application/json' }, signal });
-        let raw = resp.ok ? await resp.json() : [];
-
-        if (!Array.isArray(raw) || raw.length === 0) {
-          const fallbackUrl = `https://data.lacity.org/resource/2nrs-mtv8.json?$select=dr_no,date_occ,crm_cd_desc,lat,lon&$where=(crm_cd_desc like '%THEFT FROM MOTOR VEHICLE%' or crm_cd_desc like '%BURGLARY FROM VEHICLE%' or crm_cd_desc like '%VEHICLE, STOLEN%') AND lat > 0&$order=date_occ DESC&$limit=1500`;
-          const fallbackResp = await fetch(fallbackUrl, { headers: { Accept: 'application/json' }, signal });
-          if (fallbackResp.ok) {
-            raw = await fallbackResp.json();
-          }
-        }
-
-        if (Array.isArray(raw) && raw.length > 0) {
-          return raw
-            .map((r: any) => {
-              const lat = parseFloat(r.lat);
-              const lon = parseFloat(r.lon);
-              if (isNaN(lat) || isNaN(lon)) return null;
-              return {
-                id: r.dr_no,
-                datetime: r.date_occ || ninetyDaysAgo,
-                category: 'Motor Vehicle Theft/Burglary',
-                subcategory: r.crm_cd_desc || 'Theft from Motor Vehicle',
-                lat,
-                lon,
-              };
-            })
-            .filter(Boolean) as CrimeIncident[];
-        }
-      }
-    } catch (directErr) {
-      console.warn('Direct municipal crime fetch error:', directErr);
-    }
-
-    // 3. Fail-safe return empty or fallback so parking facilities ALWAYS load
-    return [];
+    return CrimeService.fetchCrimes(city, signal);
   }
 
   /**
-   * Fetches live parking facilities from `/api/parking?city=${city}`
-   * or direct Overpass API as fallback.
+   * Fetches live parking facilities from `/api/parking?city=${city}`,
+   * direct Overpass API query, or bundled static JSON fallback.
    */
   public static async fetchParkingFacilities(city: SupportedCity, signal?: AbortSignal): Promise<ParkingFacility[]> {
-    // 1. Try local/Vercel proxy route first
-    try {
-      const resp = await fetch(`/api/parking?city=${city}`, {
-        headers: { Accept: 'application/json' },
-        signal,
-      });
-      if (resp.ok) {
-        const json = await resp.json();
-        if (Array.isArray(json.data) && json.data.length > 0) {
-          return json.data;
-        }
-      }
-    } catch {
-      // Proceed to direct Overpass fallback
-    }
-
-    // 2. Direct Overpass QL fallback
-    const bbox = CITY_CONFIGS[city].bbox;
-    const ql = `[out:json][timeout:25];(node["amenity"="parking"](${bbox});way["amenity"="parking"](${bbox}););out center tags;`;
-    const endpoints = [
-      'https://overpass-api.de/api/interpreter',
-      'https://overpass.kumi.systems/api/interpreter',
-    ];
-
-    let lastError: any = null;
-    for (const ep of endpoints) {
-      try {
-        const resp = await fetch(ep, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-            Accept: 'application/json',
-          },
-          body: `data=${encodeURIComponent(ql)}`,
-          signal,
-        });
-        if (!resp.ok) continue;
-        const json = await resp.json();
-        if (Array.isArray(json.elements) && json.elements.length > 0) {
-          return json.elements
-            .map((elem: any) => {
-              const lat = elem.type === 'node' ? elem.lat : elem.center?.lat;
-              const lon = elem.type === 'node' ? elem.lon : elem.center?.lon;
-              if (typeof lat !== 'number' || typeof lon !== 'number') return null;
-
-              const tags = elem.tags || {};
-              let name = tags.name;
-              if (!name) {
-                if (tags['addr:street']) {
-                  name = `${tags['addr:housenumber'] ? tags['addr:housenumber'] + ' ' : ''}${tags['addr:street']} Parking`;
-                } else if (tags.operator) {
-                  name = `${tags.operator} Parking`;
-                } else if (tags.parking === 'underground' || tags.parking === 'multi-storey') {
-                  name = tags.parking === 'underground' ? 'Subterranean Parking Garage' : 'Multi-Level Parking Garage';
-                } else {
-                  name = 'Public Parking Facility';
-                }
-              }
-
-              return {
-                id: `osm-${elem.type}-${elem.id}`,
-                name,
-                lat,
-                lon,
-                type: tags.parking || 'surface',
-                capacity: tags.capacity ? String(tags.capacity) : 'Unknown',
-              };
-            })
-            .filter(Boolean) as ParkingFacility[];
-        }
-      } catch (e) {
-        // Continue to next mirror or fallback
-      }
-    }
-
-    // Fallback to bundled static JSON cache of verified parking lots
-    const backups: Record<SupportedCity, ParkingFacility[]> = {
-      sf: sfParkingBackup as ParkingFacility[],
-      la: laParkingBackup as ParkingFacility[],
-    };
-    return backups[city] || backups.sf;
+    return ParkingService.fetchParkingFacilities(city, signal);
   }
 
   /**

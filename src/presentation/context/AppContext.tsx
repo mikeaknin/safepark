@@ -178,8 +178,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const parkingRepo = useMemo(() => new ParkingRepositoryImpl(), []);
   const hazardRepo = useMemo(() => new HazardRepositoryImpl(), []);
 
-  // Multi-City State: default San Francisco
-  const [selectedCity, setSelectedCity] = useState<SupportedCity>('sf');
+  const initialCity: SupportedCity = (() => {
+    if (typeof window !== 'undefined') {
+      const param = new URLSearchParams(window.location.search).get('city');
+      if (param === 'la' || param === 'sf') return param;
+    }
+    return 'sf';
+  })();
+
+  // Multi-City State: default San Francisco or from URL param
+  const [selectedCity, setSelectedCity] = useState<SupportedCity>(initialCity);
   const [isLiveLoading, setIsLiveLoading] = useState<boolean>(true);
   const [liveLoadError, setLiveLoadError] = useState<string | null>(null);
   const [rawScoredLocations, setRawScoredLocations] = useState<ParkingLocation[]>([]);
@@ -205,9 +213,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [selectedLocation, setSelectedLocation] = useState<ParkingLocation | null>(null);
 
   // Search & Destination state
-  const [searchQuery, setSearchQuery] = useState<string>('Downtown San Francisco');
-  const [selectedDestination, setSelectedDestination] = useState<SearchDestination | null>(SF_POPULAR_DESTINATIONS[0]);
-  const [destinationResults, setDestinationResults] = useState<SearchDestination[]>(SF_POPULAR_DESTINATIONS);
+  const [searchQuery, setSearchQuery] = useState<string>(
+    initialCity === 'la' ? LA_POPULAR_DESTINATIONS[0].name : 'Downtown San Francisco'
+  );
+  const [selectedDestination, setSelectedDestination] = useState<SearchDestination | null>(
+    initialCity === 'la' ? LA_POPULAR_DESTINATIONS[0] : SF_POPULAR_DESTINATIONS[0]
+  );
+  const [destinationResults, setDestinationResults] = useState<SearchDestination[]>(
+    initialCity === 'la' ? LA_POPULAR_DESTINATIONS : SF_POPULAR_DESTINATIONS
+  );
 
   // Live Geocoding Query Hook with AbortController cancellation
   useEffect(() => {
@@ -360,11 +374,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setLocations([]); // wipe previous markers
     setRawScoredLocations([]);
     setSelectedLocation(null);
+    setLiveLoadError(null);
 
     const defaultDest = city === 'sf' ? SF_POPULAR_DESTINATIONS[0] : LA_POPULAR_DESTINATIONS[0];
     setSelectedDestination(defaultDest);
     setSearchQuery(defaultDest.name);
     setDestinationResults(city === 'sf' ? SF_POPULAR_DESTINATIONS : LA_POPULAR_DESTINATIONS);
+
+    if (typeof window !== 'undefined' && window.history) {
+      const url = new URL(window.location.href);
+      url.searchParams.set('city', city);
+      window.history.replaceState({}, '', url.toString());
+    }
 
     await loadLiveCityData(city);
   };

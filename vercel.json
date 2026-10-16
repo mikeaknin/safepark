@@ -1,27 +1,11 @@
 {
   "rewrites": [
     {
-      "source": "/api/crimes",
-      "destination": "/api/crimes"
+      "source": "/api/(.*)",
+      "destination": "/api/$1"
     },
     {
-      "source": "/api/parking",
-      "destination": "/api/parking"
-    },
-    {
-      "source": "/api/webhooks/stripe",
-      "destination": "/api/webhooks/stripe"
-    },
-    {
-      "source": "/api/webhooks/hazards",
-      "destination": "/api/webhooks/hazards"
-    },
-    {
-      "source": "/api/health",
-      "destination": "/api/health"
-    },
-    {
-      "source": "/(.*)",
+      "source": "/((?!api/).*)",
       "destination": "/index.html"
     }
   ],
