@@ -386,16 +386,19 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
           isSelected
             ? '0 0 0 4px rgba(37,99,235,0.35), 0 10px 24px rgba(15,23,42,0.3)'
             : '0 3px 12px rgba(15,23,42,0.18)'
-        }; display: flex; flex-direction: column; gap: 2px; min-width: 90px;">
-              <!-- Top Row: Spot Type Tag & Rate -->
-              <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: 800;">
-                <span style="color: ${typeColor}; background-color: ${typeBg}; padding: 1px 4px; border-radius: 4px;">${typeTag}</span>
-                <span style="color: #0F172A; font-weight: 800;">${rateDisplay}</span>
+        }; display: flex; flex-direction: column; gap: 3px; min-width: 110px; max-width: 160px;">
+              <!-- Top Row: Facility Real Name -->
+              <div style="font-size: 0.675rem; font-weight: 800; color: #0F172A; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left;" title="${loc.name}">
+                ${loc.name}
               </div>
-              <!-- Bottom Row: Real Calculated Numeric Score & Status -->
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 0.775rem; font-weight: 900; color: ${pinText}; border-top: 1px solid #F1F5F9; padding-top: 2px;">
-                <span>🛡️ ${loc.csi.totalScore}</span>
-                <span style="font-size: 0.625rem; font-weight: 800; background-color: ${pinBadgeBg}; padding: 1px 5px; border-radius: 4px;">${riskTag}</span>
+              <!-- Bottom Row: Real Calculated Numeric Score & Status & Rate -->
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 0.725rem; font-weight: 900; color: ${pinText}; border-top: 1px solid #F1F5F9; padding-top: 2px;">
+                <span style="display: flex; align-items: center; gap: 2px;">
+                  <span>🛡️</span>
+                  <span>${loc.csi.totalScore}</span>
+                </span>
+                <span style="color: #64748B; font-size: 0.65rem; font-weight: 700;">${rateDisplay}</span>
+                <span style="font-size: 0.6rem; font-weight: 800; background-color: ${pinBadgeBg}; padding: 1px 4px; border-radius: 4px;">${riskTag}</span>
               </div>
             </div>
             <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid ${

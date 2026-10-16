@@ -100,7 +100,7 @@ export class ParkingService {
     }
 
     try {
-      const resp = await fetch(`/api/parking?city=${city}`, {
+      const resp = await fetch(`/api/parking?city=${city}&v=garages_v2`, {
         headers: { Accept: 'application/json' },
         signal: proxyController.signal,
       });
