@@ -1,194 +1,242 @@
 [
   {
     "id": "osm-way-4433101",
-    "name": "5th & Mission / Yerba Buena Garage",
-    "lat": 37.7828,
-    "lon": -122.4057,
-    "type": "multi-storey",
-    "capacity": "2585"
+    "name": "Sutter Stockton Garage",
+    "address": "444 Stockton St, San Francisco, CA 94108",
+    "operator": "SFMTA",
+    "lat": 37.7896,
+    "lon": -122.4069,
+    "type": "underground",
+    "capacity": "1865",
+    "fee": "yes",
+    "access": "public"
   },
   {
     "id": "osm-way-4433102",
-    "name": "Sutter-Stockton Garage",
-    "lat": 37.7896,
-    "lon": -122.4069,
-    "type": "multi-storey",
-    "capacity": "1865"
-  },
-  {
-    "id": "osm-way-4433103",
-    "name": "Portsmouth Square Plaza Garage",
-    "lat": 37.7946,
-    "lon": -122.4052,
-    "type": "underground",
-    "capacity": "504"
-  },
-  {
-    "id": "osm-way-4433104",
     "name": "Union Square Garage",
+    "address": "333 Post St, San Francisco, CA 94108",
+    "operator": "SFMTA",
     "lat": 37.7880,
     "lon": -122.4075,
     "type": "underground",
-    "capacity": "985"
+    "capacity": "985",
+    "fee": "yes",
+    "access": "public"
+  },
+  {
+    "id": "osm-way-4433103",
+    "name": "5th & Mission / Yerba Buena Garage",
+    "address": "833 Mission St, San Francisco, CA 94103",
+    "operator": "SFMTA",
+    "lat": 37.7828,
+    "lon": -122.4057,
+    "type": "multi-storey",
+    "capacity": "2585",
+    "fee": "yes",
+    "access": "public"
+  },
+  {
+    "id": "osm-way-4433104",
+    "name": "Portsmouth Square Garage",
+    "address": "733 Kearny St, San Francisco, CA 94108",
+    "operator": "SFMTA",
+    "lat": 37.7946,
+    "lon": -122.4052,
+    "type": "underground",
+    "capacity": "500",
+    "fee": "yes",
+    "access": "public"
   },
   {
     "id": "osm-way-4433105",
     "name": "St. Mary's Square Garage",
+    "address": "433 Kearny St, San Francisco, CA 94108",
+    "operator": "SFMTA",
     "lat": 37.7919,
     "lon": -122.4048,
     "type": "underground",
-    "capacity": "413"
+    "capacity": "400",
+    "fee": "yes",
+    "access": "public"
   },
   {
     "id": "osm-way-4433106",
     "name": "Civic Center Garage",
+    "address": "355 McAllister St, San Francisco, CA 94102",
+    "operator": "SFMTA",
     "lat": 37.7797,
     "lon": -122.4172,
     "type": "underground",
-    "capacity": "843"
+    "capacity": "840",
+    "fee": "yes",
+    "access": "public"
   },
   {
     "id": "osm-way-4433107",
-    "name": "Embarcadero Center Garage",
-    "lat": 37.7950,
-    "lon": -122.3990,
-    "type": "underground",
-    "capacity": "2000"
+    "name": "Moscone Center Garage",
+    "address": "255 3rd St, San Francisco, CA 94103",
+    "operator": "City of San Francisco",
+    "lat": 37.7839,
+    "lon": -122.4018,
+    "type": "multi-storey",
+    "capacity": "730",
+    "fee": "yes",
+    "access": "public"
   },
   {
     "id": "osm-way-4433108",
-    "name": "Golden Gateway Garage",
-    "lat": 37.7978,
-    "lon": -122.4005,
-    "type": "multi-storey",
-    "capacity": "1088"
+    "name": "Japan Center Garage",
+    "address": "1610 Geary Blvd, San Francisco, CA 94115",
+    "operator": "SFMTA",
+    "lat": 37.7852,
+    "lon": -122.4300,
+    "type": "underground",
+    "capacity": "920",
+    "fee": "yes",
+    "access": "public"
   },
   {
     "id": "osm-way-4433109",
-    "name": "Japan Center Garage",
-    "lat": 37.7852,
-    "lon": -122.4300,
+    "name": "Ellis O'Farrell Garage",
+    "address": "123 O'Farrell St, San Francisco, CA 94102",
+    "operator": "SFMTA",
+    "lat": 37.7865,
+    "lon": -122.4077,
     "type": "multi-storey",
-    "capacity": "920"
+    "capacity": "950",
+    "fee": "yes",
+    "access": "public"
   },
   {
     "id": "osm-way-4433110",
-    "name": "SFMTA Lombard Garage",
-    "lat": 37.7997,
-    "lon": -122.4357,
-    "type": "multi-storey",
-    "capacity": "205"
-  },
-  {
-    "id": "osm-way-4433111",
-    "name": "Mission Bartlett Garage",
-    "lat": 37.7578,
-    "lon": -122.4194,
-    "type": "multi-storey",
-    "capacity": "350"
-  },
-  {
-    "id": "osm-way-4433112",
-    "name": "Pier 39 Parking Garage",
-    "lat": 37.8085,
-    "lon": -122.4111,
-    "type": "multi-storey",
-    "capacity": "800"
-  },
-  {
-    "id": "osm-way-4433113",
-    "name": "North Beach Parking Garage",
-    "lat": 37.8001,
-    "lon": -122.4095,
-    "type": "multi-storey",
-    "capacity": "203"
-  },
-  {
-    "id": "osm-way-4433114",
     "name": "Vallejo Street Garage",
+    "address": "766 Vallejo St, San Francisco, CA 94133",
+    "operator": "SFMTA",
     "lat": 37.7984,
     "lon": -122.4081,
     "type": "multi-storey",
-    "capacity": "163"
+    "capacity": "160",
+    "fee": "yes",
+    "access": "public"
   },
   {
-    "id": "osm-way-4433115",
-    "name": "Moscone Center Garage",
-    "lat": 37.7839,
-    "lon": -122.4018,
-    "type": "underground",
-    "capacity": "732"
+    "id": "osm-way-4433111",
+    "name": "Golden Gateway Garage",
+    "address": "250 Clay St, San Francisco, CA 94111",
+    "operator": "SFMTA",
+    "lat": 37.7978,
+    "lon": -122.4005,
+    "type": "multi-storey",
+    "capacity": "1080",
+    "fee": "yes",
+    "access": "public"
   },
   {
-    "id": "osm-way-4433116",
+    "id": "osm-way-4433112",
     "name": "Performing Arts Garage",
+    "address": "360 Grove St, San Francisco, CA 94102",
+    "operator": "SFMTA",
     "lat": 37.7778,
     "lon": -122.4211,
     "type": "multi-storey",
-    "capacity": "565"
+    "capacity": "595",
+    "fee": "yes",
+    "access": "public"
+  },
+  {
+    "id": "osm-way-4433113",
+    "name": "Mission Bartlett Garage",
+    "address": "3255 21st St, San Francisco, CA 94110",
+    "operator": "SFMTA",
+    "lat": 37.7578,
+    "lon": -122.4194,
+    "type": "multi-storey",
+    "capacity": "350",
+    "fee": "yes",
+    "access": "public"
+  },
+  {
+    "id": "osm-way-4433114",
+    "name": "Lombard Street Garage",
+    "address": "2056 Lombard St, San Francisco, CA 94123",
+    "operator": "SFMTA",
+    "lat": 37.7997,
+    "lon": -122.4357,
+    "type": "multi-storey",
+    "capacity": "205",
+    "fee": "yes",
+    "access": "public"
+  },
+  {
+    "id": "osm-way-4433115",
+    "name": "North Beach Garage",
+    "address": "735 Vallejo St, San Francisco, CA 94133",
+    "operator": "SFMTA",
+    "lat": 37.8001,
+    "lon": -122.4095,
+    "type": "multi-storey",
+    "capacity": "200",
+    "fee": "yes",
+    "access": "public"
+  },
+  {
+    "id": "osm-way-4433116",
+    "name": "Pier 39 Parking Garage",
+    "address": "2550 Beach St, San Francisco, CA 94133",
+    "operator": "Pier 39",
+    "lat": 37.8085,
+    "lon": -122.4111,
+    "type": "multi-storey",
+    "capacity": "800",
+    "fee": "yes",
+    "access": "public"
   },
   {
     "id": "osm-way-4433117",
-    "name": "Polk Bush Garage",
-    "lat": 37.7887,
-    "lon": -122.4208,
-    "type": "multi-storey",
-    "capacity": "125"
-  },
-  {
-    "id": "osm-way-4433118",
-    "name": "Castro 18th & Collingwood Parking",
-    "lat": 37.7599,
-    "lon": -122.4363,
-    "type": "surface",
-    "capacity": "45"
-  },
-  {
-    "id": "osm-way-4433119",
-    "name": "16th & Hoff Garage",
-    "lat": 37.7650,
-    "lon": -122.4205,
-    "type": "surface",
-    "capacity": "98"
-  },
-  {
-    "id": "osm-way-4433120",
     "name": "Ghirardelli Square Parking Garage",
+    "address": "900 North Point St, San Francisco, CA 94109",
+    "operator": "Ghirardelli Square",
     "lat": 37.8058,
     "lon": -122.4226,
     "type": "underground",
-    "capacity": "320"
+    "capacity": "320",
+    "fee": "yes",
+    "access": "public"
   },
   {
-    "id": "osm-way-4433121",
-    "name": "Fishermans Wharf Parking Lot",
-    "lat": 37.8077,
-    "lon": -122.4175,
-    "type": "surface",
-    "capacity": "250"
+    "id": "osm-way-4433118",
+    "name": "Embarcadero Center Garage",
+    "address": "1 Embarcadero Center, San Francisco, CA 94111",
+    "operator": "Embarcadero Center",
+    "lat": 37.7950,
+    "lon": -122.3990,
+    "type": "underground",
+    "capacity": "2000",
+    "fee": "yes",
+    "access": "public"
   },
   {
-    "id": "osm-way-4433122",
+    "id": "osm-way-4433119",
+    "name": "Polk Bush Garage",
+    "address": "1399 Bush St, San Francisco, CA 94109",
+    "operator": "SFMTA",
+    "lat": 37.7887,
+    "lon": -122.4208,
+    "type": "multi-storey",
+    "capacity": "125",
+    "fee": "yes",
+    "access": "public"
+  },
+  {
+    "id": "osm-way-4433120",
     "name": "SoMa Grand Parking Garage",
+    "address": "1160 Mission St, San Francisco, CA 94103",
+    "operator": "City Parking",
     "lat": 37.7776,
     "lon": -122.4132,
     "type": "multi-storey",
-    "capacity": "240"
-  },
-  {
-    "id": "osm-way-4433123",
-    "name": "Oracle Park Lot A",
-    "lat": 37.7758,
-    "lon": -122.3892,
-    "type": "surface",
-    "capacity": "1500"
-  },
-  {
-    "id": "osm-way-4433124",
-    "name": "Salesforce Transit Center Garage",
-    "lat": 37.7895,
-    "lon": -122.3970,
-    "type": "underground",
-    "capacity": "450"
+    "capacity": "240",
+    "fee": "yes",
+    "access": "public"
   }
 ]

@@ -15,33 +15,81 @@ export const PARKING_BOUNDING_BOXES: Record<SupportedCity, string> = {
   la: '33.98,-118.50,34.11,-118.23',
 };
 
+/**
+ * Merges live Overpass facilities with verified named anchor garages,
+ * ensuring anchor facilities are always present and avoiding duplicates.
+ */
+function mergeWithAnchorGarages(
+  anchors: ParkingFacility[],
+  liveResults: ParkingFacility[]
+): ParkingFacility[] {
+  const merged: ParkingFacility[] = [...anchors];
+
+  function getDistanceMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const R = 6371000;
+    const dLat = ((lat2 - lat1) * Math.PI) / 180;
+    const dLon = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos((lat1 * Math.PI) / 180) *
+        Math.cos((lat2 * Math.PI) / 180) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    return 2 * R * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  for (const live of liveResults) {
+    const isDuplicate = merged.some((anchor) => {
+      if (anchor.id === live.id) return true;
+      if (anchor.name.toLowerCase() === live.name.toLowerCase()) return true;
+      const d = getDistanceMeters(anchor.lat, anchor.lon, live.lat, live.lon);
+      return d < 70;
+    });
+
+    if (!isDuplicate) {
+      merged.push(live);
+    }
+  }
+
+  return merged;
+}
+
 export class ParkingService {
   /**
    * Retrieves the client-bundled static JSON dataset to guarantee
-   * the map never drops to 0 lots.
+   * the map never drops to 0 lots and all anchor garages are present.
    */
   public static getBundledBackup(city: SupportedCity): ParkingFacility[] {
     const list = city === 'sf' ? sfParkingBackup : laParkingBackup;
     return (list as any[]).map((item) => ({
       id: item.id,
       name: item.name,
+      address: item.address,
+      operator: item.operator,
       lat: item.lat,
       lon: item.lon,
       type: item.type || 'surface',
       capacity: item.capacity ? String(item.capacity) : 'Unknown',
+      fee: item.fee,
+      access: item.access,
+      barrier: item.barrier,
+      lit: item.lit,
     }));
   }
 
   /**
    * Fetches parking facilities:
    * 1. Try local/Vercel `/api/parking?city=${city}` (6s timeout)
-   * 2. Direct Overpass API query (6s timeout per mirror)
+   * 2. Direct Overpass API query (6s timeout per mirror) merged with anchor garages
    * 3. Fallback to client-bundled JSON (sf_parking_backup.json / la_parking_backup.json)
    */
   public static async fetchParkingFacilities(
     city: SupportedCity,
     externalSignal?: AbortSignal
   ): Promise<ParkingFacility[]> {
+    const anchors = this.getBundledBackup(city);
+    const cityName = city === 'la' ? 'Los Angeles' : 'San Francisco';
+
     // 1. Try proxy route first with 6s timeout
     const proxyController = new AbortController();
     const proxyTimeout = setTimeout(() => proxyController.abort(), 6000);
@@ -63,12 +111,13 @@ export class ParkingService {
         if (text && !text.trim().startsWith('<') && !text.includes('<!DOCTYPE') && !text.includes('DOCTYPE html')) {
           const parsed = JSON.parse(text);
           if (Array.isArray(parsed.data) && parsed.data.length > 0) {
-            return parsed.data;
+            // Merge with local anchors to guarantee all 15 named municipal garages are present
+            return mergeWithAnchorGarages(anchors, parsed.data);
           }
         }
       }
     } catch {
-      // Proceed to Overpass / Bundled fallback
+      // Proceed to direct Overpass / Bundled fallback
     } finally {
       clearTimeout(proxyTimeout);
       if (externalSignal) {
@@ -103,7 +152,7 @@ export class ParkingService {
         if (resp.ok) {
           const json = await resp.json();
           if (Array.isArray(json.elements) && json.elements.length > 0) {
-            const parsed = json.elements
+            const parsedLive = json.elements
               .map((elem: any) => {
                 const lat = elem.type === 'node' ? elem.lat : elem.center?.lat;
                 const lon = elem.type === 'node' ? elem.lon : elem.center?.lon;
@@ -111,31 +160,47 @@ export class ParkingService {
 
                 const tags = elem.tags || {};
                 let name = tags.name;
+
                 if (!name) {
-                  if (tags['addr:street']) {
-                    name = `${tags['addr:housenumber'] ? tags['addr:housenumber'] + ' ' : ''}${tags['addr:street']} Parking`;
-                  } else if (tags.operator) {
-                    name = `${tags.operator} Parking`;
-                  } else if (tags.parking === 'underground' || tags.parking === 'multi-storey') {
-                    name = tags.parking === 'underground' ? 'Subterranean Parking Garage' : 'Multi-Level Parking Garage';
+                  if (tags.operator) {
+                    const streetOrNum = tags['addr:street'] || tags['addr:housenumber'] || 'Facility';
+                    name = `${tags.operator} - ${streetOrNum}`;
+                  } else if (tags['addr:street']) {
+                    const houseNum = tags['addr:housenumber'] ? `${tags['addr:housenumber']} ` : '';
+                    name = `${houseNum}${tags['addr:street']} Parking`.trim();
                   } else {
-                    name = 'Public Parking Facility';
+                    // Drop any Overpass node that has NO name, NO operator, and NO street address.
+                    return null;
                   }
+                }
+
+                let address = '';
+                if (tags['addr:street']) {
+                  const houseNum = tags['addr:housenumber'] ? `${tags['addr:housenumber']} ` : '';
+                  address = `${houseNum}${tags['addr:street']}, ${cityName}, CA`;
+                } else {
+                  address = `${name}, ${cityName}, CA`;
                 }
 
                 return {
                   id: `osm-${elem.type}-${elem.id}`,
                   name,
+                  address,
+                  operator: tags.operator || undefined,
                   lat,
                   lon,
                   type: tags.parking || 'surface',
                   capacity: tags.capacity ? String(tags.capacity) : 'Unknown',
+                  fee: tags.fee,
+                  access: tags.access,
+                  barrier: tags.barrier,
+                  lit: tags.lit,
                 };
               })
               .filter(Boolean) as ParkingFacility[];
 
-            if (parsed.length > 0) {
-              return parsed;
+            if (parsedLive.length > 0) {
+              return mergeWithAnchorGarages(anchors, parsedLive);
             }
           }
         }
@@ -145,6 +210,6 @@ export class ParkingService {
     }
 
     // 3. Bundled static JSON fallback (Guarantees map NEVER drops to 0 lots)
-    return this.getBundledBackup(city);
+    return anchors;
   }
 }

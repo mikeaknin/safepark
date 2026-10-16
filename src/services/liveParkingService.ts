@@ -113,7 +113,7 @@ export class LiveParkingService {
       const location: ParkingLocation = {
         id: String(scoreResult.facilityId),
         name: scoreResult.name,
-        address: `${scoreResult.name}, ${CITY_CONFIGS[city].name}, CA`,
+        address: scoreResult.address || `${scoreResult.name}, ${CITY_CONFIGS[city].name}, CA`,
         hourlyRate,
         currency: 'USD',
         totalSpaces,

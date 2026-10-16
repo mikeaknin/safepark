@@ -9,6 +9,8 @@ import { useMemo } from 'react';
 export interface ParkingFacility {
   id: string | number;
   name: string;
+  address?: string;
+  operator?: string;
   lat: number;
   lon: number;
   type?: string;
@@ -36,6 +38,8 @@ export type SafetyRiskLevel = 'Low Incident Zone' | 'Moderate Risk' | 'High Brea
 export interface SafetyScoreResult {
   facilityId: string | number;
   name: string;
+  address?: string;
+  operator?: string;
   lat: number;
   lon: number;
   type: string;
@@ -256,6 +260,8 @@ export function calculateSafetyScore(
   return {
     facilityId: facility.id,
     name: facility.name || 'Public Parking',
+    address: facility.address,
+    operator: facility.operator,
     lat: facility.lat,
     lon: facility.lon,
     type: facility.type || 'surface',
