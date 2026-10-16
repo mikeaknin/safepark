@@ -22,6 +22,7 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
   isFullscreen = true,
 }) => {
   const {
+    selectedCity,
     currentView,
     locations,
     selectedLocation,
@@ -137,12 +138,32 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
     }
   }, [currentView]);
 
-  // 3. Real Panning & Re-Centering on Destination Coordinates Update
+  // 3. Multi-City Re-Centering: SF ([37.7749, -122.4194], zoom 13), LA ([34.0522, -118.2437], zoom 12)
+  useEffect(() => {
+    if (!mapInstanceRef.current) return;
+    isProgrammaticFlightRef.current = true;
+    markersGroupRef.current?.clearLayers();
+    curbSegmentsGroupRef.current?.clearLayers();
+
+    if (selectedCity === 'sf') {
+      mapInstanceRef.current.setView([37.7749, -122.4194], 13, { animate: true });
+    } else {
+      mapInstanceRef.current.setView([34.0522, -118.2437], 12, { animate: true });
+    }
+
+    const timer = setTimeout(() => {
+      isProgrammaticFlightRef.current = false;
+      mapInstanceRef.current?.invalidateSize();
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, [selectedCity]);
+
+  // 4. Real Panning & Re-Centering on Destination Coordinates Update
   useEffect(() => {
     if (mapInstanceRef.current && selectedDestination?.coordinates) {
       const { lat, lng } = selectedDestination.coordinates;
       isProgrammaticFlightRef.current = true;
-      mapInstanceRef.current.flyTo([lat, lng], 16, {
+      mapInstanceRef.current.flyTo([lat, lng], 15, {
         animate: true,
         duration: 1.2,
       });
@@ -328,43 +349,53 @@ export const InteractiveMapCanvas: React.FC<InteractiveMapCanvasProps> = ({
       }
 
       // 2. Build High-Clarity Multi-Attribute Map Pin
+      // Color-coding rules:
+      // - 80-100: Green (Low Incident Zone)
+      // - 60-79: Yellow (Moderate Risk)
+      // - Under 60: Red (High Break-In Frequency)
       let pinBg = '#FFFFFF';
       let pinText = '#15803D';
-      let pinBorder = isSelected ? '#2563EB' : '#CBD5E1';
+      let pinBadgeBg = '#DCFCE7';
+      let pinBorder = isSelected ? '#2563EB' : '#86EFAC';
+      let riskTag = 'SAFE';
 
-      if (loc.csi.totalScore < 50) {
-        pinText = '#BE123C';
-        pinBorder = isSelected ? '#2563EB' : '#FECDD3';
-      } else if (loc.csi.totalScore < 75) {
-        pinText = '#B45309';
-        pinBorder = isSelected ? '#2563EB' : '#FDE68A';
+      if (loc.csi.totalScore < 60) {
+        pinText = '#DC2626';
+        pinBadgeBg = '#FEE2E2';
+        pinBorder = isSelected ? '#2563EB' : '#FCA5A5';
+        riskTag = 'RISK';
+      } else if (loc.csi.totalScore < 80) {
+        pinText = '#CA8A04';
+        pinBadgeBg = '#FEF9C3';
+        pinBorder = isSelected ? '#2563EB' : '#FDE047';
+        riskTag = 'MOD';
       }
 
       const parkingIcon = L.divIcon({
         className: `safepark-pin-${loc.id}`,
         html: `
-          <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%) ${isSelected ? 'scale(1.08)' : 'scale(1)'}; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: auto;">
+          <div style="display: flex; flex-direction: column; align-items: center; transform: translate(-50%, -100%) ${isSelected ? 'scale(1.12)' : 'scale(1)'}; cursor: pointer; transition: transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1); pointer-events: auto;">
             ${
               isParked
                 ? `<div style="background-color: #15803D; color: #FFFFFF; font-size: 0.6rem; font-weight: 800; padding: 1px 6px; border-radius: 9999px; margin-bottom: 2px; box-shadow: 0 2px 6px rgba(21,128,61,0.4); text-transform: uppercase;">Active Spot</div>`
                 : ''
             }
             <div style="background-color: ${pinBg}; border: ${
-          isSelected ? '2.5px solid #2563EB' : `1.5px solid ${pinBorder}`
+          isSelected ? '2.5px solid #2563EB' : `2px solid ${pinBorder}`
         }; border-radius: 12px; padding: 4px 8px; box-shadow: ${
           isSelected
             ? '0 0 0 4px rgba(37,99,235,0.35), 0 10px 24px rgba(15,23,42,0.3)'
-            : '0 3px 12px rgba(15,23,42,0.15)'
-        }; display: flex; flex-direction: column; gap: 2px; min-width: 92px;">
+            : '0 3px 12px rgba(15,23,42,0.18)'
+        }; display: flex; flex-direction: column; gap: 2px; min-width: 90px;">
               <!-- Top Row: Spot Type Tag & Rate -->
               <div style="display: flex; justify-content: space-between; align-items: center; gap: 4px; font-size: 0.65rem; font-weight: 800;">
                 <span style="color: ${typeColor}; background-color: ${typeBg}; padding: 1px 4px; border-radius: 4px;">${typeTag}</span>
                 <span style="color: #0F172A; font-weight: 800;">${rateDisplay}</span>
               </div>
-              <!-- Bottom Row: CSI Score & Open Spaces -->
-              <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 0.725rem; font-weight: 800; color: ${pinText}; border-top: 1px solid #F1F5F9; padding-top: 2px;">
-                <span>🛡️ CSI ${loc.csi.totalScore}</span>
-                <span style="font-size: 0.65rem; color: #64748B; font-weight: 700;">${loc.availableSpaces} open</span>
+              <!-- Bottom Row: Real Calculated Numeric Score & Status -->
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 4px; font-size: 0.775rem; font-weight: 900; color: ${pinText}; border-top: 1px solid #F1F5F9; padding-top: 2px;">
+                <span>🛡️ ${loc.csi.totalScore}</span>
+                <span style="font-size: 0.625rem; font-weight: 800; background-color: ${pinBadgeBg}; padding: 1px 5px; border-radius: 4px;">${riskTag}</span>
               </div>
             </div>
             <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-top: 6px solid ${

@@ -14,6 +14,9 @@ import {
   Car,
   Filter,
   X,
+  AlertTriangle,
+  Loader2,
+  RefreshCw,
 } from 'lucide-react';
 
 export type SnapPoint = 'peek' | 'mid' | 'expanded';
@@ -41,11 +44,23 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
     activeParkedSession,
     handleParkHere,
     clearParkedSpot,
+    isLiveLoading,
+    liveLoadError,
+    retryLiveLoad,
   } = useApp();
 
   const [snapPoint, setSnapPoint] = useState<SnapPoint>('peek');
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [dragOffset, setDragOffset] = useState<number>(0);
+
+  // Auto-expand sheet to mid mode when user taps a parking pin on the map
+  const previousSelectedIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (selectedLocation && selectedLocation.id !== previousSelectedIdRef.current) {
+      previousSelectedIdRef.current = selectedLocation.id;
+      setSnapPoint('mid');
+    }
+  }, [selectedLocation]);
 
   const sheetRef = useRef<HTMLElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -397,34 +412,32 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                   </>
                 ) : (
                   <>
-                    {/* Stage 1 (En Route): 1. Drive to Spot (Primary Blue), 2. I'm Parked Here (Secondary Slate) */}
-                    {onOpenDirections && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onOpenDirections(topRankedSpot);
-                        }}
-                        aria-label={`Drive to ${topRankedSpot.name}`}
-                        style={{
-                          backgroundColor: '#2563EB',
-                          color: '#FFFFFF',
-                          border: 'none',
-                          borderRadius: '8px',
-                          padding: '5px 10px',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '3px',
-                          minHeight: '32px',
-                          fontSize: '0.725rem',
-                          fontWeight: 800,
-                          boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
-                        }}
-                      >
-                        <Navigation size={12} />
-                        <span>Drive to Spot</span>
-                      </button>
-                    )}
+                    {/* Get Directions (Google Maps / Apple Maps direct coordinates) */}
+                    <a
+                      href={`https://www.google.com/maps/dir/?api=1&destination=${topRankedSpot.coordinates.lat},${topRankedSpot.coordinates.lng}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      aria-label={`Get directions to ${topRankedSpot.name} on Google Maps`}
+                      style={{
+                        backgroundColor: '#2563EB',
+                        color: '#FFFFFF',
+                        textDecoration: 'none',
+                        borderRadius: '8px',
+                        padding: '6px 12px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        minHeight: '32px',
+                        fontSize: '0.725rem',
+                        fontWeight: 800,
+                        boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)',
+                      }}
+                    >
+                      <Navigation size={12} />
+                      <span>Directions</span>
+                    </a>
 
                     <button
                       onClick={(e) => {
@@ -472,7 +485,7 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
             backgroundColor: '#F8FAFC',
           }}
         >
-          {/* Active Parked Vehicle Session Card (Find My Car & Countdown Timer) */}
+          {/* Active Parked Vehicle Session Card */}
           {activeParkedSession && (
             <ActiveParkedSpotCard
               session={activeParkedSession}
@@ -480,24 +493,123 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
             />
           )}
 
-          {locations.map((loc) => (
-            <ParkingFacilityCard
-              key={loc.id}
-              location={loc}
-              isSelected={selectedLocation?.id === loc.id}
-              isParkedHere={parkedLocation?.id === loc.id || activeParkedSession?.locationId === loc.id}
-              showFullDetails={snapPoint === 'expanded'}
-              onSelect={(l) => {
-                setSelectedLocation(l);
+          {/* Loading Skeletons */}
+          {isLiveLoading && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {[1, 2, 3].map((key) => (
+                <div
+                  key={key}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: '18px',
+                    border: '1px solid #E2E8F0',
+                    padding: '16px',
+                    boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '10px',
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ width: '55%', height: '18px', backgroundColor: '#E2E8F0', borderRadius: '6px', animation: 'pulse 1.5s infinite' }} />
+                    <div style={{ width: '25%', height: '22px', backgroundColor: '#E2E8F0', borderRadius: '12px', animation: 'pulse 1.5s infinite' }} />
+                  </div>
+                  <div style={{ width: '80%', height: '14px', backgroundColor: '#F1F5F9', borderRadius: '4px', animation: 'pulse 1.5s infinite' }} />
+                  <div style={{ width: '100%', height: '48px', backgroundColor: '#F8FAFC', border: '1px solid #EDF2F7', borderRadius: '10px', animation: 'pulse 1.5s infinite' }} />
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <div style={{ flex: 1, height: '38px', backgroundColor: '#E2E8F0', borderRadius: '8px', animation: 'pulse 1.5s infinite' }} />
+                    <div style={{ flex: 1, height: '38px', backgroundColor: '#F1F5F9', borderRadius: '8px', animation: 'pulse 1.5s infinite' }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Empty State Alert if Municipal Feed Times Out */}
+          {!isLiveLoading && liveLoadError && locations.length === 0 && (
+            <div
+              role="alert"
+              style={{
+                backgroundColor: '#FEF2F2',
+                border: '1.5px solid #FCA5A5',
+                borderRadius: '16px',
+                padding: '24px 16px',
+                textAlign: 'center',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '12px',
+                marginTop: '12px',
               }}
-              onInspectCsi={onInspectCsi}
-              onSafeWalk={onSafeWalk}
-              onParkHere={handleParkHere}
-              onLeaveSpot={clearParkedSpot}
-              onReportHazard={onReportHazard}
-              onOpenDirections={onOpenDirections}
-            />
-          ))}
+            >
+              <AlertTriangle size={36} color="#DC2626" />
+              <div>
+                <h4 style={{ margin: '0 0 6px 0', fontSize: '1rem', fontWeight: 800, color: '#991B1B' }}>
+                  Municipal Crime Feed Timed Out
+                </h4>
+                <p style={{ margin: 0, fontSize: '0.8rem', color: '#B91C1C', lineHeight: 1.4 }}>
+                  {liveLoadError}. Please verify your connection or tap below to reconnect.
+                </p>
+              </div>
+              <button
+                onClick={retryLiveLoad}
+                style={{
+                  backgroundColor: '#DC2626',
+                  color: '#FFFFFF',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '9px 20px',
+                  fontWeight: 800,
+                  fontSize: '0.8rem',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 8px rgba(220, 38, 38, 0.25)',
+                }}
+              >
+                <RefreshCw size={13} />
+                <span>Retry Live Sync</span>
+              </button>
+            </div>
+          )}
+
+          {/* Empty State when no results match filters */}
+          {!isLiveLoading && !liveLoadError && locations.length === 0 && (
+            <div
+              style={{
+                backgroundColor: '#FFFFFF',
+                borderRadius: '16px',
+                border: '1px solid #E2E8F0',
+                padding: '32px 16px',
+                textAlign: 'center',
+              }}
+            >
+              <p style={{ margin: 0, fontSize: '0.875rem', fontWeight: 700, color: '#64748B' }}>
+                No parking facilities found matching your active filter criteria.
+              </p>
+            </div>
+          )}
+
+          {!isLiveLoading &&
+            locations.map((loc) => (
+              <ParkingFacilityCard
+                key={loc.id}
+                location={loc}
+                isSelected={selectedLocation?.id === loc.id}
+                isParkedHere={parkedLocation?.id === loc.id || activeParkedSession?.locationId === loc.id}
+                showFullDetails={snapPoint === 'expanded'}
+                onSelect={(l) => {
+                  setSelectedLocation(l);
+                }}
+                onInspectCsi={onInspectCsi}
+                onSafeWalk={onSafeWalk}
+                onParkHere={handleParkHere}
+                onLeaveSpot={clearParkedSpot}
+                onReportHazard={onReportHazard}
+                onOpenDirections={onOpenDirections}
+              />
+            ))}
         </div>
       )}
     </section>

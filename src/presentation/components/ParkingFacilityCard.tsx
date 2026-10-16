@@ -43,23 +43,40 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
   const status = getStatusStyle(location.csi.totalScore);
   const litRoute = location.walkingRoutes?.find((r) => r.isRecommendedLitPath);
 
+  const score = location.csi.totalScore;
+  const isGreen = score >= 80;
+  const isYellow = score >= 60 && score < 80;
+  const isRed = score < 60;
+
+  const cardBorder = isParkedHere
+    ? '2px solid #15803D'
+    : isSelected
+    ? '2.5px solid #2563EB'
+    : isGreen
+    ? '1.5px solid #86EFAC'
+    : isYellow
+    ? '1.5px solid #FDE047'
+    : '1.5px solid #FCA5A5';
+
+  const cardBg = isGreen ? '#FFFFFF' : isYellow ? '#FFFEFA' : '#FFFDFD';
+
+  const incidentCount = (location.csi.components.crimeScore?.factorDetails?.incidentCount500m as number) ?? (location.crimeData?.incidentsLast90Days ?? 0);
+  const within250 = (location.csi.components.crimeScore?.factorDetails?.within250m as number) ?? (location.crimeData?.incidentsLast30Days ?? 0);
+  const between250and500 = (location.csi.components.crimeScore?.factorDetails?.between250and500m as number) ?? Math.max(0, incidentCount - within250);
+
   return (
     <article
-      aria-label={`${location.name}, Composite Safety Index ${location.csi.totalScore}`}
+      aria-label={`${location.name}, Safety Score ${location.csi.totalScore}`}
       onClick={() => onSelect(location)}
       style={{
-        backgroundColor: '#FFFFFF',
+        backgroundColor: cardBg,
         borderRadius: '18px',
-        border: isParkedHere
-          ? '2px solid #15803D'
-          : isSelected
-          ? '2px solid #2563EB'
-          : '1px solid #E2E8F0',
+        border: cardBorder,
         boxShadow: isParkedHere
           ? '0 4px 16px rgba(21, 128, 61, 0.12)'
           : isSelected
-          ? '0 4px 16px rgba(37, 99, 235, 0.12)'
-          : '0 2px 10px rgba(15, 23, 42, 0.04)',
+          ? '0 6px 20px rgba(37, 99, 235, 0.16)'
+          : '0 2px 10px rgba(15, 23, 42, 0.05)',
         padding: '16px',
         marginBottom: '12px',
         cursor: 'pointer',
@@ -162,6 +179,45 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
             <Video size={12} color="#2563EB" /> CCTV Monitored
           </span>
         )}
+      </div>
+
+      {/* Real Safety Score & Incident Breakdown */}
+      <div
+        style={{
+          backgroundColor: isGreen ? '#F0FDF4' : isYellow ? '#FEFCE8' : '#FEF2F2',
+          border: `1.5px solid ${isGreen ? '#BBF7D0' : isYellow ? '#FEF08A' : '#FECACA'}`,
+          borderRadius: '12px',
+          padding: '10px 12px',
+          marginBottom: '12px',
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <span
+              style={{
+                display: 'inline-block',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: isGreen ? '#16A34A' : isYellow ? '#CA8A04' : '#DC2626',
+              }}
+            />
+            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: isGreen ? '#15803D' : isYellow ? '#854D0E' : '#991B1B' }}>
+              {isGreen ? 'Low Incident Zone' : isYellow ? 'Moderate Risk' : 'High Break-In Frequency'}
+            </span>
+          </div>
+          <span style={{ fontSize: '0.85rem', fontWeight: 900, color: isGreen ? '#15803D' : isYellow ? '#854D0E' : '#991B1B' }}>
+            {score}/100 Score
+          </span>
+        </div>
+
+        <div style={{ fontSize: '0.775rem', fontWeight: 700, color: '#1E293B' }}>
+          🚨 {incidentCount} vehicle incident{incidentCount === 1 ? '' : 's'} within 500m in past 90 days
+        </div>
+        <div style={{ fontSize: '0.7rem', color: '#64748B', marginTop: '3px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <span>• {within250} within 250m (-4 pts each)</span>
+          <span>• {between250and500} between 250m–500m (-2 pts each)</span>
+        </div>
       </div>
 
       {/* Curbside Municipal Rules & Sweeping Banner (For Street/Curbside Spots) */}
@@ -293,37 +349,35 @@ export const ParkingFacilityCard: React.FC<ParkingFacilityCardProps> = ({
           </>
         ) : (
           <>
-            {/* Pre-Parked State: 1. Drive to Spot (Primary Blue), 2. I'm Parked Here (Secondary Slate) */}
-            {onOpenDirections && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenDirections(location);
-                }}
-                aria-label={`Drive to ${location.name}`}
-                style={{
-                  flex: '1 1 130px',
-                  backgroundColor: '#2563EB',
-                  color: '#FFFFFF',
-                  border: 'none',
-                  borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
-                  padding: '8px 14px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '6px',
-                  minHeight: '42px',
-                  fontSize: '0.8rem',
-                  fontWeight: 800,
-                  boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
-                  transition: 'all 0.15s ease',
-                }}
-              >
-                <Navigation size={15} />
-                <span>Drive to Spot</span>
-              </button>
-            )}
+            {/* Get Directions (Google Maps / Apple Maps direct coordinates) */}
+            <a
+              href={`https://www.google.com/maps/dir/?api=1&destination=${location.coordinates.lat},${location.coordinates.lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              aria-label={`Get directions to ${location.name} in Google Maps`}
+              style={{
+                flex: '1 1 130px',
+                backgroundColor: '#2563EB',
+                color: '#FFFFFF',
+                textDecoration: 'none',
+                borderRadius: SAFE_PARK_TOKENS.borderRadius.md,
+                padding: '8px 14px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '6px',
+                minHeight: '42px',
+                fontSize: '0.8rem',
+                fontWeight: 800,
+                boxShadow: '0 4px 12px rgba(37, 99, 235, 0.3)',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              <Navigation size={15} />
+              <span>Get Directions</span>
+            </a>
 
             {onParkHere && (
               <button

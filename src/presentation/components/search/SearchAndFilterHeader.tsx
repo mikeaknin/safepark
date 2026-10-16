@@ -11,12 +11,22 @@ import {
   Clock,
   Trash2,
   Sparkles,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
+import { SafeParkLogo } from '../SafeParkLogo';
 
 const RECENT_SEARCHES_STORAGE_KEY = 'safepark_recent_searches_v1';
 
 export const SearchAndFilterHeader: React.FC = () => {
   const {
+    selectedCity,
+    switchCity,
+    isLiveLoading,
+    liveLoadError,
+    retryLiveLoad,
+    totalCrimesCount,
+    totalFacilitiesCount,
     selectedDestination,
     setSelectedDestination,
     showToast,
@@ -140,6 +150,153 @@ export const SearchAndFilterHeader: React.FC = () => {
           width: '100%',
         }}
       >
+        {/* Persistent Top-Bar City Toggle */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            backgroundColor: 'rgba(255, 255, 255, 0.98)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+            border: '1px solid rgba(203, 213, 225, 0.9)',
+            borderRadius: '16px',
+            boxShadow: '0 4px 18px rgba(15, 23, 42, 0.08)',
+            padding: '6px 10px',
+            marginBottom: '8px',
+          }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <SafeParkLogo size={24} />
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 900, color: '#0F172A', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                SafePark
+              </span>
+              <span style={{ fontSize: '0.625rem', fontWeight: 700, color: '#2563EB', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                {isLiveLoading ? 'Syncing Feeds...' : `${totalFacilitiesCount} Lots • ${totalCrimesCount} Crimes`}
+              </span>
+            </div>
+          </div>
+
+          {/* Segmented City Toggle */}
+          <div
+            role="tablist"
+            aria-label="City Selection"
+            style={{
+              display: 'flex',
+              backgroundColor: '#F1F5F9',
+              borderRadius: '12px',
+              padding: '3px',
+              gap: '2px',
+            }}
+          >
+            <button
+              role="tab"
+              aria-selected={selectedCity === 'sf'}
+              onClick={() => switchCity('sf')}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '9px',
+                border: 'none',
+                fontSize: '0.75rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                backgroundColor: selectedCity === 'sf' ? '#FFFFFF' : 'transparent',
+                color: selectedCity === 'sf' ? '#0F172A' : '#64748B',
+                boxShadow: selectedCity === 'sf' ? '0 2px 6px rgba(15, 23, 42, 0.12)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              San Francisco
+            </button>
+            <button
+              role="tab"
+              aria-selected={selectedCity === 'la'}
+              onClick={() => switchCity('la')}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '9px',
+                border: 'none',
+                fontSize: '0.75rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                backgroundColor: selectedCity === 'la' ? '#FFFFFF' : 'transparent',
+                color: selectedCity === 'la' ? '#0F172A' : '#64748B',
+                boxShadow: selectedCity === 'la' ? '0 2px 6px rgba(15, 23, 42, 0.12)' : 'none',
+                transition: 'all 0.15s ease',
+              }}
+            >
+              Los Angeles
+            </button>
+          </div>
+        </div>
+
+        {/* Live Loading Indicator Banner */}
+        {isLiveLoading && (
+          <div
+            style={{
+              backgroundColor: 'rgba(239, 246, 255, 0.95)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid #BFDBFE',
+              borderRadius: '12px',
+              padding: '6px 12px',
+              marginBottom: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              fontSize: '0.725rem',
+              color: '#1D4ED8',
+              fontWeight: 700,
+              boxShadow: '0 2px 8px rgba(37, 99, 235, 0.1)',
+            }}
+          >
+            <Loader2 size={13} style={{ animation: 'spin 1s linear infinite' }} />
+            <span>Connecting to live {selectedCity === 'sf' ? 'SFPD DataSF' : 'LAPD DataLA'} 90-day feeds & OSM parking facilities...</span>
+          </div>
+        )}
+
+        {/* Municipal Feed Timeout Empty State Alert */}
+        {liveLoadError && (
+          <div
+            role="alert"
+            style={{
+              backgroundColor: '#FEF2F2',
+              border: '1.5px solid #FCA5A5',
+              borderRadius: '12px',
+              padding: '8px 12px',
+              marginBottom: '8px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '8px',
+              boxShadow: '0 2px 10px rgba(220, 38, 38, 0.1)',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', color: '#991B1B', fontWeight: 700 }}>
+              <AlertTriangle size={15} color="#DC2626" />
+              <span>Municipal feed timed out for {selectedCity === 'sf' ? 'San Francisco' : 'Los Angeles'}.</span>
+            </div>
+            <button
+              onClick={retryLiveLoad}
+              style={{
+                backgroundColor: '#DC2626',
+                color: '#FFFFFF',
+                border: 'none',
+                borderRadius: '6px',
+                padding: '4px 10px',
+                fontSize: '0.7rem',
+                fontWeight: 800,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+              }}
+            >
+              <RefreshCw size={11} /> Retry
+            </button>
+          </div>
+        )}
+
         {/* Daylight Apple Maps Full-Width Floating Search Bar */}
         <div
           ref={searchContainerRef}

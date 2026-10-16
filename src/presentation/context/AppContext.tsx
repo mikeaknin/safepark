@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
 import { ParkingLocation } from '../../domain/models/ParkingLocation';
 import { SafetyRepositoryImpl } from '../../data/repositories/SafetyRepositoryImpl';
 import { ParkingRepositoryImpl } from '../../data/repositories/ParkingRepositoryImpl';
@@ -6,14 +6,16 @@ import { HazardRepositoryImpl } from '../../data/repositories/HazardRepositoryIm
 import { ExitDetectionService, ExitTriggerAlert } from '../../domain/services/ExitDetectionService';
 import { OfflineCacheService } from '../../domain/services/OfflineCacheService';
 import { HazardValidationResult } from '../../domain/models/HazardReport';
-import { CsiEngine } from '../../domain/services/CsiEngine';
 import { AuthService, AuthUser } from '../../domain/services/AuthService';
 import { PushNotificationService } from '../../domain/services/PushNotificationService';
 import { GeocodingAdapter } from '../../data/adapters/GeocodingAdapter';
-import { DynamicParkingGenerator } from '../../domain/services/DynamicParkingGenerator';
-import { SafetyScoringEngine } from '../../domain/services/SafetyScoringEngine';
 import { SavedParkingSession } from '../../domain/models/SavedParkingSession';
 import { PedestrianRoutingAdapter } from '../../data/adapters/PedestrianRoutingAdapter';
+import {
+  LiveParkingService,
+  SupportedCity,
+  CITY_CONFIGS,
+} from '../../services/liveParkingService';
 
 export type ActiveAppView = 'driver' | 'my_car' | 'safe_garages' | 'profile' | 'carplay' | 'b2b_portal' | 'enterprise_api' | 'user_profile' | 'admin_ops';
 export type MotionState = 'driving' | 'parked' | 'walking';
@@ -37,12 +39,20 @@ export interface SearchDestination {
   coordinates: { lat: number; lng: number };
 }
 
-export const POPULAR_DESTINATIONS: SearchDestination[] = [
-  { id: 'dest-1', name: 'Moscone Convention Center', address: '747 Howard St, San Francisco, CA', coordinates: { lat: 37.7842, lng: -122.4015 } },
-  { id: 'dest-2', name: 'Salesforce Tower Plaza', address: '415 Mission St, San Francisco, CA', coordinates: { lat: 37.7897, lng: -122.3972 } },
-  { id: 'dest-3', name: 'Union Square & Shopping District', address: '333 Post St, San Francisco, CA', coordinates: { lat: 37.7879, lng: -122.4075 } },
-  { id: 'dest-4', name: 'Oracle Park', address: '24 Willie Mays Plaza, San Francisco, CA', coordinates: { lat: 37.7786, lng: -122.3893 } },
-  { id: 'dest-5', name: 'Metreon Entertainment Hub', address: '135 4th St, San Francisco, CA', coordinates: { lat: 37.7848, lng: -122.4032 } },
+export const SF_POPULAR_DESTINATIONS: SearchDestination[] = [
+  { id: 'sf-1', name: 'Downtown San Francisco', address: 'Market St & Powell St, San Francisco, CA', coordinates: { lat: 37.7842, lng: -122.4015 } },
+  { id: 'sf-2', name: 'Moscone Convention Center', address: '747 Howard St, San Francisco, CA', coordinates: { lat: 37.7842, lng: -122.4015 } },
+  { id: 'sf-3', name: 'Salesforce Tower & Transbay', address: '415 Mission St, San Francisco, CA', coordinates: { lat: 37.7897, lng: -122.3972 } },
+  { id: 'sf-4', name: 'Union Square District', address: '333 Post St, San Francisco, CA', coordinates: { lat: 37.7879, lng: -122.4075 } },
+  { id: 'sf-5', name: 'Oracle Park / Mission Bay', address: '24 Willie Mays Plaza, San Francisco, CA', coordinates: { lat: 37.7786, lng: -122.3893 } },
+];
+
+export const LA_POPULAR_DESTINATIONS: SearchDestination[] = [
+  { id: 'la-1', name: 'Downtown Los Angeles (DTLA)', address: 'Grand Central Market, Los Angeles, CA', coordinates: { lat: 34.0505, lng: -118.2492 } },
+  { id: 'la-2', name: 'Hollywood Walk of Fame', address: '6801 Hollywood Blvd, Los Angeles, CA', coordinates: { lat: 34.1016, lng: -118.3414 } },
+  { id: 'la-3', name: 'Santa Monica Pier', address: '200 Santa Monica Pier, Santa Monica, CA', coordinates: { lat: 34.0099, lng: -118.4965 } },
+  { id: 'la-4', name: 'Venice Beach Boardwalk', address: '1800 Ocean Front Walk, Venice, CA', coordinates: { lat: 33.9850, lng: -118.4695 } },
+  { id: 'la-5', name: 'Crypto.com Arena / LA Live', address: '1111 S Figueroa St, Los Angeles, CA', coordinates: { lat: 34.0430, lng: -118.2673 } },
 ];
 
 export interface FilterSettings {
@@ -55,6 +65,16 @@ export interface FilterSettings {
 }
 
 interface AppContextType {
+  // City Navigation & Multi-City State
+  selectedCity: SupportedCity;
+  setSelectedCity: (city: SupportedCity) => void;
+  switchCity: (city: SupportedCity) => Promise<void>;
+  isLiveLoading: boolean;
+  liveLoadError: string | null;
+  retryLiveLoad: () => void;
+  totalCrimesCount: number;
+  totalFacilitiesCount: number;
+
   // Navigation & Multi-Sided View Switching
   currentView: ActiveAppView;
   setCurrentView: (view: ActiveAppView) => void;
@@ -158,6 +178,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const parkingRepo = useMemo(() => new ParkingRepositoryImpl(), []);
   const hazardRepo = useMemo(() => new HazardRepositoryImpl(), []);
 
+  // Multi-City State: default San Francisco
+  const [selectedCity, setSelectedCity] = useState<SupportedCity>('sf');
+  const [isLiveLoading, setIsLiveLoading] = useState<boolean>(true);
+  const [liveLoadError, setLiveLoadError] = useState<string | null>(null);
+  const [rawScoredLocations, setRawScoredLocations] = useState<ParkingLocation[]>([]);
+  const [totalCrimesCount, setTotalCrimesCount] = useState<number>(0);
+  const [totalFacilitiesCount, setTotalFacilitiesCount] = useState<number>(0);
+
   // Top-Level View & Onboarding state
   const [currentView, setCurrentView] = useState<ActiveAppView>('driver');
   const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
@@ -177,9 +205,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [selectedLocation, setSelectedLocation] = useState<ParkingLocation | null>(null);
 
   // Search & Destination state
-  const [searchQuery, setSearchQuery] = useState<string>('Moscone Center');
-  const [selectedDestination, setSelectedDestination] = useState<SearchDestination | null>(POPULAR_DESTINATIONS[0]);
-  const [destinationResults, setDestinationResults] = useState<SearchDestination[]>(POPULAR_DESTINATIONS);
+  const [searchQuery, setSearchQuery] = useState<string>('Downtown San Francisco');
+  const [selectedDestination, setSelectedDestination] = useState<SearchDestination | null>(SF_POPULAR_DESTINATIONS[0]);
+  const [destinationResults, setDestinationResults] = useState<SearchDestination[]>(SF_POPULAR_DESTINATIONS);
 
   // Live Geocoding Query Hook with AbortController cancellation
   useEffect(() => {
@@ -243,183 +271,154 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setTimeout(() => setToastMessage(null), 4000);
   };
 
-  // Load and recalculate parking spots dynamically based on destination, environment & filters
-  const refreshLocations = async () => {
-    let rawSpots: ParkingLocation[] = [];
-    if (selectedDestination) {
-      rawSpots = DynamicParkingGenerator.generateSpotsAroundDestination(
-        selectedDestination,
-        !isNightMode
-      );
-    } else {
-      rawSpots = await parkingRepo.getAllParkingLocations();
-    }
-
-    const scoredSpots = rawSpots.map(spot => {
-      const lighting = { ...spot.lighting, isDaytime: !isNightMode };
-      const csi = spot.csi || SafetyScoringEngine.computeGeospatialCsi({
-        spotId: spot.id,
-        coordinates: spot.coordinates,
-        structureType: spot.infrastructure.structureType,
-        isDaytime: !isNightMode,
-        luxLevel: lighting.ambientLuxLevel,
-        hazards: spot.activeHazards,
-      });
-      return { ...spot, lighting, csi };
+  // Helper to filter and sort scored locations according to active user filters
+  const applyFilters = useCallback((spots: ParkingLocation[], currentFilters: FilterSettings): ParkingLocation[] => {
+    const filtered = spots.filter((spot) => {
+      if (spot.csi.totalScore < currentFilters.minCsi) return false;
+      if (spot.hourlyRate > currentFilters.maxHourlyRate) return false;
+      if (currentFilters.parkingTypeFilter === 'garages_only' || currentFilters.coveredOrGarageOnly) {
+        const isGarage =
+          spot.infrastructure.structureType === 'covered_underground_garage' ||
+          spot.infrastructure.structureType === 'multi_level_deck';
+        if (!isGarage) return false;
+      }
+      if (currentFilters.parkingTypeFilter === 'street_only') {
+        const isStreet =
+          spot.infrastructure.structureType === 'curbside_street_metered' ||
+          spot.infrastructure.structureType === 'curbside_residential' ||
+          spot.infrastructure.structureType === 'open_surface_lot' ||
+          spot.infrastructure.structureType === 'gated_surface_lot';
+        if (!isStreet) return false;
+      }
+      if (currentFilters.gatedAccessOnly && !spot.infrastructure.hasControlledAccessBarrier) return false;
+      if (currentFilters.monitoredCctvOnly && spot.infrastructure.surveillance !== 'monitored_cctv_24_7') return false;
+      return true;
     });
 
-    // Cache computed results in OfflineCacheService for subterranean fallback
-    OfflineCacheService.cacheParkingLocations(scoredSpots);
+    return filtered.sort((a, b) => b.csi.totalScore - a.csi.totalScore);
+  }, []);
 
-    // Apply active user filters
-    const applyFiltersAndSet = (spotsToFilter: ParkingLocation[]) => {
-      const filtered = spotsToFilter.filter(spot => {
-        if (spot.csi.totalScore < filters.minCsi) return false;
-        if (spot.hourlyRate > filters.maxHourlyRate) return false;
-        if (filters.parkingTypeFilter === 'garages_only' || filters.coveredOrGarageOnly) {
-          const isGarage = spot.infrastructure.structureType === 'covered_underground_garage' ||
-            spot.infrastructure.structureType === 'multi_level_deck' ||
-            spot.infrastructure.structureType === 'gated_surface_lot';
-          if (!isGarage) return false;
-        }
-        if (filters.parkingTypeFilter === 'street_only') {
-          const isStreet = spot.infrastructure.structureType === 'curbside_street_metered' ||
-            spot.infrastructure.structureType === 'curbside_residential';
-          if (!isStreet) return false;
-        }
-        if (filters.gatedAccessOnly && !spot.infrastructure.hasControlledAccessBarrier) return false;
-        if (filters.monitoredCctvOnly && spot.infrastructure.surveillance !== 'monitored_cctv_24_7') return false;
-        return true;
-      });
+  // Primary Live Data Loader for City
+  const loadLiveCityData = useCallback(async (city: SupportedCity) => {
+    setIsLiveLoading(true);
+    setLiveLoadError(null);
+    try {
+      const result = await LiveParkingService.loadCityLiveParking(city);
+      setRawScoredLocations(result.scoredLocations);
+      setTotalFacilitiesCount(result.facilities.length);
+      setTotalCrimesCount(result.crimes.length);
 
-      filtered.sort((a, b) => b.csi.totalScore - a.csi.totalScore);
+      OfflineCacheService.cacheParkingLocations(result.scoredLocations);
+
+      const filtered = applyFilters(result.scoredLocations, filters);
       setLocations(filtered);
       if (filtered.length > 0) {
         setSelectedLocation(filtered[0]);
       } else {
         setSelectedLocation(null);
       }
-    };
 
-    applyFiltersAndSet(scoredSpots);
+      showToast(`🟢 Loaded ${result.facilities.length} live parking lots & ${result.crimes.length} crime records in ${CITY_CONFIGS[city].name}`);
+    } catch (err: any) {
+      console.error('Failed to load live city data:', err);
+      setLiveLoadError(err?.message || 'Municipal feed timeout or network error');
+      showToast(`⚠️ Could not reach municipal feed for ${CITY_CONFIGS[city].name}. Tap Retry.`);
+    } finally {
+      setIsLiveLoading(false);
+    }
+  }, [applyFilters, filters]);
 
-    // Asynchronously enrich with live SFPD crime and SF 311 telemetry
-    if (selectedDestination?.coordinates) {
-      DynamicParkingGenerator.generateSpotsAroundCoordinatesAsync(
-        selectedDestination.coordinates,
-        selectedDestination.name,
-        !isNightMode,
-        selectedDestination.id
-      ).then((liveSpots) => {
-        if (liveSpots.length > 0) {
-          applyFiltersAndSet(liveSpots);
-        }
-      }).catch(() => {});
+  // Initial load
+  useEffect(() => {
+    loadLiveCityData(selectedCity);
+  }, []);
+
+  // Memoize filtered and sorted locations off the main render loop to ensure
+  // marker generation and filtering does not block map panning or bottom sheet animations
+  const memoizedFilteredLocations = useMemo(() => {
+    if (rawScoredLocations.length === 0) return [];
+    return applyFilters(rawScoredLocations, filters);
+  }, [rawScoredLocations, filters, applyFilters]);
+
+  useEffect(() => {
+    if (memoizedFilteredLocations.length > 0) {
+      setLocations(memoizedFilteredLocations);
+      if (!selectedLocation || !memoizedFilteredLocations.some((s) => s.id === selectedLocation.id)) {
+        setSelectedLocation(memoizedFilteredLocations[0]);
+      }
+    } else if (rawScoredLocations.length === 0) {
+      setLocations([]);
+      setSelectedLocation(null);
+    }
+  }, [memoizedFilteredLocations, rawScoredLocations.length]);
+
+  // Switch City Action: wipes markers, updates map center, triggers fresh live fetch
+  const switchCity = async (city: SupportedCity) => {
+    if (city === selectedCity) return;
+
+    setSelectedCity(city);
+    setLocations([]); // wipe previous markers
+    setRawScoredLocations([]);
+    setSelectedLocation(null);
+
+    const defaultDest = city === 'sf' ? SF_POPULAR_DESTINATIONS[0] : LA_POPULAR_DESTINATIONS[0];
+    setSelectedDestination(defaultDest);
+    setSearchQuery(defaultDest.name);
+    setDestinationResults(city === 'sf' ? SF_POPULAR_DESTINATIONS : LA_POPULAR_DESTINATIONS);
+
+    await loadLiveCityData(city);
+  };
+
+  const refreshLocations = async () => {
+    await loadLiveCityData(selectedCity);
+  };
+
+  const retryLiveLoad = () => {
+    loadLiveCityData(selectedCity);
+  };
+
+  // Pan-to-scan: filter locations nearest to coordinates
+  const scanLocationsAt = async (coords: { lat: number; lng: number }) => {
+    if (rawScoredLocations.length === 0) return;
+
+    // Sort by proximity to center
+    const sorted = [...rawScoredLocations].sort((a, b) => {
+      const distA = haversineDistanceMeters(coords.lat, coords.lng, a.coordinates.lat, a.coordinates.lng);
+      const distB = haversineDistanceMeters(coords.lat, coords.lng, b.coordinates.lat, b.coordinates.lng);
+      return distA - distB;
+    });
+
+    const filtered = applyFilters(sorted, filters);
+    setLocations(filtered);
+    if (filtered.length > 0 && (!selectedLocation || !filtered.some((s) => s.id === selectedLocation.id))) {
+      setSelectedLocation(filtered[0]);
     }
   };
 
-  // Pan-to-Scan dynamic location scanner
-  const scanLocationsAt = async (coords: { lat: number; lng: number }, areaName?: string) => {
-    const rawSpots = DynamicParkingGenerator.generateSpotsAroundCoordinates(
-      coords,
-      areaName,
-      !isNightMode
-    );
-
-    const scoredSpots = rawSpots.map(spot => {
-      const lighting = { ...spot.lighting, isDaytime: !isNightMode };
-      const csi = spot.csi || SafetyScoringEngine.computeGeospatialCsi({
-        spotId: spot.id,
-        coordinates: spot.coordinates,
-        structureType: spot.infrastructure.structureType,
-        isDaytime: !isNightMode,
-        luxLevel: lighting.ambientLuxLevel,
-        hazards: spot.activeHazards,
-      });
-      return { ...spot, lighting, csi };
-    });
-
-    OfflineCacheService.cacheParkingLocations(scoredSpots);
-
-    const applyFiltersAndSet = (spotsToFilter: ParkingLocation[]) => {
-      const filtered = spotsToFilter.filter(spot => {
-        if (spot.csi.totalScore < filters.minCsi) return false;
-        if (spot.hourlyRate > filters.maxHourlyRate) return false;
-        if (filters.parkingTypeFilter === 'garages_only' || filters.coveredOrGarageOnly) {
-          const isGarage = spot.infrastructure.structureType === 'covered_underground_garage' ||
-            spot.infrastructure.structureType === 'multi_level_deck' ||
-            spot.infrastructure.structureType === 'gated_surface_lot';
-          if (!isGarage) return false;
-        }
-        if (filters.parkingTypeFilter === 'street_only') {
-          const isStreet = spot.infrastructure.structureType === 'curbside_street_metered' ||
-            spot.infrastructure.structureType === 'curbside_residential';
-          if (!isStreet) return false;
-        }
-        if (filters.gatedAccessOnly && !spot.infrastructure.hasControlledAccessBarrier) return false;
-        if (filters.monitoredCctvOnly && spot.infrastructure.surveillance !== 'monitored_cctv_24_7') return false;
-        return true;
-      });
-
-      filtered.sort((a, b) => b.csi.totalScore - a.csi.totalScore);
-      setLocations(filtered);
-      if (filtered.length > 0 && (!selectedLocation || !filtered.some(s => s.id === selectedLocation.id))) {
-        setSelectedLocation(filtered[0]);
-      }
-    };
-
-    applyFiltersAndSet(scoredSpots);
-
-    // Asynchronously enrich with live DataSF police & 311 telemetry
-    DynamicParkingGenerator.generateSpotsAroundCoordinatesAsync(
-      coords,
-      areaName,
-      !isNightMode
-    ).then((liveSpots) => {
-      if (liveSpots.length > 0) {
-        applyFiltersAndSet(liveSpots);
-      }
-    }).catch(() => {});
-  };
-
-  useEffect(() => {
-    refreshLocations();
-  }, [selectedDestination, isNightMode, filters]);
-
-  // Subscribe to background exit detection triggers and dispatch native push
-  useEffect(() => {
-    const unsub = ExitDetectionService.subscribe((alert) => {
-      setActiveExitAlert(alert);
-      PushNotificationService.dispatchVehicleExitPush(alert);
-    });
-    return () => unsub();
-  }, []);
-
-  // Action: Save Parked Spot / Find My Car
-  const saveParkedSpot = (
+  // Park Here Workflow Actions
+  const handleParkHere = (
     loc: ParkingLocation,
     notes?: { level?: string; stallNumber?: string; note?: string },
-    durationMinutes?: number
+    durationMinutes: number = 120
   ) => {
-    const is2Hr = loc.hourlyRate === 0 || loc.infrastructure.structureType === 'curbside_residential';
+    const isFree = loc.hourlyRate === 0;
     const isMeter = loc.infrastructure.structureType === 'curbside_street_metered';
-    const spotType = is2Hr ? 'free_curbside' : isMeter ? 'metered' : 'garage';
-
-    const now = Date.now();
-    const duration = durationMinutes || (is2Hr ? 120 : isMeter ? 120 : 480);
-    const expirationTimestamp = now + duration * 60 * 1000;
+    const spotType = isFree ? 'free_curbside' : isMeter ? 'metered' : 'garage';
 
     const session: SavedParkingSession = {
-      id: `session-${now}`,
+      id: `session_${Date.now()}`,
       locationId: loc.id,
       spotName: loc.name,
       address: loc.address,
       spotType,
       coordinates: loc.coordinates,
-      parkedAtTimestamp: now,
-      expirationTimestamp,
-      streetSweepingNotice: is2Hr || isMeter ? '🧹 Sweeping: 1st & 3rd Tue 9–11 AM' : undefined,
-      garageNotes: notes,
+      parkedAtTimestamp: Date.now(),
+      expirationTimestamp: Date.now() + durationMinutes * 60 * 1000,
+      garageNotes: {
+        level: notes?.level || 'Level 1',
+        stallNumber: notes?.stallNumber || 'Stall A-12',
+        note: notes?.note || 'Parked safely via SafePark live index',
+      },
       csiScore: loc.csi.totalScore,
       hourlyRate: loc.hourlyRate,
     };
@@ -433,23 +432,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setMotionState('parked');
     setBluetoothConnected(false);
     OfflineCacheService.cacheActiveSession(loc);
-
-    const alert = ExitDetectionService.triggerBluetoothDisconnect(loc);
-    setActiveExitAlert(alert);
-    PushNotificationService.dispatchVehicleExitPush(alert);
-
-    showToast(`📍 Vehicle Parked at ${loc.name}. "Find My Car" active.`);
+    showToast(`🅿️ Parked vehicle saved at ${loc.name}. Return timer active.`);
   };
 
-  const handleParkHere = (
+  const saveParkedSpot = (
     loc: ParkingLocation,
     notes?: { level?: string; stallNumber?: string; note?: string },
-    durationMinutes?: number
+    durationMinutes: number = 120
   ) => {
-    saveParkedSpot(loc, notes, durationMinutes);
+    handleParkHere(loc, notes, durationMinutes);
   };
 
-  // Action: Leave parked spot / Clear
   const handleLeaveParkedSpot = () => {
     setActiveParkedSession(null);
     try {
@@ -479,7 +472,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     showToast('Saved vehicle notes');
   };
 
-  // Active Navigation Route state (Safe Walk Return / In-car directions)
+  // Active Navigation Route state
   const [activeRoute, setActiveRoute] = useState<ActiveNavigationRoute | null>(null);
 
   const startSafeWalkToCar = async (origin?: { lat: number; lng: number }) => {
@@ -491,7 +484,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const dest = activeParkedSession.coordinates;
     let startPoint = origin;
 
-    // Check geofence distance (> 10 km or missing/denied -> Smart Fallback ~250m away)
     if (startPoint) {
       const d = haversineDistanceMeters(startPoint.lat, startPoint.lng, dest.lat, dest.lng);
       if (d > 10000 || isNaN(d)) {
@@ -529,7 +521,6 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     startSafeWalkToCar();
   };
 
-  // Action: Simulate Bluetooth disconnect manually
   const handleSimulateBluetoothDisconnect = () => {
     const target = parkedLocation || selectedLocation || locations[0];
     if (target) {
@@ -557,9 +548,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  const handleHazardSubmitted = (result: HazardValidationResult) => {
+  const handleHazardSubmitted = (_result: HazardValidationResult) => {
     setReportingHazardLocation(null);
-    showToast('✅ Verifiable Physical Hazard Ingested. CSI recalculated.');
+    showToast('✅ Physical Hazard Ingested. CSI recalculated.');
     refreshLocations();
   };
 
@@ -570,6 +561,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   return (
     <AppContext.Provider
       value={{
+        selectedCity,
+        setSelectedCity,
+        switchCity,
+        isLiveLoading,
+        liveLoadError,
+        retryLiveLoad,
+        totalCrimesCount,
+        totalFacilitiesCount,
         currentView,
         setCurrentView,
         isOnboardingOpen,

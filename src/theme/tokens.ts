@@ -116,24 +116,35 @@ export const SAFE_PARK_TOKENS = {
 
 /**
  * Helper to determine semantic status styling strictly isolated from Brand Blue.
- * Rule: CSI >= 75: Low Risk (Green)
- *       CSI >= 50: Moderate Risk (Amber)
- *       CSI <  50: High Risk (Red)
+ * Rule:
+ * - 80-100: Green (Low Incident Zone)
+ * - 60-79: Yellow (Moderate Risk)
+ * - Under 60: Red (High Break-In Frequency)
  */
 export function getStatusStyle(csiScore: number) {
-  if (csiScore >= 75) {
-    return SAFE_PARK_TOKENS.colors.status.lowRisk;
+  if (csiScore >= 80) {
+    return {
+      ...SAFE_PARK_TOKENS.colors.status.lowRisk,
+      label: 'Low Incident Zone',
+    };
   }
-  if (csiScore >= 50) {
-    return SAFE_PARK_TOKENS.colors.status.moderateRisk;
+  if (csiScore >= 60) {
+    return {
+      ...SAFE_PARK_TOKENS.colors.status.moderateRisk,
+      label: 'Moderate Risk',
+    };
   }
-  return SAFE_PARK_TOKENS.colors.status.highRisk;
+  return {
+    ...SAFE_PARK_TOKENS.colors.status.highRisk,
+    label: 'High Break-In Frequency',
+  };
 }
 
 export type RiskLevel = 'low' | 'moderate' | 'high';
 
 export function getRiskLevel(csiScore: number): RiskLevel {
-  if (csiScore >= 75) return 'low';
-  if (csiScore >= 50) return 'moderate';
+  if (csiScore >= 80) return 'low';
+  if (csiScore >= 60) return 'moderate';
   return 'high';
 }
+

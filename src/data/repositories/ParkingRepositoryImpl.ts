@@ -1,13 +1,10 @@
 import { IParkingRepository } from '../../domain/repositories/IParkingRepository';
 import { ParkingLocation } from '../../domain/models/ParkingLocation';
-import { MOCK_PARKING_LOCATIONS } from '../mock/mockParkingSpots';
 import { OfflineCacheService } from '../../domain/services/OfflineCacheService';
-import { SolarLightingAdapter } from '../adapters/SolarLightingAdapter';
-import { CrimeDataFeedAdapter } from '../adapters/CrimeDataFeedAdapter';
-import { CsiEngine } from '../../domain/services/CsiEngine';
+import { LiveParkingService } from '../../services/liveParkingService';
 
 export class ParkingRepositoryImpl implements IParkingRepository {
-  private locations: ParkingLocation[] = [...MOCK_PARKING_LOCATIONS];
+  private locations: ParkingLocation[] = [];
 
   public async getAllParkingLocations(): Promise<ParkingLocation[]> {
     // 1. Subterranean Offline Check
@@ -18,44 +15,16 @@ export class ParkingRepositoryImpl implements IParkingRepository {
       }
     }
 
-    // 2. Fetch / Augment with live telemetry feeds
+    // 2. Fetch live data
     try {
-      const enriched = await Promise.all(
-        this.locations.map(async (loc) => {
-          const liveCrime = await CrimeDataFeedAdapter.fetchBlockCrimeData(
-            loc.coordinates.lat,
-            loc.coordinates.lng
-          );
-          const liveLighting = SolarLightingAdapter.calculateLightingEnvironment(
-            loc.coordinates.lat,
-            loc.coordinates.lng,
-            new Date(),
-            !loc.lighting.isDaytime
-          );
-
-          const csi = CsiEngine.calculate(
-            loc.id,
-            liveCrime,
-            liveLighting,
-            loc.infrastructure,
-            loc.activeHazards
-          );
-
-          return {
-            ...loc,
-            crimeData: liveCrime,
-            lighting: liveLighting,
-            csi,
-          };
-        })
-      );
-
-      this.locations = enriched;
-      OfflineCacheService.cacheParkingLocations(enriched);
-      return enriched;
-    } catch (e) {
-      console.warn('Live telemetry feed augmentation fallback:', e);
-      return [...this.locations];
+      if (this.locations.length === 0) {
+        const live = await LiveParkingService.loadCityLiveParking('sf');
+        this.locations = live.scoredLocations;
+      }
+      return this.locations;
+    } catch {
+      const cached = OfflineCacheService.getCachedParkingLocations();
+      return cached && cached.length > 0 ? cached : [];
     }
   }
 
