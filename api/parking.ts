@@ -1,5 +1,4 @@
-import sfStreetBackup from '../src/data/sf_street_backup.json';
-import laStreetBackup from '../src/data/la_street_backup.json';
+import { SF_STREET_BACKUP, LA_STREET_BACKUP } from '../src/data/streetBackups';
 
 export interface NormalizedParkingFacility {
   id: string;
@@ -222,7 +221,7 @@ export async function fetchCurbsideMeters(city: 'sf' | 'la'): Promise<Normalized
   const timeout = setTimeout(() => controller.abort(), 6500);
 
   const getStreetFallback = (): NormalizedParkingFacility[] => {
-    const list = city === 'sf' ? sfStreetBackup : laStreetBackup;
+    const list = city === 'sf' ? SF_STREET_BACKUP : LA_STREET_BACKUP;
     return (list as any[]).map((item) => ({
       ...item,
       isStreetParking: true,

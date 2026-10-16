@@ -6,8 +6,7 @@
  */
 
 import { ParkingFacility } from '../lib/safetyScore';
-import sfStreetBackup from '../data/sf_street_backup.json';
-import laStreetBackup from '../data/la_street_backup.json';
+import { SF_STREET_BACKUP, LA_STREET_BACKUP } from '../data/streetBackups';
 
 export type SupportedCity = 'sf' | 'la';
 
@@ -34,7 +33,7 @@ export class StreetParkingService {
    * Retrieves curated client-bundled static street blocks fallback.
    */
   public static getBundledStreetBackup(city: SupportedCity): ParkingFacility[] {
-    const list = city === 'sf' ? sfStreetBackup : laStreetBackup;
+    const list = city === 'sf' ? SF_STREET_BACKUP : LA_STREET_BACKUP;
     return (list as any[]).map((item) => ({
       ...item,
       isStreetParking: true,
