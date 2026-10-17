@@ -73,9 +73,9 @@ self.addEventListener('fetch', (event) => {
 // Push notification listener for scheduled meter alerts
 self.addEventListener('push', (event) => {
   let payload = {
-    title: '⚠️ Meter Expiring in 15 Minutes!',
+    title: '⚠️ 15 Minutes Left on Meter',
     body: 'Your vehicle will exceed the meter limit shortly. Return to your car to avoid a parking ticket.',
-    icon: '/apple-touch-icon.svg',
+    icon: '/favicon.svg',
     badge: '/favicon.svg',
     tag: 'safepark-meter-alert',
   };
@@ -97,7 +97,7 @@ self.addEventListener('push', (event) => {
     tag: payload.tag || 'safepark-meter-alert',
     renotify: true,
     requireInteraction: true,
-    data: { url: '/?tab=my_car' },
+    data: { url: '/' },
     actions: [
       { action: 'view_car', title: '🚗 View Car' },
       { action: 'dismiss', title: 'Dismiss' },
@@ -121,7 +121,7 @@ self.addEventListener('notificationclick', (event) => {
         }
       }
       if (clients.openWindow) {
-        return clients.openWindow('/?tab=my_car');
+        return clients.openWindow('/');
       }
     })
   );

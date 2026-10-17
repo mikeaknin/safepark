@@ -34,7 +34,7 @@ const DURATION_CHIPS: Array<{ label: string; minutes: number }> = [
   { label: '15m', minutes: 15 },
   { label: '30m', minutes: 30 },
   { label: '1h', minutes: 60 },
-  { label: '2h (Default)', minutes: 120 },
+  { label: '2h', minutes: 120 },
   { label: '4h', minutes: 240 },
   { label: 'All Day', minutes: 720 },
 ];
@@ -352,8 +352,9 @@ export const AppleMapsBottomSheet: React.FC<AppleMapsBottomSheetProps> = ({
                       whiteSpace: 'nowrap',
                       cursor: 'pointer',
                       border: isSelected ? '1.5px solid #2563EB' : '1px solid #CBD5E1',
-                      backgroundColor: isSelected ? '#EFF6FF' : '#FFFFFF',
-                      color: isSelected ? '#1D4ED8' : '#475569',
+                      backgroundColor: isSelected ? '#2563EB' : '#FFFFFF',
+                      color: isSelected ? '#FFFFFF' : '#334155',
+                      boxShadow: isSelected ? '0 2px 6px rgba(37, 99, 235, 0.25)' : 'none',
                       transition: 'all 0.15s ease',
                     }}
                   >

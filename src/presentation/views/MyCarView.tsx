@@ -168,7 +168,8 @@ export const MyCarView: React.FC<MyCarViewProps> = ({ onNavigateToExplore }) => 
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference * (1 - Math.min(100, Math.max(0, progressPercent)) / 100);
 
-  const ringColor = isExpired ? '#EF4444' : isWarning ? '#F59E0B' : '#2563EB';
+  const isAllDay = (vehicle?.meterDurationMinutes || 120) >= 720;
+  const ringColor = isExpired ? '#DC2626' : isWarning ? '#CA8A04' : '#2563EB';
 
   return (
     <div className="min-h-screen bg-slate-50/60 pt-10 pb-36 px-4">
@@ -183,7 +184,7 @@ export const MyCarView: React.FC<MyCarViewProps> = ({ onNavigateToExplore }) => 
             My Parked Vehicle
           </h1>
           <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-            Live GPS location tracking, 2-hour meter countdowns, and illuminated return walking routes.
+            Live GPS location tracking, dynamic meter countdowns, and illuminated return walking routes.
           </p>
         </div>
 
@@ -191,45 +192,44 @@ export const MyCarView: React.FC<MyCarViewProps> = ({ onNavigateToExplore }) => 
         {vehicle ? (
           <div className="space-y-4">
             {/* HIGH-PRIORITY METER EXPIRATION ALERT BANNER */}
-            {isExpired ? (
+            {isExpired && !isAllDay ? (
               <div
                 role="alert"
-                className="bg-rose-50 border-2 border-rose-500 rounded-2xl p-4 flex items-start gap-3.5 shadow-md animate-pulse"
+                style={{ borderColor: '#DC2626', backgroundColor: '#FEF2F2' }}
+                className="border-2 rounded-2xl p-4 flex items-start gap-3.5 shadow-md animate-pulse"
               >
-                <div className="w-10 h-10 rounded-xl bg-rose-600 text-white flex items-center justify-center shrink-0 text-xl font-black">
+                <div style={{ backgroundColor: '#DC2626' }} className="w-10 h-10 rounded-xl text-white flex items-center justify-center shrink-0 text-xl font-black">
                   🚨
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-black text-rose-900 uppercase tracking-tight flex items-center gap-1.5">
-                    <span>Meter Expired</span>
-                    <span className="bg-rose-600 text-white text-[10px] px-1.5 py-0.5 rounded font-extrabold">
-                      CRITICAL ALERT
-                    </span>
+                  <div style={{ color: '#DC2626' }} className="text-xs font-black uppercase tracking-tight flex items-center gap-1.5">
+                    <span>METER EXPIRED • Citation Risk High</span>
                   </div>
-                  <div className="text-sm font-extrabold text-rose-800 mt-0.5">
+                  <div className="text-sm font-extrabold text-red-900 mt-0.5">
                     Your vehicle at {vehicle.name} has exceeded the meter limit.
                   </div>
-                  <p className="text-xs text-rose-700 mt-1 leading-relaxed">
+                  <p className="text-xs text-red-700 mt-1 leading-relaxed">
                     Return to your car immediately to avoid an $85+ municipal citation or towing.
                   </p>
                 </div>
               </div>
-            ) : isWarning ? (
+            ) : isWarning && !isAllDay ? (
               <div
                 role="alert"
-                className="bg-amber-50 border-2 border-amber-400 rounded-2xl p-4 flex items-start gap-3.5 shadow-md"
+                style={{ borderColor: '#CA8A04', backgroundColor: '#FEFCE8' }}
+                className="border-2 rounded-2xl p-4 flex items-start gap-3.5 shadow-md"
               >
-                <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 text-xl font-black">
+                <div style={{ backgroundColor: '#CA8A04' }} className="w-10 h-10 rounded-xl text-white flex items-center justify-center shrink-0 text-xl font-black">
                   ⚠️
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="text-xs font-black text-amber-950 uppercase tracking-tight flex items-center gap-1.5">
+                  <div style={{ color: '#CA8A04' }} className="text-xs font-black uppercase tracking-tight flex items-center gap-1.5">
                     <span>Meter Expiring Soon ({remainingMinutes}m remaining)</span>
-                    <span className="bg-amber-400 text-amber-950 text-[10px] px-1.5 py-0.5 rounded font-extrabold">
+                    <span style={{ backgroundColor: '#CA8A04' }} className="text-white text-[10px] px-1.5 py-0.5 rounded font-extrabold">
                       15-MIN WARNING
                     </span>
                   </div>
-                  <div className="text-sm font-bold text-amber-900 mt-0.5">
+                  <div className="text-sm font-bold text-amber-950 mt-0.5">
                     Your vehicle at {vehicle.name} will exceed the meter limit shortly.
                   </div>
                   <p className="text-xs text-amber-800 mt-1 leading-relaxed">
@@ -246,57 +246,77 @@ export const MyCarView: React.FC<MyCarViewProps> = ({ onNavigateToExplore }) => 
                 <span>Meter Expiration Countdown</span>
               </div>
 
-              {/* Circular SVG Ring */}
-              <div className="relative w-44 h-44 flex items-center justify-center my-2">
-                <svg className="w-full h-full transform -rotate-90" viewBox="0 0 160 160">
-                  {/* Background Track */}
-                  <circle
-                    cx="80"
-                    cy="80"
-                    r={radius}
-                    stroke="#E2E8F0"
-                    strokeWidth={strokeWidth}
-                    fill="transparent"
-                  />
-                  {/* Animated Progress Stroke */}
-                  <circle
-                    cx="80"
-                    cy="80"
-                    r={radius}
-                    stroke={ringColor}
-                    strokeWidth={strokeWidth}
-                    fill="transparent"
-                    strokeDasharray={circumference}
-                    strokeDashoffset={strokeDashoffset}
-                    strokeLinecap="round"
-                    style={{
-                      transition: 'stroke-dashoffset 0.8s ease, stroke 0.3s ease',
-                    }}
-                  />
-                </svg>
-
-                {/* Center Content */}
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span
-                    className={`text-2xl font-black tracking-tight ${
-                      isExpired ? 'text-rose-600' : isWarning ? 'text-amber-600' : 'text-slate-900'
-                    }`}
-                  >
-                    {remainingTimeFormatted}
+              {/* Circular SVG Ring OR Static Shield Badge for All Day Parking */}
+              {isAllDay ? (
+                <div className="w-44 h-44 flex flex-col items-center justify-center my-2 rounded-full bg-emerald-50 border-4 border-emerald-500 shadow-inner p-4 text-center">
+                  <div className="w-14 h-14 rounded-full bg-emerald-600 text-white flex items-center justify-center mb-2 shadow-md">
+                    <ShieldCheck className="w-8 h-8" />
+                  </div>
+                  <span className="text-sm font-black text-emerald-950 tracking-tight">
+                    All Day Parking • Monitored
                   </span>
-                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mt-0.5">
-                    {isExpired ? 'Meter Expired' : 'Remaining'}
-                  </span>
-                  <span className="mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
-                    {vehicle.meterDurationMinutes || 120}-Min Limit
+                  <span className="text-[10px] font-bold text-emerald-700 mt-1 uppercase tracking-wider">
+                    No Meter Expiration
                   </span>
                 </div>
-              </div>
+              ) : (
+                <div className="relative w-44 h-44 flex items-center justify-center my-2">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 160 160">
+                    {/* Background Track */}
+                    <circle
+                      cx="80"
+                      cy="80"
+                      r={radius}
+                      stroke="#E2E8F0"
+                      strokeWidth={strokeWidth}
+                      fill="transparent"
+                    />
+                    {/* Animated Progress Stroke */}
+                    <circle
+                      cx="80"
+                      cy="80"
+                      r={radius}
+                      stroke={ringColor}
+                      strokeWidth={strokeWidth}
+                      fill="transparent"
+                      strokeDasharray={circumference}
+                      strokeDashoffset={strokeDashoffset}
+                      strokeLinecap="round"
+                      style={{
+                        transition: 'stroke-dashoffset 0.8s ease, stroke 0.3s ease',
+                      }}
+                    />
+                  </svg>
+
+                  {/* Center Content */}
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span
+                      style={{
+                        color: isExpired ? '#DC2626' : isWarning ? '#CA8A04' : '#0F172A',
+                      }}
+                      className="text-2xl font-black tracking-tight"
+                    >
+                      {remainingTimeFormatted}
+                    </span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 mt-0.5">
+                      {isExpired ? 'Meter Expired' : 'Remaining'}
+                    </span>
+                    <span className="mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600">
+                      {vehicle.meterDurationMinutes || 120}-Min Limit
+                    </span>
+                  </div>
+                </div>
+              )}
 
               {/* Progress Summary Pill */}
               <div className="mt-3 text-xs text-slate-500 font-medium">
-                {isExpired ? (
-                  <span className="text-rose-600 font-bold flex items-center gap-1">
+                {isAllDay ? (
+                  <span className="text-emerald-700 font-bold flex items-center justify-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    All-day monitoring active • Risk radar on
+                  </span>
+                ) : isExpired ? (
+                  <span style={{ color: '#DC2626' }} className="font-bold flex items-center gap-1">
                     <AlertTriangle className="w-3.5 h-3.5" />
                     Meter time has ended. Return to vehicle to avoid citation.
                   </span>
